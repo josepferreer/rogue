@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #f6f6f8;
+  --foreground: #17181c;
+
+  --surface: #ffffff;
+  --surface-foreground: #17181c;
+
+  --muted: #eeeef1;
+  --muted-foreground: #71727a;
+
+  --border: #e6e6ec;
+
+  --accent: #6c5ce7;
+  --accent-foreground: #ffffff;
+
+  --card-lilac: #ece9fb;
+  --card-lilac-foreground: #4b3e7a;
+  --card-blue: #e1f1fc;
+  --card-blue-foreground: #2c5d7a;
+  --card-mint: #e2f7ee;
+  --card-mint-foreground: #276e51;
+
+  --rank-bronce: #b08361;
+  --rank-hierro: #8b8d94;
+  --rank-plata: #a3a8b3;
+  --rank-oro: #c7a34d;
+  --rank-platino: #6fa198;
+  --rank-diamante: #5f9fc9;
+  --rank-maestro: #9481b5;
+  --rank-legendario: #b5594f;
+}
+
+.dark {
+  --background: #0c0c0e;
+  --foreground: #f1f1f3;
+
+  --surface: #18181c;
+  --surface-foreground: #f1f1f3;
+
+  --muted: #202024;
+  --muted-foreground: #96979e;
+
+  --border: #26262b;
+
+  --accent: #8778ea;
+  --accent-foreground: #0c0c0e;
+
+  --card-lilac: #221f30;
+  --card-lilac-foreground: #cbbdf3;
+  --card-blue: #16232b;
+  --card-blue-foreground: #9fcdec;
+  --card-mint: #16241d;
+  --card-mint-foreground: #a3dcc0;
+
+  --rank-bronce: #c99b76;
+  --rank-hierro: #9fa1a8;
+  --rank-plata: #c1c5cd;
+  --rank-oro: #dbb968;
+  --rank-platino: #82bcb0;
+  --rank-diamante: #83badd;
+  --rank-maestro: #ab98cc;
+  --rank-legendario: #c87669;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-border: var(--border);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-card-lilac: var(--card-lilac);
+  --color-card-lilac-foreground: var(--card-lilac-foreground);
+  --color-card-blue: var(--card-blue);
+  --color-card-blue-foreground: var(--card-blue-foreground);
+  --color-card-mint: var(--card-mint);
+  --color-card-mint-foreground: var(--card-mint-foreground);
+
+  --color-rank-bronce: var(--rank-bronce);
+  --color-rank-hierro: var(--rank-hierro);
+  --color-rank-plata: var(--rank-plata);
+  --color-rank-oro: var(--rank-oro);
+  --color-rank-platino: var(--rank-platino);
+  --color-rank-diamante: var(--rank-diamante);
+  --color-rank-maestro: var(--rank-maestro);
+  --color-rank-legendario: var(--rank-legendario);
+
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+* {
+  border-color: var(--border);
+}
