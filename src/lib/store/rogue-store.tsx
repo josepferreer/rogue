@@ -58,7 +58,7 @@ export type LogResult = {
   rankChanges: RankChange[];
 };
 
-type RogueState = { profile: Profile; sessions: WorkoutSession[] };
+type RogueState = { profile: Profile; sessions: WorkoutSession[]; routineDays: RoutineDay[] };
 
 type RogueContextValue = {
   hydrated: boolean;
@@ -69,6 +69,7 @@ type RogueContextValue = {
   todayDay: RoutineDay;
   completeOnboarding: (data: Partial<Profile>) => void;
   logSession: (dayLabel: string, sets: LoggedSet[]) => LogResult;
+  saveRoutine: (days: RoutineDay[]) => void;
   resetAll: () => void;
 };
 
@@ -121,6 +122,7 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<RogueState>({
     profile: DEFAULT_PROFILE,
     sessions: [],
+    routineDays: DEMO_ROUTINE.days,
   });
   const [hydrated, setHydrated] = useState(false);
 
@@ -132,6 +134,7 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
         setState({
           profile: { ...DEFAULT_PROFILE, ...parsed.profile },
           sessions: parsed.sessions ?? [],
+          routineDays: parsed.routineDays ?? DEMO_ROUTINE.days,
         });
       }
     } catch {
@@ -156,9 +159,9 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
         ...data,
         onboarded: true,
       };
-      persist({ profile, sessions: seedHistory() });
+      persist({ profile, sessions: seedHistory(), routineDays: state.routineDays });
     },
-    [persist],
+    [persist, state.routineDays],
   );
 
   const logSession = useCallback(
@@ -208,14 +211,21 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
         if (up) rankChanges.push({ muscle: a.muscle, before: b, after: a, up, newlyRanked });
       }
 
-      persist({ profile: state.profile, sessions: nextSessions });
+      persist({ profile: state.profile, sessions: nextSessions, routineDays: state.routineDays });
       return { session, prs, rankChanges };
     },
     [persist, state],
   );
 
+  const saveRoutine = useCallback(
+    (days: RoutineDay[]) => {
+      persist({ ...state, routineDays: days });
+    },
+    [persist, state],
+  );
+
   const resetAll = useCallback(() => {
-    persist({ profile: DEFAULT_PROFILE, sessions: [] });
+    persist({ profile: DEFAULT_PROFILE, sessions: [], routineDays: DEMO_ROUTINE.days });
   }, [persist]);
 
   const ranks = useMemo(
@@ -225,8 +235,8 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
   );
 
   const todayDay = useMemo(
-    () => DEMO_ROUTINE.days[state.sessions.length % DEMO_ROUTINE.days.length],
-    [state.sessions.length],
+    () => state.routineDays[state.sessions.length % state.routineDays.length],
+    [state.sessions.length, state.routineDays],
   );
 
   const value: RogueContextValue = {
@@ -234,10 +244,11 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
     profile: state.profile,
     sessions: state.sessions,
     ranks,
-    routineDays: DEMO_ROUTINE.days,
+    routineDays: state.routineDays,
     todayDay,
     completeOnboarding,
     logSession,
+    saveRoutine,
     resetAll,
   };
 

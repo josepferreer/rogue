@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Play } from "lucide-react";
+import { Pencil, Play } from "lucide-react";
 import { PastelCard } from "@/components/ui/pastel-card";
 import { getExerciseInfo, useRogue } from "@/lib/store/rogue-store";
 import { cn } from "@/lib/utils";
@@ -11,11 +11,20 @@ export default function RutinasPage() {
 
   return (
     <div className="flex flex-col gap-5 pt-2 pb-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Rutinas</h1>
-        <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
-          HIPERTROFIA · 3 DIAS
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Rutinas</h1>
+          <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
+            {routineDays.length} DÍAS
+          </p>
+        </div>
+        <Link
+          href="/rutinas/editor"
+          className="flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
+          <Pencil className="size-3.5" />
+          Editar
+        </Link>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -77,10 +86,7 @@ export default function RutinasPage() {
         })}
       </div>
 
-      <p className="text-center text-[11px] text-muted-foreground">
-        El constructor de rutinas llegara pronto. Por ahora, esta es tu rutina de
-        demo.
-      </p>
+
     </div>
   );
 }
