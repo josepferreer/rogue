@@ -37,9 +37,7 @@ export default function Home() {
           <span className="rounded-full bg-neutral-100 px-3 py-1.5 font-mono text-[10px] font-medium tracking-[0.15em] text-neutral-600">
             {todaySession.dayLabel.toUpperCase()}
           </span>
-          <span className="flex size-11 items-center justify-center rounded-2xl bg-neutral-100">
-            <Target className="size-5 text-neutral-900" strokeWidth={1.75} />
-          </span>
+
         </div>
         <h2 className="mt-4 text-2xl font-semibold leading-tight tracking-tight">
           {todaySession.title}
@@ -48,13 +46,7 @@ export default function Home() {
           {todaySession.exerciseCount} ejercicios · {todaySession.estMinutes} min
         </p>
         <div className="mt-5 flex items-center justify-between">
-          <div className="flex -space-x-2.5">
-            <span className="size-9 rounded-full bg-neutral-200 ring-2 ring-white" />
-            <span className="size-9 rounded-full bg-neutral-300 ring-2 ring-white" />
-            <span className="flex size-9 items-center justify-center rounded-full bg-neutral-500 font-mono text-xs font-medium text-white ring-2 ring-white">
-              +{todaySession.exerciseCount - 2}
-            </span>
-          </div>
+
           <button
             type="button"
             className="rounded-full bg-neutral-900 px-6 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
