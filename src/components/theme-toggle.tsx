@@ -30,7 +30,7 @@ export function ThemeToggle() {
             className={cn(
               "flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm transition-colors",
               active
-                ? "bg-surface text-foreground shadow-sm"
+                ? "bg-surface text-foreground shadow-sm dark:bg-neutral-700"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >

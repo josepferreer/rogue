@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Flame, Layers, Timer } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowRight, Flame, Layers, Target, Timer } from "lucide-react";
 import { PastelCard } from "@/components/ui/pastel-card";
 import { RankBadge } from "@/components/ui/rank-badge";
 import { DIVISION_LABELS, getRankTier } from "@/lib/ranks";
@@ -33,22 +32,39 @@ export default function Home() {
         </h1>
       </div>
 
-      <PastelCard variant="lilac" className="flex flex-col gap-4">
-        <div>
-          <p className="font-mono text-xs tracking-[0.2em] text-card-lilac-foreground/70">
+      <div className="rounded-3xl bg-white p-5 text-neutral-900 shadow-[0_16px_48px_-16px_rgba(23,24,28,0.25)]">
+        <div className="flex items-start justify-between">
+          <span className="rounded-full bg-neutral-100 px-3 py-1.5 font-mono text-[10px] font-medium tracking-[0.15em] text-neutral-600">
             {todaySession.dayLabel.toUpperCase()}
-          </p>
-          <h2 className="mt-1 text-lg font-semibold">{todaySession.title}</h2>
-          <p className="mt-1 font-mono text-sm text-card-lilac-foreground/80">
-            {todaySession.exerciseCount} ejercicios · {todaySession.estMinutes} min
-          </p>
+          </span>
+          <span className="flex size-11 items-center justify-center rounded-2xl bg-neutral-100">
+            <Target className="size-5 text-neutral-900" strokeWidth={1.75} />
+          </span>
         </div>
-        <Button variant="primary" className="w-full">
-          Empezar entreno
-        </Button>
-      </PastelCard>
+        <h2 className="mt-4 text-2xl font-semibold leading-tight tracking-tight">
+          {todaySession.title}
+        </h2>
+        <p className="mt-1.5 font-mono text-sm text-neutral-500">
+          {todaySession.exerciseCount} ejercicios · {todaySession.estMinutes} min
+        </p>
+        <div className="mt-5 flex items-center justify-between">
+          <div className="flex -space-x-2.5">
+            <span className="size-9 rounded-full bg-neutral-200 ring-2 ring-white" />
+            <span className="size-9 rounded-full bg-neutral-300 ring-2 ring-white" />
+            <span className="flex size-9 items-center justify-center rounded-full bg-neutral-500 font-mono text-xs font-medium text-white ring-2 ring-white">
+              +{todaySession.exerciseCount - 2}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="rounded-full bg-neutral-900 px-6 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          >
+            Empezar entreno
+          </button>
+        </div>
+      </div>
 
-      <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1">
+      <div className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pb-1">
         <PastelCard variant="neutral" className="flex min-w-[128px] flex-col gap-2">
           <Flame className="size-4 text-muted-foreground" />
           <div>
@@ -92,7 +108,7 @@ export default function Home() {
             <ArrowRight className="size-3.5" />
           </Link>
         </div>
-        <div className="-mx-5 mt-3 flex gap-3 overflow-x-auto px-5 pb-1">
+        <div className="no-scrollbar -mx-5 mt-3 flex gap-3 overflow-x-auto px-5 py-1">
           {muscleRanks.map((rank) => (
             <div
               key={rank.muscle}
@@ -131,7 +147,7 @@ export default function Home() {
               </p>
               <p className="text-[11px] opacity-70">{exercise.secondaryMeta}</p>
               <Link
-                href="/biblioteca"
+                href={exercise.href}
                 className="mt-1 flex w-fit items-center gap-1 rounded-full bg-black/10 px-3 py-1 text-xs font-medium dark:bg-white/15"
               >
                 Ver

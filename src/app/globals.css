@@ -14,7 +14,7 @@
 
   --border: #e6e6ec;
 
-  --accent: #6c5ce7;
+  --accent: #17181c;
   --accent-foreground: #ffffff;
 
   --card-lilac: #ece9fb;
@@ -46,8 +46,8 @@
 
   --border: #26262b;
 
-  --accent: #8778ea;
-  --accent-foreground: #0c0c0e;
+  --accent: #f1f1f3;
+  --accent-foreground: #17181c;
 
   --card-lilac: #221f30;
   --card-lilac-foreground: #cbbdf3;
@@ -99,6 +99,20 @@
 
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
+}
+
+/* App mobile-first: ocultamos todas las scrollbars (en movil son overlay y no
+   molestan; en el marco de escritorio se verian y afean). El scroll sigue
+   funcionando, solo se oculta la barra. */
+*,
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 body {

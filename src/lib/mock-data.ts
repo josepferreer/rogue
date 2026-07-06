@@ -4,6 +4,19 @@ export const mockUser = {
   name: "Marc",
 };
 
+export const mockProfile = {
+  name: "Marc Soler",
+  handle: "@marcsoler",
+  objetivo: "Hipertrofia",
+  memberSince: "Enero 2026",
+  bodyweightKg: 78,
+  heightCm: 179,
+  sex: "Hombre",
+  email: "marc@rogue.app",
+  equipo: "Gimnasio completo",
+  totalSessions: 96,
+};
+
 export const todaySession = {
   dayLabel: "Hoy - Empuje",
   title: "Pecho, Hombro y Triceps",
@@ -33,15 +46,17 @@ export const exerciseSuggestions = [
   {
     muscle: "PECHO",
     variant: "lilac" as const,
-    title: "Press de Banca con Barra",
+    title: "Press de banca con barra",
     primaryMeta: "4 series x 10 reps",
-    secondaryMeta: "Banco plano - Dificultad media",
+    secondaryMeta: "Barra - Principiante",
+    href: "/biblioteca/press-banca",
   },
   {
     muscle: "ESPALDA",
     variant: "blue" as const,
-    title: "Dominadas Lastradas",
+    title: "Dominadas",
     primaryMeta: "4 series x 8 reps",
-    secondaryMeta: "Barra de dominadas - Dificultad alta",
+    secondaryMeta: "Peso corporal - Intermedio",
+    href: "/biblioteca/dominadas",
   },
 ];
