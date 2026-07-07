@@ -11,10 +11,14 @@ import {
 import type { MuscleGroup } from "@/lib/ranks";
 import { DEMO_EXERCISES } from "@/lib/exercises/repo";
 import {
+  aggregateToGroups,
+  computeMuscleRanks,
   computeRanks,
   estimate1RM,
   rankScore,
+  type ComputedMuscleRank,
   type ComputedRank,
+  type ExerciseMuscles,
 } from "@/lib/rank-engine";
 import { DEMO_ROUTINE } from "@/data/routine.demo";
 import type {
@@ -44,6 +48,16 @@ export function getExerciseInfo(id: string): ExerciseInfo {
   return EXERCISE_INFO.get(id) ?? { nombre: id, grupo: "Core" };
 }
 
+/** Musculos primarios/secundarios por ejercicio, para el motor por musculo. */
+const EXERCISE_MUSCLES = new Map<string, ExerciseMuscles>(
+  DEMO_EXERCISES.map((e) => [
+    e.id,
+    { primarios: e.musculosPrimarios, secundarios: e.musculosSecundarios },
+  ]),
+);
+const muscleLookup = (id: string): ExerciseMuscles | null =>
+  EXERCISE_MUSCLES.get(id) ?? null;
+
 export type PrResult = { exerciseId: string; nombre: string; est1RM: number };
 export type RankChange = {
   muscle: MuscleGroup;
@@ -65,6 +79,7 @@ type RogueContextValue = {
   profile: Profile;
   sessions: WorkoutSession[];
   ranks: ComputedRank[];
+  muscleRanks: ComputedMuscleRank[];
   routineDays: RoutineDay[];
   todayDay: RoutineDay;
   completeOnboarding: (data: Partial<Profile>) => void;
@@ -193,12 +208,14 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
         state.sessions,
         state.profile.bodyweightKg,
         state.profile.sex,
+        muscleLookup,
       );
       const nextSessions = [...state.sessions, session];
       const after = computeRanks(
         nextSessions,
         state.profile.bodyweightKg,
         state.profile.sex,
+        muscleLookup,
       );
 
       const rankChanges: RankChange[] = [];
@@ -228,10 +245,20 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
     persist({ profile: DEFAULT_PROFILE, sessions: [], routineDays: DEMO_ROUTINE.days });
   }, [persist]);
 
-  const ranks = useMemo(
+  const muscleRanks = useMemo(
     () =>
-      computeRanks(state.sessions, state.profile.bodyweightKg, state.profile.sex),
+      computeMuscleRanks(
+        state.sessions,
+        state.profile.bodyweightKg,
+        state.profile.sex,
+        muscleLookup,
+      ),
     [state.sessions, state.profile.bodyweightKg, state.profile.sex],
+  );
+
+  const ranks = useMemo(
+    () => aggregateToGroups(muscleRanks),
+    [muscleRanks],
   );
 
   const todayDay = useMemo(
@@ -244,6 +271,7 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
     profile: state.profile,
     sessions: state.sessions,
     ranks,
+    muscleRanks,
     routineDays: state.routineDays,
     todayDay,
     completeOnboarding,
