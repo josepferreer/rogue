@@ -68,8 +68,8 @@ export default function Home() {
             Hola, {profile.name || "Atleta"}
           </h1>
         </div>
-        <Link 
-          href="/perfil" 
+        <Link
+          href="/perfil"
           className="flex size-11 items-center justify-center rounded-full bg-neutral-100 text-neutral-900 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
         >
           <User className="size-5" />
@@ -80,9 +80,6 @@ export default function Home() {
         <div className="flex items-start justify-between">
           <span className="rounded-full bg-neutral-100 px-3 py-1.5 font-mono text-[10px] font-medium tracking-[0.15em] text-neutral-600">
             HOY · {todayDay.label.toUpperCase()}
-          </span>
-          <span className="flex size-11 items-center justify-center rounded-2xl bg-neutral-100 font-mono text-sm font-medium text-neutral-900">
-            {todayDay.exercises.length}
           </span>
         </div>
         <h2 className="mt-4 text-2xl font-semibold leading-tight tracking-tight">
