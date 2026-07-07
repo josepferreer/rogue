@@ -3,67 +3,19 @@
 import { useMemo, useState } from "react";
 import { Search, SearchX } from "lucide-react";
 import { ExerciseCard } from "@/components/exercise/exercise-card";
-import { DEMO_EXERCISES, filterExercises } from "@/lib/exercises/repo";
 import {
-  DIFFICULTY_LABELS,
-  EQUIPMENT_LABELS,
-  type DifficultyId,
-  type EquipmentId,
-} from "@/lib/exercises/types";
-import { MUSCLE_GROUPS, type MuscleGroup } from "@/lib/ranks";
-import { cn } from "@/lib/utils";
-
-function Chip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors",
-        active
-          ? "bg-accent text-accent-foreground"
-          : "border border-border bg-surface text-muted-foreground hover:text-foreground",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-const EQUIPMENT_ORDER: EquipmentId[] = [
-  "barra",
-  "mancuernas",
-  "maquina",
-  "polea",
-  "peso-corporal",
-  "kettlebell",
-  "barra-z",
-  "otro",
-];
-
-const DIFFICULTIES: DifficultyId[] = [
-  "principiante",
-  "intermedio",
-  "avanzado",
-];
+  ExerciseFilterBar,
+  type ExerciseFilterValue,
+} from "@/components/exercise/exercise-filter-bar";
+import { DEMO_EXERCISES, filterExercises } from "@/lib/exercises/repo";
 
 export default function BibliotecaPage() {
   const [query, setQuery] = useState("");
-  const [grupo, setGrupo] = useState<MuscleGroup | undefined>();
-  const [equipo, setEquipo] = useState<EquipmentId | undefined>();
-  const [dificultad, setDificultad] = useState<DifficultyId | undefined>();
+  const [filters, setFilters] = useState<ExerciseFilterValue>({});
 
   const results = useMemo(
-    () => filterExercises(DEMO_EXERCISES, { query, grupo, equipo, dificultad }),
-    [query, grupo, equipo, dificultad],
+    () => filterExercises(DEMO_EXERCISES, { query, ...filters }),
+    [query, filters],
   );
 
   return (
@@ -86,46 +38,7 @@ export default function BibliotecaPage() {
         />
       </label>
 
-      <div className="flex flex-col gap-2">
-        <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 pb-0.5">
-          <Chip active={!grupo} onClick={() => setGrupo(undefined)}>
-            Todos
-          </Chip>
-          {MUSCLE_GROUPS.map((g) => (
-            <Chip
-              key={g}
-              active={grupo === g}
-              onClick={() => setGrupo(grupo === g ? undefined : g)}
-            >
-              {g}
-            </Chip>
-          ))}
-        </div>
-
-        <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 pb-0.5">
-          {EQUIPMENT_ORDER.map((e) => (
-            <Chip
-              key={e}
-              active={equipo === e}
-              onClick={() => setEquipo(equipo === e ? undefined : e)}
-            >
-              {EQUIPMENT_LABELS[e]}
-            </Chip>
-          ))}
-        </div>
-
-        <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 pb-0.5">
-          {DIFFICULTIES.map((d) => (
-            <Chip
-              key={d}
-              active={dificultad === d}
-              onClick={() => setDificultad(dificultad === d ? undefined : d)}
-            >
-              {DIFFICULTY_LABELS[d]}
-            </Chip>
-          ))}
-        </div>
-      </div>
+      <ExerciseFilterBar value={filters} onChange={setFilters} />
 
       <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
         {results.length} RESULTADO{results.length === 1 ? "" : "S"}

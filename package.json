@@ -16,6 +16,7 @@
     "next": "16.2.10",
     "next-themes": "^0.4.6",
     "react": "19.2.4",
+    "react-body-highlighter": "^2.0.5",
     "react-dom": "19.2.4",
     "tailwind-merge": "^3.6.0"
   },
