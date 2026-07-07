@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Flame, Layers, Lock, Timer } from "lucide-react";
+import { ArrowRight, Flame, Layers, Lock, Timer, User } from "lucide-react";
 import { PastelCard } from "@/components/ui/pastel-card";
 import { RankBadge } from "@/components/ui/rank-badge";
 import { getDivisionLabel, getRankTier } from "@/lib/ranks";
@@ -59,13 +59,21 @@ export default function Home() {
 
   return (
     <div className="flex flex-col gap-6 pt-2">
-      <div>
-        <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
-          {formatToday()}
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-          Hola, {profile.name || "Atleta"}
-        </h1>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
+            {formatToday()}
+          </p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight">
+            Hola, {profile.name || "Atleta"}
+          </h1>
+        </div>
+        <Link 
+          href="/perfil" 
+          className="flex size-11 items-center justify-center rounded-full bg-neutral-100 text-neutral-900 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
+        >
+          <User className="size-5" />
+        </Link>
       </div>
 
       <div className="rounded-3xl bg-white p-5 text-neutral-900 shadow-[0_16px_48px_-16px_rgba(23,24,28,0.25)]">

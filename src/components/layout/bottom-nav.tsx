@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Dumbbell, Home, Shield, User } from "lucide-react";
+import { CalendarDays, Dumbbell, Home, Shield, Footprints } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/", label: "Inicio", icon: Home },
   { href: "/rutinas", label: "Rutinas", icon: CalendarDays },
+  { href: "/cardio", label: "Cardio", icon: Footprints },
   { href: "/biblioteca", label: "Ejercicios", icon: Dumbbell },
   { href: "/rangos", label: "Rangos", icon: Shield },
-  { href: "/perfil", label: "Perfil", icon: User },
 ] as const;
 
 export function BottomNav() {
