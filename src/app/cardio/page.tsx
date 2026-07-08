@@ -1,12 +1,19 @@
 "use client";
 
-import { Flame, Footprints, Timer, TrendingUp, Play } from "lucide-react";
+import Link from "next/link";
+import { Flame, Footprints, Timer, TrendingUp, Play, ChevronRight, Activity } from "lucide-react";
 import { PastelCard } from "@/components/ui/pastel-card";
 import { RouteTrackerModal } from "@/components/cardio/route-tracker-modal";
 import { useCardio } from "@/lib/store/cardio-store";
 
 export default function CardioPage() {
-  const { isTracking, startTracking, maximize } = useCardio();
+  const { isTracking, startTracking, maximize, history } = useCardio();
+
+  function formatDuration(sec: number) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }
 
   return (
     <div className="flex flex-col gap-6 pt-2 pb-24">
@@ -87,6 +94,49 @@ export default function CardioPage() {
           <Play className="size-5 fill-current" />
           {isTracking ? "Ver Ruta Activa" : "Empezar Ruta Libre"}
         </button>
+      </div>
+
+      {/* History section */}
+      <div className="mt-6 flex flex-col gap-4">
+        <div>
+          <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
+            HISTORIAL
+          </p>
+        </div>
+        <div className="flex flex-col gap-3">
+          {history.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              Aún no hay rutas guardadas.
+            </div>
+          ) : (
+            history.map((session) => (
+              <Link
+                href={`/cardio/actividad/${session.id}`}
+                key={session.id}
+                className="flex items-center justify-between rounded-3xl border border-border bg-surface p-4 transition-colors hover:bg-muted/40 active:bg-muted"
+              >
+                <div className="flex items-center gap-4">
+                  <span className="flex size-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                    <Activity className="size-5" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold">
+                      {new Intl.DateTimeFormat("es-ES", {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                      }).format(new Date(session.dateISO))}
+                    </p>
+                    <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                      {session.distanceKm.toFixed(2)} km · {formatDuration(session.durationSec)}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="size-5 text-muted-foreground" />
+              </Link>
+            ))
+          )}
+        </div>
       </div>
 
     </div>

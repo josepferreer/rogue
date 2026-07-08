@@ -27,6 +27,14 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 
 export type Coordinate = { lat: number; lng: number; timestamp: number };
 
+export type CardioSession = {
+  id: string;
+  dateISO: string;
+  coordinates: Coordinate[];
+  distanceKm: number;
+  durationSec: number;
+};
+
 export type CardioContextValue = {
   isTracking: boolean;
   isPaused: boolean;
@@ -34,6 +42,7 @@ export type CardioContextValue = {
   coordinates: Coordinate[];
   distanceKm: number;
   durationSec: number;
+  history: CardioSession[];
   startTracking: () => void;
   pauseTracking: () => void;
   resumeTracking: () => void;
@@ -55,6 +64,29 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
   const [coordinates, setCoordinates] = useState<Coordinate[]>([]);
   const [distanceKm, setDistanceKm] = useState(0);
   const [durationSec, setDurationSec] = useState(0);
+  const [history, setHistory] = useState<CardioSession[]>([
+    {
+      id: "demo-session-1",
+      dateISO: new Date(Date.now() - 24 * 60 * 60 * 1000 * 2).toISOString(), // Hace 2 días
+      coordinates: [
+        { lat: 40.4168, lng: -3.7038, timestamp: 1 },
+        { lat: 40.4180, lng: -3.7020, timestamp: 2 },
+        { lat: 40.4200, lng: -3.7000, timestamp: 3 },
+      ],
+      distanceKm: 5.2,
+      durationSec: 45 * 60, // 45 minutos
+    },
+    {
+      id: "demo-session-2",
+      dateISO: new Date(Date.now() - 24 * 60 * 60 * 1000 * 5).toISOString(), // Hace 5 días
+      coordinates: [
+        { lat: 40.4200, lng: -3.7000, timestamp: 1 },
+        { lat: 40.4150, lng: -3.7050, timestamp: 2 },
+      ],
+      distanceKm: 3.1,
+      durationSec: 25 * 60, // 25 minutos
+    },
+  ]);
 
   const watchIdRef = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -126,6 +158,26 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     setIsMinimized(false);
     clearGPS();
     if (timerRef.current) clearInterval(timerRef.current);
+
+    setDistanceKm((finalDistance) => {
+      setDurationSec((finalDuration) => {
+        setCoordinates((finalCoordinates) => {
+          if (finalDistance > 0 || finalDuration > 10) {
+            const newSession: CardioSession = {
+              id: crypto.randomUUID(),
+              dateISO: new Date().toISOString(),
+              coordinates: finalCoordinates,
+              distanceKm: finalDistance,
+              durationSec: finalDuration,
+            };
+            setHistory((prev) => [newSession, ...prev]);
+          }
+          return finalCoordinates; // We keep it in memory for now, although startTracking resets it
+        });
+        return finalDuration;
+      });
+      return finalDistance;
+    });
   }, [clearGPS]);
 
   const minimize = useCallback(() => setIsMinimized(true), []);
@@ -140,6 +192,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
         coordinates,
         distanceKm,
         durationSec,
+        history,
         startTracking,
         pauseTracking,
         resumeTracking,
