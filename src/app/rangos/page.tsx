@@ -266,7 +266,7 @@ function ScoringInfoModal({ onClose }: { onClose: () => void }) {
               type="button"
               onClick={onClose}
               aria-label="Cerrar"
-              className="-mr-1 -mt-1 shrink-0 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="-mr-1 -mt-1 flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-muted"
             >
               <X className="size-5" />
             </button>
@@ -339,7 +339,7 @@ function GroupSheet({
               type="button"
               onClick={() => setInfoOpen(true)}
               aria-label="Que significa fuerza y volumen"
-              className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="flex size-10 items-center justify-center rounded-full hover:bg-muted"
             >
               <Info className="size-5" />
             </button>
@@ -347,7 +347,7 @@ function GroupSheet({
               type="button"
               onClick={onClose}
               aria-label="Cerrar"
-              className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="flex size-10 items-center justify-center rounded-full hover:bg-muted"
             >
               <X className="size-5" />
             </button>

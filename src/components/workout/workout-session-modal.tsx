@@ -147,7 +147,7 @@ export function WorkoutSessionModal() {
           type="button"
           onClick={close}
           aria-label="Descartar entreno"
-          className="flex size-11 items-center justify-center rounded-full bg-muted/70 text-muted-foreground backdrop-blur-md transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+          className="flex size-10 items-center justify-center rounded-full bg-surface hover:bg-muted"
         >
           <X className="size-5" />
         </button>
@@ -161,7 +161,7 @@ export function WorkoutSessionModal() {
           type="button"
           onClick={minimize}
           aria-label="Minimizar entreno"
-          className="flex size-11 items-center justify-center rounded-full bg-muted/70 text-muted-foreground backdrop-blur-md transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+          className="flex size-10 items-center justify-center rounded-full bg-surface hover:bg-muted"
         >
           <Minimize2 className="size-5" />
         </button>

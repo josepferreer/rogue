@@ -93,13 +93,13 @@ export default function OnboardingPage() {
 
   return (
     <div className="flex flex-1 flex-col px-6 pb-8 pt-8">
-      <div className="mb-4 h-9">
+      <div className="mb-4 h-10">
         {step > 0 && (
           <button
             type="button"
             onClick={() => setStep(step - 1)}
             aria-label="Volver atras"
-            className="flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="flex size-10 items-center justify-center rounded-full bg-surface hover:bg-muted"
           >
             <ArrowLeft className="size-5" />
           </button>

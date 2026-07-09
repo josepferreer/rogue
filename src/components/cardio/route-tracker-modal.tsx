@@ -53,7 +53,7 @@ export function RouteTrackerModal() {
           </span>
           <button
             onClick={minimize}
-            className="flex size-12 items-center justify-center rounded-full bg-background/80 backdrop-blur-md text-muted-foreground"
+            className="flex size-10 items-center justify-center rounded-full bg-surface hover:bg-muted"
           >
             <Minimize2 className="size-5" />
           </button>

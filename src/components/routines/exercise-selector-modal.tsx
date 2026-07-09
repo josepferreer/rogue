@@ -192,9 +192,9 @@ export function ExerciseSelectorModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground"
+            className="flex size-10 items-center justify-center rounded-full bg-surface hover:bg-muted"
           >
-            <X className="size-4" />
+            <X className="size-5" />
           </button>
         </div>
 
