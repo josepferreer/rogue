@@ -49,7 +49,7 @@ export default function RutinasPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {routineDays.map((day) => {
-            const isToday = day.id === todayDay.id;
+            const isToday = day.id === todayDay?.id;
             return (
               <PastelCard
                 key={day.id}
@@ -73,7 +73,7 @@ export default function RutinasPage() {
                   {isToday && (
                     <button
                       type="button"
-                      onClick={() => startWorkout(todayDay)}
+                      onClick={() => todayDay && startWorkout(todayDay)}
                       aria-label="Empezar entreno"
                       className="flex size-10 items-center justify-center rounded-full bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
                     >

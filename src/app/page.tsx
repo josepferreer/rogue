@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   Calendar,
+  CalendarPlus,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -19,8 +20,9 @@ import { getDivisionLabel, getRankTier } from "@/lib/ranks";
 import { useRogue } from "@/lib/store/rogue-store";
 import { useWorkoutSession } from "@/lib/store/workout-session-store";
 import type { ComputedRank } from "@/lib/rank-engine";
-import type { WorkoutSession } from "@/lib/workout/types";
+import type { RoutineDay, WorkoutSession } from "@/lib/workout/types";
 import { exerciseSuggestions } from "@/lib/mock-data";
+import { formatWeight } from "@/lib/units";
 import { cn } from "@/lib/utils";
 
 const WEEKDAY_LETTERS = ["L", "M", "X", "J", "V", "S", "D"];
@@ -93,10 +95,30 @@ function TodayCard({
   estMinutes,
   onStart,
 }: {
-  todayDay: { label: string; focus: string; exercises: unknown[] };
+  todayDay: RoutineDay | null;
   estMinutes: number;
   onStart: () => void;
 }) {
+  if (!todayDay) {
+    return (
+      <div className="flex h-full min-h-[212px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-border bg-surface p-5 text-center">
+        <CalendarPlus className="size-7 text-muted-foreground" />
+        <div>
+          <p className="text-sm font-semibold">Aun no tienes dias de rutina</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Crea tu primer dia de entreno desde el editor.
+          </p>
+        </div>
+        <Link
+          href="/rutinas/editor"
+          className="mt-1 flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-xs font-semibold text-background"
+        >
+          Crear rutina
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full min-h-[212px] rounded-3xl p-5 bg-surface text-foreground border border-border">
       <div className="flex items-start justify-between">
@@ -185,6 +207,7 @@ function formatDayDetail(dateKey: string) {
 }
 
 function WeekCalendarCard({ sessions }: { sessions: WorkoutSession[] }) {
+  const { preferences } = useRogue();
   const days = useLastSevenDays(sessions);
   const trainedCount = days.filter((d) => d.trained).length;
 
@@ -349,7 +372,7 @@ function WeekCalendarCard({ sessions }: { sessions: WorkoutSession[] }) {
                           {s.sets.length} series
                         </p>
                         <p className="font-mono text-[10px] text-muted-foreground">
-                          {volume.toLocaleString("es-ES")} kg
+                          {formatWeight(volume, preferences.unit)} {preferences.unit}
                         </p>
                       </div>
                     </div>
@@ -365,7 +388,7 @@ function WeekCalendarCard({ sessions }: { sessions: WorkoutSession[] }) {
 }
 
 export default function Home() {
-  const { profile, ranks, sessions, todayDay } = useRogue();
+  const { profile, ranks, sessions, todayDay, preferences } = useRogue();
   const { start: startWorkout } = useWorkoutSession();
   const [page, setPage] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -411,7 +434,7 @@ export default function Home() {
     (sum, s) => sum + s.sets.reduce((a, set) => a + set.weightKg * set.reps, 0),
     0,
   );
-  const estMinutes = todayDay.exercises.length * 9;
+  const estMinutes = todayDay ? todayDay.exercises.length * 9 : 0;
   const initials =
     profile.name
       .split(" ")
@@ -451,7 +474,7 @@ export default function Home() {
               <TodayCard
                 todayDay={todayDay}
                 estMinutes={estMinutes}
-                onStart={() => startWorkout(todayDay)}
+                onStart={() => todayDay && startWorkout(todayDay)}
               />
             </div>
             <div ref={page1Ref} className="w-full shrink-0 snap-center snap-always">
@@ -490,8 +513,8 @@ export default function Home() {
           <Layers className="size-4 text-muted-foreground" />
           <div>
             <p className="font-mono text-lg font-medium leading-none">
-              {weekVolume.toLocaleString("es-ES")}
-              <span className="text-xs font-normal"> kg</span>
+              {formatWeight(weekVolume, preferences.unit)}
+              <span className="text-xs font-normal"> {preferences.unit}</span>
             </p>
             <p className="mt-1 text-xs text-muted-foreground">volumen semana</p>
           </div>

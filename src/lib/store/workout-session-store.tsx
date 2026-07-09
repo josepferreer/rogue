@@ -13,8 +13,12 @@ import {
   useRogue,
   type LogResult,
 } from "@/lib/store/rogue-store";
-import type { LoggedSet, RoutineDay } from "@/lib/workout/types";
+import { fromKg, toKg } from "@/lib/units";
+import type { LoggedSet, RoutineDay, WeightUnit } from "@/lib/workout/types";
 
+/** weightKg guarda el numero tal como se muestra/edita, EN LA UNIDAD DE
+ *  PREFERENCIA del usuario (a pesar del nombre). Solo se convierte a kg al
+ *  entrar (buildRows, desde suggestedKg) y al salir (finish, hacia LoggedSet). */
 export type SetState = { weightKg: string; reps: string; done: boolean };
 
 type Phase = "active" | "done";
@@ -48,11 +52,14 @@ const WorkoutSessionContext = createContext<WorkoutSessionContextValue | null>(
   null,
 );
 
-function buildRows(day: RoutineDay): Record<string, SetState[]> {
+function buildRows(day: RoutineDay, unit: WeightUnit): Record<string, SetState[]> {
   const next: Record<string, SetState[]> = {};
   for (const ex of day.exercises) {
+    const suggestedDisplay = ex.suggestedKg
+      ? String(Math.round(fromKg(ex.suggestedKg, unit)))
+      : "";
     next[ex.exerciseId] = Array.from({ length: ex.sets }, () => ({
-      weightKg: ex.suggestedKg ? String(ex.suggestedKg) : "",
+      weightKg: suggestedDisplay,
       reps: String(ex.reps),
       done: false,
     }));
@@ -126,13 +133,13 @@ export function WorkoutSessionProvider({
       }
     }
     setDay(d);
-    setRows(buildRows(d));
+    setRows(buildRows(d, preferences.unit));
     setPhase("active");
     setResult(null);
     setRestUntil(null);
     setMinimized(false);
     setActive(true);
-  }, []);
+  }, [preferences.unit]);
 
   const minimize = useCallback(() => setMinimized(true), []);
   const maximize = useCallback(() => setMinimized(false), []);
@@ -233,7 +240,7 @@ export function WorkoutSessionProvider({
         sets.push({
           exerciseId: ex.exerciseId,
           grupo: info.grupo,
-          weightKg: Number(s.weightKg) || 0,
+          weightKg: toKg(Number(s.weightKg) || 0, preferences.unit),
           reps,
         });
       }
@@ -243,7 +250,7 @@ export function WorkoutSessionProvider({
     setRestUntil(null);
     setMinimized(false);
     setPhase("done");
-  }, [day, rows, logSession]);
+  }, [day, rows, logSession, preferences.unit]);
 
   const { doneCount, totalCount } = useMemo(() => {
     const all = Object.values(rows).flat();

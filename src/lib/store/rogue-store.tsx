@@ -94,7 +94,8 @@ type RogueContextValue = {
   ranks: ComputedRank[];
   muscleRanks: ComputedMuscleRank[];
   routineDays: RoutineDay[];
-  todayDay: RoutineDay;
+  /** null cuando la rutina no tiene ningun dia (p.ej. se borraron todos). */
+  todayDay: RoutineDay | null;
   preferences: Preferences;
   completeOnboarding: (data: Partial<Profile>) => void;
   updateProfile: (patch: Partial<Profile>) => void;
@@ -305,7 +306,10 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
   );
 
   const todayDay = useMemo(
-    () => state.routineDays[state.sessions.length % state.routineDays.length],
+    () =>
+      state.routineDays.length > 0
+        ? state.routineDays[state.sessions.length % state.routineDays.length]
+        : null,
     [state.sessions.length, state.routineDays],
   );
 

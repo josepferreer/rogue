@@ -40,7 +40,7 @@ export function ConfirmDialog({
         role="alertdialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full rounded-3xl border border-border bg-surface p-5 shadow-2xl"
+        className="w-full rounded-3xl border border-border bg-surface p-5 shadow-2xl md:max-w-sm"
         onClick={(e) => e.stopPropagation()}
       >
         <p className="text-base font-semibold">{title}</p>

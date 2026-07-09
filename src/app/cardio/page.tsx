@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Flame, Footprints, Timer, TrendingUp, Play, ChevronRight, Activity } from "lucide-react";
 import { PastelCard } from "@/components/ui/pastel-card";
-import { RouteTrackerModal } from "@/components/cardio/route-tracker-modal";
 import { useCardio } from "@/lib/store/cardio-store";
 
 export default function CardioPage() {
@@ -103,9 +102,9 @@ export default function CardioPage() {
             HISTORIAL
           </p>
         </div>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 md:grid md:grid-cols-2 md:gap-3">
           {history.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+            <div className="rounded-3xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground md:col-span-2">
               Aún no hay rutas guardadas.
             </div>
           ) : (

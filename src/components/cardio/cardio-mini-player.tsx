@@ -17,7 +17,7 @@ export function CardioMiniPlayer() {
   return (
     <button
       onClick={maximize}
-      className="absolute inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+80px)] z-30 flex items-center gap-3 rounded-2xl border border-border bg-background/80 px-4 py-3 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.25)] backdrop-blur-xl transition-transform active:scale-[0.98] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)]"
+      className="absolute inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+80px)] z-30 flex items-center gap-3 rounded-2xl border border-border bg-background/80 px-4 py-3 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.25)] backdrop-blur-xl transition-transform active:scale-[0.98] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] md:inset-x-auto md:left-auto md:right-6 md:bottom-6 md:w-96"
     >
       {/* Pulsing indicator */}
       <div className="relative flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15">

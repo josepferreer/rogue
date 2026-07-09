@@ -15,12 +15,14 @@ import { RankBadge } from "@/components/ui/rank-badge";
 import { PastelCard } from "@/components/ui/pastel-card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ExerciseSelectorModal } from "@/components/routines/exercise-selector-modal";
-import { getExerciseInfo } from "@/lib/store/rogue-store";
+import { getExerciseInfo, useRogue } from "@/lib/store/rogue-store";
 import { useWorkoutSession } from "@/lib/store/workout-session-store";
 import { getDivisionLabel, getRankTier } from "@/lib/ranks";
+import { formatWeight } from "@/lib/units";
 import { cn } from "@/lib/utils";
 
 export function WorkoutSessionModal() {
+  const { preferences } = useRogue();
   const {
     active,
     minimized,
@@ -55,7 +57,7 @@ export function WorkoutSessionModal() {
   if (phase === "done" && result) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-background pt-[env(safe-area-inset-top)]">
-        <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 pb-6 pt-10">
+        <div className="mx-auto flex w-full flex-1 flex-col gap-5 overflow-y-auto px-5 pb-6 pt-10 md:max-w-2xl">
           <div className="flex flex-col items-center gap-2 pt-4 text-center">
             <span className="flex size-16 items-center justify-center rounded-full bg-accent/15 text-accent">
               <Trophy className="size-8" />
@@ -114,7 +116,7 @@ export function WorkoutSessionModal() {
                 >
                   <span className="text-sm">{pr.nombre}</span>
                   <span className="font-mono text-sm text-muted-foreground">
-                    1RM {pr.est1RM} kg
+                    1RM {formatWeight(pr.est1RM, preferences.unit)} {preferences.unit}
                   </span>
                 </PastelCard>
               ))}
@@ -128,7 +130,7 @@ export function WorkoutSessionModal() {
           )}
         </div>
 
-        <div className="shrink-0 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
+        <div className="mx-auto w-full shrink-0 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 md:max-w-2xl">
           <button
             type="button"
             onClick={close}
@@ -145,7 +147,7 @@ export function WorkoutSessionModal() {
   // ── Sesion activa ─────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background pt-[env(safe-area-inset-top)]">
-      <header className="flex shrink-0 items-center justify-between px-4 py-2 pt-10">
+      <header className="mx-auto flex w-full shrink-0 items-center justify-between px-4 py-2 pt-10 md:max-w-2xl">
         <button
           type="button"
           onClick={() => (doneCount > 0 ? setConfirmDiscard(true) : close())}
@@ -170,7 +172,7 @@ export function WorkoutSessionModal() {
         </button>
       </header>
 
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 pb-6 pt-2">
+      <div className="mx-auto flex w-full flex-1 flex-col gap-4 overflow-y-auto px-5 pb-6 pt-2 md:max-w-2xl">
         {day.exercises.map((ex) => {
           const info = getExerciseInfo(ex.exerciseId);
           return (
@@ -221,7 +223,9 @@ export function WorkoutSessionModal() {
                         placeholder="0"
                         className="w-full bg-transparent text-sm outline-none"
                       />
-                      <span className="text-xs text-muted-foreground">kg</span>
+                      <span className="text-xs text-muted-foreground">
+                        {preferences.unit}
+                      </span>
                     </label>
                     <label className="flex flex-1 items-center gap-1 rounded-xl bg-muted/60 px-3 py-2">
                       <input
@@ -266,7 +270,7 @@ export function WorkoutSessionModal() {
         })}
       </div>
 
-      <div className="flex shrink-0 flex-col gap-2 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
+      <div className="mx-auto flex w-full shrink-0 flex-col gap-2 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 md:max-w-2xl">
         {restUntil !== null && (
           <div className="mx-auto w-full max-w-sm rounded-2xl border border-border bg-surface/90 px-4 py-2.5 backdrop-blur-xl">
             <div className="flex items-center justify-between text-sm">

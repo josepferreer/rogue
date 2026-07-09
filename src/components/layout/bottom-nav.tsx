@@ -2,22 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Dumbbell, Home, Shield, Footprints } from "lucide-react";
+import { NAV_ITEMS, isNavItemActive } from "./nav-items";
 import { cn } from "@/lib/utils";
 
-const NAV_ITEMS = [
-  { href: "/", label: "Inicio", icon: Home },
-  { href: "/rutinas", label: "Rutinas", icon: CalendarDays },
-  { href: "/cardio", label: "Cardio", icon: Footprints },
-  { href: "/biblioteca", label: "Ejercicios", icon: Dumbbell },
-  { href: "/rangos", label: "Rangos", icon: Shield },
-] as const;
-
+/** Navegacion inferior, solo en movil/tablet (el escritorio usa Sidebar). */
 export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 md:hidden">
       <nav
         className={cn(
           "pointer-events-auto mx-auto flex max-w-sm items-center justify-between gap-1 rounded-[28px] px-2 py-2",
@@ -26,10 +19,7 @@ export function BottomNav() {
         )}
       >
         {NAV_ITEMS.map((item) => {
-          const active =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
+          const active = isNavItemActive(pathname, item.href);
           const Icon = item.icon;
 
           return (

@@ -175,14 +175,14 @@ export function ExerciseSelectorModal({
 
   const content = (
     <div
-      className="absolute inset-0 z-50 flex flex-col justify-end"
+      className="absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
       style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       {/* Mismo margen lateral (px-5) que las tarjetas de contenido. */}
-      <div className="w-full px-5">
+      <div className="w-full px-5 md:w-full md:max-w-lg md:px-0">
         <div
-          className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl"
+          className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:max-h-[80dvh] md:rounded-3xl"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between px-5 pb-3 pt-4">

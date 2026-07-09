@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Calendar, Lightbulb, TrendingUp } from "lucide-react";
+import { ArrowLeft, Lightbulb } from "lucide-react";
 import { ExerciseMedia } from "@/components/exercise/exercise-media";
 import { ExerciseTabs } from "@/components/exercise/exercise-tabs";
 import { MuscleMap } from "@/components/exercise/muscle-map";
+import {
+  ExerciseHistoryPanel,
+  ExerciseStatsPanel,
+} from "@/components/exercise/exercise-progress";
 import { PastelCard } from "@/components/ui/pastel-card";
-import { RankBadge } from "@/components/ui/rank-badge";
-import { getMockExerciseStats } from "@/lib/exercises/mock-stats";
 import {
   getAllExerciseIds,
   getExerciseById,
@@ -16,8 +18,6 @@ import {
   DIFFICULTY_LABELS,
   EQUIPMENT_LABELS,
 } from "@/lib/exercises/types";
-import { getDivisionLabel, getRankTier } from "@/lib/ranks";
-import { mockUser, muscleRanks } from "@/lib/mock-data";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -38,8 +38,6 @@ export default async function ExercisePage({ params }: PageProps) {
   if (!exercise) notFound();
 
   const images = getExerciseImages(exercise);
-  const stats = getMockExerciseStats(exercise);
-  const groupRank = muscleRanks.find((rank) => rank.muscle === exercise.grupo);
 
   return (
     <div className="flex flex-col gap-5 pt-2 pb-4">
@@ -116,92 +114,8 @@ export default async function ExercisePage({ params }: PageProps) {
             )}
           </div>
         }
-        stats={
-          <div className="flex flex-col gap-3">
-            {groupRank && (
-              <PastelCard variant="lilac" className="flex items-center gap-4">
-                <RankBadge
-                  tier={groupRank.tier}
-                  division={groupRank.division}
-                  size="sm"
-                />
-                <div>
-                  <p className="font-mono text-[10px] tracking-[0.2em] opacity-70">
-                    TU RANGO EN {exercise.grupo.toUpperCase()}
-                  </p>
-                  <p className="mt-0.5 text-sm font-semibold">
-                    {getRankTier(groupRank.tier).label}{" "}
-                    {getDivisionLabel(getRankTier(groupRank.tier), groupRank.division)}
-                  </p>
-                </div>
-              </PastelCard>
-            )}
-            <div className="grid grid-cols-2 gap-3">
-              <PastelCard variant="neutral">
-                <p className="text-xs text-muted-foreground">1RM estimado</p>
-                <p className="mt-1 font-mono text-lg font-medium">
-                  {stats.oneRmKg === null ? "—" : `${stats.oneRmKg} kg`}
-                </p>
-              </PastelCard>
-              <PastelCard variant="neutral">
-                <p className="text-xs text-muted-foreground">Mejor serie</p>
-                <p className="mt-1 font-mono text-lg font-medium">
-                  {stats.mejorSerie}
-                </p>
-              </PastelCard>
-              <PastelCard variant="neutral">
-                <p className="text-xs text-muted-foreground">Volumen 4 sem.</p>
-                <p className="mt-1 font-mono text-lg font-medium">
-                  {stats.volumen4SemanasKg === 0
-                    ? "—"
-                    : `${stats.volumen4SemanasKg.toLocaleString("es-ES")} kg`}
-                </p>
-              </PastelCard>
-              <PastelCard variant="neutral">
-                <p className="text-xs text-muted-foreground">Sesiones 30 dias</p>
-                <p className="mt-1 font-mono text-lg font-medium">
-                  {stats.sesiones30Dias}
-                </p>
-              </PastelCard>
-            </div>
-            <p className="text-center font-mono text-[10px] tracking-[0.2em] text-muted-foreground">
-              DATOS DE DEMO · {mockUser.name.toUpperCase()}
-            </p>
-          </div>
-        }
-        historial={
-          <div className="flex flex-col gap-2.5">
-            {stats.historial.map((sesion, index) => (
-              <PastelCard
-                key={index}
-                variant="neutral"
-                className="flex items-center gap-3"
-              >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted">
-                  <Calendar className="size-4 text-muted-foreground" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold capitalize">
-                    {sesion.fecha}
-                  </p>
-                  <p className="mt-0.5 font-mono text-xs text-muted-foreground">
-                    {sesion.series} x {sesion.reps}
-                    {sesion.pesoKg > 0 ? ` @ ${sesion.pesoKg} kg` : ""}
-                  </p>
-                </div>
-                {sesion.volumenKg > 0 && (
-                  <p className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
-                    <TrendingUp className="size-3.5" />
-                    {sesion.volumenKg.toLocaleString("es-ES")} kg
-                  </p>
-                )}
-              </PastelCard>
-            ))}
-            <p className="mt-1 text-center font-mono text-[10px] tracking-[0.2em] text-muted-foreground">
-              DATOS DE DEMO
-            </p>
-          </div>
-        }
+        stats={<ExerciseStatsPanel exercise={exercise} />}
+        historial={<ExerciseHistoryPanel exercise={exercise} />}
       />
     </div>
   );

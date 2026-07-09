@@ -17,6 +17,7 @@ import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useEffect } from "react";
 import { PastelCard } from "@/components/ui/pastel-card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   SwitchRow,
@@ -155,12 +156,12 @@ function EditPhysicalModal({
 
   const content = (
     <div
-      className="absolute inset-0 z-[60] flex flex-col justify-end"
+      className="absolute inset-0 z-[60] flex flex-col justify-end md:items-center md:justify-center"
       style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       <div
-        className="flex flex-col gap-4 rounded-t-3xl border border-border bg-surface p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+        className="flex w-full flex-col gap-4 rounded-t-3xl border border-border bg-surface p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:max-w-md md:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -255,6 +256,7 @@ function EditPhysicalModal({
 export default function PerfilPage() {
   const { profile, sessions, ranks, preferences, resetAll } = useRogue();
   const [editOpen, setEditOpen] = useState(false);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
   const initials =
     profile.name
@@ -268,10 +270,10 @@ export default function PerfilPage() {
 
   return (
     <div className="flex h-full flex-col bg-background">
-      <header className="relative flex shrink-0 items-center px-4 py-2 pt-10">
-        <Link 
-          href="/" 
-          aria-label="Volver atrás" 
+      <header className="relative mx-auto flex w-full shrink-0 items-center px-4 py-2 pt-10 md:max-w-2xl">
+        <Link
+          href="/"
+          aria-label="Volver atrás"
           className="flex size-10 z-10 items-center justify-center rounded-full bg-surface border border-border shadow-sm text-muted-foreground transition-all hover:bg-muted active:scale-95"
         >
           <ArrowLeft className="size-5 text-foreground" />
@@ -281,7 +283,7 @@ export default function PerfilPage() {
         </span>
       </header>
 
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-5 pb-8 pt-2">
+      <div className="mx-auto flex w-full flex-1 flex-col gap-6 overflow-y-auto px-5 pb-8 pt-2 md:max-w-2xl">
         <div className="flex flex-col items-center text-center gap-3 pt-2 pb-2">
         <span className="flex size-24 shrink-0 items-center justify-center rounded-full bg-accent text-3xl font-semibold text-accent-foreground shadow-sm">
           {initials}
@@ -370,7 +372,7 @@ export default function PerfilPage() {
       <div className="flex flex-col gap-2">
         <button
           type="button"
-          onClick={resetAll}
+          onClick={() => setConfirmResetOpen(true)}
           className="flex items-center justify-center gap-2 rounded-2xl border border-border py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <RotateCcw className="size-4" />
@@ -380,6 +382,18 @@ export default function PerfilPage() {
       </div>
 
       <EditPhysicalModal open={editOpen} onClose={() => setEditOpen(false)} />
+
+      <ConfirmDialog
+        open={confirmResetOpen}
+        title="¿Reiniciar todos los datos?"
+        description="Perderas tu perfil, historial de entrenos y rutina personalizada. Esta accion no se puede deshacer."
+        confirmLabel="Reiniciar"
+        onConfirm={() => {
+          setConfirmResetOpen(false);
+          resetAll();
+        }}
+        onCancel={() => setConfirmResetOpen(false)}
+      />
     </div>
   );
 }

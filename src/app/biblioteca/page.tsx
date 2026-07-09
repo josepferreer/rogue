@@ -55,7 +55,7 @@ export default function BibliotecaPage() {
           </div>
         </div>
       ) : (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2.5 md:grid md:grid-cols-2 md:gap-3">
           {results.map((exercise) => (
             <ExerciseCard key={exercise.id} exercise={exercise} />
           ))}

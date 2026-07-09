@@ -256,9 +256,7 @@ function ScoringInfoModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden />
-      {/* Replica el ancho del contenido (shell + px-5) para alinear con las
-          tarjetas. En md el shell mide 440 menos su borde de 1px por lado. */}
-      <div className="relative z-10 w-full px-5 md:max-w-[438px]">
+      <div className="relative z-10 w-full px-5 md:w-full md:max-w-md md:px-0">
         <div className="w-full rounded-3xl border border-border bg-surface p-5">
           <div className="mb-4 flex items-start justify-between gap-3">
             <p className="text-base font-semibold">Como se puntua cada musculo</p>
@@ -325,12 +323,11 @@ function GroupSheet({
   const tier = groupRank?.ranked ? getRankTier(groupRank.tier) : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden />
-      {/* Bottom-sheet: sube desde abajo pero con el mismo ancho y margenes
-          laterales que las tarjetas de contenido (px-5). */}
-      <div className="relative z-10 w-full px-5 md:max-w-[438px]">
-        <div className="no-scrollbar max-h-[80vh] w-full overflow-y-auto rounded-t-3xl border border-border bg-surface p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+      {/* Bottom-sheet en movil (sube desde abajo); dialogo centrado en escritorio. */}
+      <div className="relative z-10 w-full px-5 md:w-full md:max-w-md md:px-0">
+        <div className="no-scrollbar max-h-[80vh] w-full overflow-y-auto rounded-t-3xl border border-border bg-surface p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:rounded-3xl">
           {/* Cabecera */}
         <div className="mb-4 flex items-center justify-between">
           <p className="text-lg font-semibold">{group}</p>
@@ -454,7 +451,7 @@ export default function RangosPage() {
 
       <BodyRankSummary ranks={ranks} muscleRanks={muscleRanks} />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
         {ranks.map((rank) => (
           <RankCard
             key={rank.muscle}

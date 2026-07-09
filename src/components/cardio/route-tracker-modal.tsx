@@ -79,7 +79,7 @@ export function RouteTrackerModal() {
       </div>
 
       {/* Bottom panel */}
-      <div className="rounded-t-[2.5rem] bg-background p-6 pb-[max(2rem,env(safe-area-inset-bottom))] shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.1)] dark:border-t dark:border-border">
+      <div className="rounded-t-[2.5rem] bg-background p-6 pb-[max(2rem,env(safe-area-inset-bottom))] shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.1)] dark:border-t dark:border-border md:mx-auto md:w-full md:max-w-2xl">
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 text-center">
           <div className="flex flex-col items-center gap-1">

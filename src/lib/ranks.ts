@@ -84,10 +84,3 @@ export const MUSCLE_GROUPS = [
 ] as const;
 
 export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
-
-export type MuscleRank = {
-  muscle: MuscleGroup;
-  tier: RankId;
-  division: number;
-  progress: number;
-};

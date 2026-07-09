@@ -36,6 +36,7 @@ export type CardioSession = {
 };
 
 export type CardioContextValue = {
+  hydrated: boolean;
   isTracking: boolean;
   isPaused: boolean;
   isMinimized: boolean;
@@ -51,6 +52,33 @@ export type CardioContextValue = {
   minimize: () => void;
   maximize: () => void;
 };
+
+const STORAGE_KEY = "rogue.cardio.v1";
+
+/** Historial de demo: solo se usa la primera vez, si no hay nada guardado. */
+const DEMO_HISTORY: CardioSession[] = [
+  {
+    id: "demo-session-1",
+    dateISO: new Date(Date.now() - 24 * 60 * 60 * 1000 * 2).toISOString(),
+    coordinates: [
+      { lat: 40.4168, lng: -3.7038, timestamp: 1 },
+      { lat: 40.418, lng: -3.702, timestamp: 2 },
+      { lat: 40.42, lng: -3.7, timestamp: 3 },
+    ],
+    distanceKm: 5.2,
+    durationSec: 45 * 60,
+  },
+  {
+    id: "demo-session-2",
+    dateISO: new Date(Date.now() - 24 * 60 * 60 * 1000 * 5).toISOString(),
+    coordinates: [
+      { lat: 40.42, lng: -3.7, timestamp: 1 },
+      { lat: 40.415, lng: -3.705, timestamp: 2 },
+    ],
+    distanceKm: 3.1,
+    durationSec: 25 * 60,
+  },
+];
 
 function gpsErrorMessage(err: GeolocationPositionError): string {
   switch (err.code) {
@@ -78,31 +106,31 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
   const [coordinates, setCoordinates] = useState<Coordinate[]>([]);
   const [distanceKm, setDistanceKm] = useState(0);
   const [durationSec, setDurationSec] = useState(0);
-  const [history, setHistory] = useState<CardioSession[]>([
-    {
-      id: "demo-session-1",
-      dateISO: new Date(Date.now() - 24 * 60 * 60 * 1000 * 2).toISOString(), // Hace 2 días
-      coordinates: [
-        { lat: 40.4168, lng: -3.7038, timestamp: 1 },
-        { lat: 40.4180, lng: -3.7020, timestamp: 2 },
-        { lat: 40.4200, lng: -3.7000, timestamp: 3 },
-      ],
-      distanceKm: 5.2,
-      durationSec: 45 * 60, // 45 minutos
-    },
-    {
-      id: "demo-session-2",
-      dateISO: new Date(Date.now() - 24 * 60 * 60 * 1000 * 5).toISOString(), // Hace 5 días
-      coordinates: [
-        { lat: 40.4200, lng: -3.7000, timestamp: 1 },
-        { lat: 40.4150, lng: -3.7050, timestamp: 2 },
-      ],
-      distanceKm: 3.1,
-      durationSec: 25 * 60, // 25 minutos
-    },
-  ]);
+  const [history, setHistory] = useState<CardioSession[]>([]);
+  const [hydrated, setHydrated] = useState(false);
 
   const [gpsError, setGpsError] = useState<string | null>(null);
+
+  // Hidrata el historial desde localStorage (o siembra el demo la 1a vez).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      setHistory(raw ? (JSON.parse(raw) as CardioSession[]) : DEMO_HISTORY);
+    } catch {
+      setHistory(DEMO_HISTORY);
+    }
+    setHydrated(true);
+  }, []);
+
+  // Persiste cualquier cambio real del historial (nunca antes de hidratar).
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    } catch {
+      /* almacenamiento no disponible */
+    }
+  }, [history, hydrated]);
 
   const watchIdRef = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -211,6 +239,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
   return (
     <CardioContext.Provider
       value={{
+        hydrated,
         isTracking,
         isPaused,
         isMinimized,
