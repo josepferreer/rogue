@@ -137,38 +137,30 @@ function bestEst1RMByExercise(sessions: WorkoutSession[]): Map<string, number> {
 
 /** Historial de demo coherente con el peso corporal, para que los rangos no
  *  arranquen vacios tras el onboarding. */
+/** Un unico entreno de demo (no vacio de entrada) SIN llegar a MIN_SESSIONS_TO_RANK
+ *  (2): al estar todo en una sola sesion, ningun musculo queda "rankeado" con
+ *  datos falsos - el usuario sube de rango solo con entrenos reales. */
 function seedHistory(): WorkoutSession[] {
-  const sessions: WorkoutSession[] = [];
-  const now = Date.now();
-  const day = 24 * 60 * 60 * 1000;
-  let counter = 0;
+  const routineDay = DEMO_ROUTINE.days[0];
+  const daysAgo = 2;
+  const sets: LoggedSet[] = routineDay.exercises.map((ex) => ({
+    exerciseId: ex.exerciseId,
+    grupo: getExerciseInfo(ex.exerciseId).grupo,
+    weightKg: Math.round(ex.suggestedKg * 0.9),
+    reps: ex.reps,
+  }));
 
-  DEMO_ROUTINE.days.forEach((routineDay, dayIndex) => {
-    for (let rep = 0; rep < 3; rep++) {
-      const daysAgo = 21 - (dayIndex + rep * 3);
-      // El historial queda por debajo del peso sugerido: asi el primer entreno
-      // con los valores por defecto ya es una marca personal y sube de rango.
-      const progression = 0.88 + rep * 0.03;
-      const sets: LoggedSet[] = routineDay.exercises.map((ex) => ({
-        exerciseId: ex.exerciseId,
-        grupo: getExerciseInfo(ex.exerciseId).grupo,
-        weightKg: Math.round(ex.suggestedKg * progression),
-        reps: ex.reps,
-      }));
-      sessions.push({
-        id:
-          typeof crypto !== "undefined" && crypto.randomUUID
-            ? crypto.randomUUID()
-            : `seed-${counter}`,
-        dateISO: new Date(now - daysAgo * day).toISOString(),
-        dayLabel: routineDay.label,
-        sets,
-      });
-      counter++;
-    }
-  });
-
-  return sessions;
+  return [
+    {
+      id:
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : "seed-0",
+      dateISO: new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString(),
+      dayLabel: routineDay.label,
+      sets,
+    },
+  ];
 }
 
 // --- Mapeo filas de Supabase <-> tipos de la app ---
