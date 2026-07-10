@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Lightbulb } from "lucide-react";
 import { ExerciseMedia } from "@/components/exercise/exercise-media";
+import { FavoriteButton } from "@/components/exercise/favorite-button";
 import { ExerciseTabs } from "@/components/exercise/exercise-tabs";
 import { MuscleMap } from "@/components/exercise/muscle-map";
 import {
@@ -42,13 +43,16 @@ export default async function ExercisePage({ params }: PageProps) {
   return (
     <div className="flex flex-col gap-5 pt-2 pb-4">
       <div>
-        <Link
-          href="/biblioteca"
-          aria-label="Volver a biblioteca"
-          className="flex size-10 items-center justify-center rounded-full bg-surface hover:bg-muted"
-        >
-          <ArrowLeft className="size-5" />
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link
+            href="/biblioteca"
+            aria-label="Volver a biblioteca"
+            className="flex size-10 items-center justify-center rounded-full bg-surface hover:bg-muted"
+          >
+            <ArrowLeft className="size-5" />
+          </Link>
+          <FavoriteButton exerciseId={exercise.id} />
+        </div>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">
           {exercise.nombre}
         </h1>

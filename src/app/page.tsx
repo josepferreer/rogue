@@ -20,7 +20,7 @@ import { getDivisionLabel, getRankTier } from "@/lib/ranks";
 import { useRogue } from "@/lib/store/rogue-store";
 import { useWorkoutSession } from "@/lib/store/workout-session-store";
 import type { ComputedRank } from "@/lib/rank-engine";
-import type { RoutineDay, WorkoutSession } from "@/lib/workout/types";
+import { getDisplayName, type RoutineDay, type WorkoutSession } from "@/lib/workout/types";
 import { exerciseSuggestions } from "@/lib/mock-data";
 import { formatWeight } from "@/lib/units";
 import { cn } from "@/lib/utils";
@@ -435,8 +435,9 @@ export default function Home() {
     0,
   );
   const estMinutes = todayDay ? todayDay.exercises.length * 9 : 0;
+  const displayName = getDisplayName(profile, preferences);
   const initials =
-    profile.name
+    displayName
       .split(" ")
       .map((p) => p[0])
       .filter(Boolean)
@@ -455,7 +456,7 @@ export default function Home() {
             {formatToday()}
           </p>
           <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">
-            Hola, {profile.name || "Atleta"}
+            Hola, {displayName}
           </h1>
         </div>
       </Link>

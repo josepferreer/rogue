@@ -8,6 +8,8 @@ import {
   useRef,
   useState,
 } from "react";
+import { usePathname } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 // --- Helpers ---
 
@@ -53,32 +55,52 @@ export type CardioContextValue = {
   maximize: () => void;
 };
 
-const STORAGE_KEY = "rogue.cardio.v1";
+type CardioRow = {
+  id: string;
+  date: string;
+  distance_km: number;
+  duration_sec: number;
+  coordinates: Coordinate[];
+};
 
-/** Historial de demo: solo se usa la primera vez, si no hay nada guardado. */
-const DEMO_HISTORY: CardioSession[] = [
-  {
-    id: "demo-session-1",
-    dateISO: new Date(Date.now() - 24 * 60 * 60 * 1000 * 2).toISOString(),
-    coordinates: [
-      { lat: 40.4168, lng: -3.7038, timestamp: 1 },
-      { lat: 40.418, lng: -3.702, timestamp: 2 },
-      { lat: 40.42, lng: -3.7, timestamp: 3 },
-    ],
-    distanceKm: 5.2,
-    durationSec: 45 * 60,
-  },
-  {
-    id: "demo-session-2",
-    dateISO: new Date(Date.now() - 24 * 60 * 60 * 1000 * 5).toISOString(),
-    coordinates: [
-      { lat: 40.42, lng: -3.7, timestamp: 1 },
-      { lat: 40.415, lng: -3.705, timestamp: 2 },
-    ],
-    distanceKm: 3.1,
-    durationSec: 25 * 60,
-  },
-];
+function rowToSession(row: CardioRow): CardioSession {
+  return {
+    id: row.id,
+    dateISO: row.date,
+    coordinates: row.coordinates,
+    distanceKm: Number(row.distance_km),
+    durationSec: row.duration_sec,
+  };
+}
+
+type SupabaseClient = ReturnType<typeof createClient>;
+
+async function fetchHistory(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<CardioSession[]> {
+  const { data } = await supabase
+    .from("cardio_sessions")
+    .select("id, date, distance_km, duration_sec, coordinates")
+    .eq("user_id", userId)
+    .order("date", { ascending: false });
+  return (data ?? []).map(rowToSession);
+}
+
+async function insertCardioSession(
+  supabase: SupabaseClient,
+  userId: string,
+  session: CardioSession,
+) {
+  await supabase.from("cardio_sessions").insert({
+    id: session.id,
+    user_id: userId,
+    date: session.dateISO,
+    distance_km: session.distanceKm,
+    duration_sec: session.durationSec,
+    coordinates: session.coordinates,
+  });
+}
 
 function gpsErrorMessage(err: GeolocationPositionError): string {
   switch (err.code) {
@@ -100,6 +122,9 @@ const CardioContext = createContext<CardioContextValue | null>(null);
 // --- Provider ---
 
 export function CardioProvider({ children }: { children: React.ReactNode }) {
+  const [supabase] = useState(() => createClient());
+  const pathname = usePathname();
+
   const [isTracking, setIsTracking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -111,26 +136,47 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
 
   const [gpsError, setGpsError] = useState<string | null>(null);
 
-  // Hidrata el historial desde localStorage (o siembra el demo la 1a vez).
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      setHistory(raw ? (JSON.parse(raw) as CardioSession[]) : DEMO_HISTORY);
-    } catch {
-      setHistory(DEMO_HISTORY);
-    }
-    setHydrated(true);
-  }, []);
+  const userIdRef = useRef<string | null>(null);
 
-  // Persiste cualquier cambio real del historial (nunca antes de hidratar).
+  // Hidrata el historial desde Supabase para el usuario autenticado. Se
+  // re-comprueba en cada cambio de ruta porque el login/logout ocurre via
+  // Server Actions y este cliente no se entera solo por su cuenta.
   useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-    } catch {
-      /* almacenamiento no disponible */
+    let active = true;
+
+    async function load() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        userIdRef.current = null;
+        if (active) {
+          setHistory([]);
+          setHydrated(true);
+        }
+        return;
+      }
+
+      // Mismo usuario ya cargado: no repetir la consulta en cada navegacion.
+      if (user.id === userIdRef.current) {
+        if (active) setHydrated(true);
+        return;
+      }
+
+      const sessions = await fetchHistory(supabase, user.id);
+      if (!active) return;
+
+      userIdRef.current = user.id;
+      setHistory(sessions);
+      setHydrated(true);
     }
-  }, [history, hydrated]);
+
+    load();
+    return () => {
+      active = false;
+    };
+  }, [pathname, supabase]);
 
   const watchIdRef = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -224,6 +270,10 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
               durationSec: finalDuration,
             };
             setHistory((prev) => [newSession, ...prev]);
+            const userId = userIdRef.current;
+            if (userId) {
+              insertCardioSession(supabase, userId, newSession).catch(() => {});
+            }
           }
           return finalCoordinates; // We keep it in memory for now, although startTracking resets it
         });
@@ -231,7 +281,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
       });
       return finalDistance;
     });
-  }, [clearGPS]);
+  }, [clearGPS, supabase]);
 
   const minimize = useCallback(() => setIsMinimized(true), []);
   const maximize = useCallback(() => setIsMinimized(false), []);

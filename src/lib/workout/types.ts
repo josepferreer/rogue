@@ -4,6 +4,8 @@ export type Sex = "hombre" | "mujer";
 
 export type Profile = {
   onboarded: boolean;
+  /** Identificador unico elegido al registrarse (login alternativo, no editable a cualquier valor: se valida formato y unicidad). */
+  username: string;
   name: string;
   sex: Sex;
   bodyweightKg: number;
@@ -13,9 +15,13 @@ export type Profile = {
 
 export type WeightUnit = "kg" | "lb";
 
+/** Cual de los dos identificadores se muestra en saludos/cabeceras. */
+export type DisplayNameSource = "name" | "username";
+
 /** Ajustes del usuario (persisten junto al resto del estado). */
 export type Preferences = {
   unit: WeightUnit;
+  displayNameSource: DisplayNameSource;
   /** Recordatorio diario de la sesion que toca. */
   notifyReminders: boolean;
   /** Aviso (vibracion/notificacion) al terminar el descanso entre series. */
@@ -23,6 +29,13 @@ export type Preferences = {
   /** Resumen semanal de progreso. */
   notifyWeeklySummary: boolean;
 };
+
+/** Nombre o username segun la preferencia del usuario, con fallback. */
+export function getDisplayName(profile: Profile, preferences: Preferences): string {
+  const preferred =
+    preferences.displayNameSource === "username" ? profile.username : profile.name;
+  return preferred || profile.name || profile.username || "Atleta";
+}
 
 /** Un ejercicio dentro de un dia de rutina. */
 export type RoutineExercise = {

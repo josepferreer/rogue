@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Minus, Plus } from "lucide-react";
 import { useRogue } from "@/lib/store/rogue-store";
+import { createClient } from "@/lib/supabase/client";
+import { getCurrentUserId } from "@/lib/supabase/exercise-interactions";
 import type { Sex } from "@/lib/workout/types";
 import { cn } from "@/lib/utils";
 
@@ -74,6 +76,22 @@ export default function OnboardingPage() {
   const [bodyweight, setBodyweight] = useState("");
   const [height, setHeight] = useState("");
   const [goal, setGoal] = useState(GOALS[0]);
+
+  // Precarga el nombre con el username elegido al registrarse (editable):
+  // asi no se siente como si se pidiera el mismo dato dos veces seguidas.
+  useEffect(() => {
+    (async () => {
+      const supabase = createClient();
+      const userId = await getCurrentUserId(supabase);
+      if (!userId) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (data?.username) setName((prev) => prev || data.username);
+    })();
+  }, []);
 
   const canNext =
     (step === 0 && name.trim().length > 0) ||
@@ -184,7 +202,7 @@ export default function OnboardingPage() {
                 step={1}
                 min={30}
                 max={300}
-                fallback={70}
+                fallback={78}
                 placeholder="78"
               />
             </div>
@@ -197,7 +215,7 @@ export default function OnboardingPage() {
                 step={1}
                 min={100}
                 max={250}
-                fallback={170}
+                fallback={179}
                 placeholder="179"
               />
             </div>

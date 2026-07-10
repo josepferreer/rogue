@@ -6,6 +6,7 @@ import {
   Check,
   ChevronRight,
   Flame,
+  LogOut,
   Minus,
   Plus,
   RotateCcw,
@@ -19,13 +20,14 @@ import { useEffect } from "react";
 import { PastelCard } from "@/components/ui/pastel-card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { signOut } from "@/lib/supabase/actions";
 import {
   SwitchRow,
   UnitToggle,
 } from "@/components/profile/preference-controls";
 import { useRogue } from "@/lib/store/rogue-store";
 import { formatWeight } from "@/lib/units";
-import type { Sex } from "@/lib/workout/types";
+import { getDisplayName, type Sex } from "@/lib/workout/types";
 import { cn } from "@/lib/utils";
 
 const GOALS = ["Hipertrofia", "Fuerza", "Perder grasa", "Mantenerme"];
@@ -121,6 +123,144 @@ function FieldStepper({
       </div>
     </div>
   );
+}
+
+/** Hoja de edicion de nombre, usuario y cual de los dos se muestra. */
+function EditIdentityModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const { profile, preferences, updateProfile, updatePreferences, updateUsername } =
+    useRogue();
+  const [name, setName] = useState(profile.name);
+  const [username, setUsername] = useState(profile.username);
+  const [displaySource, setDisplaySource] = useState(preferences.displayNameSource);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setName(profile.name);
+      setUsername(profile.username);
+      setDisplaySource(preferences.displayNameSource);
+      setError(null);
+    }
+  }, [open, profile.name, profile.username, preferences.displayNameSource]);
+
+  const [portalTarget, setPortalTarget] = useState<Element | null>(null);
+  useEffect(() => {
+    setPortalTarget(document.getElementById("app-shell"));
+  }, []);
+
+  if (!open) return null;
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+
+    if (username !== profile.username) {
+      const result = await updateUsername(username);
+      if (result.error) {
+        setError(result.error);
+        setSaving(false);
+        return;
+      }
+    }
+    if (name !== profile.name) updateProfile({ name });
+    if (displaySource !== preferences.displayNameSource) {
+      updatePreferences({ displayNameSource: displaySource });
+    }
+    setSaving(false);
+    onClose();
+  }
+
+  const content = (
+    <div
+      className="absolute inset-0 z-[60] flex flex-col justify-end md:items-center md:justify-center"
+      style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+      onClick={onClose}
+    >
+      <div
+        className="flex w-full flex-col gap-4 rounded-t-3xl border border-border bg-surface p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:max-w-md md:rounded-3xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <p className="text-base font-semibold">Nombre y usuario</p>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="flex size-10 items-center justify-center rounded-full hover:bg-muted"
+          >
+            <X className="size-5" />
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs text-muted-foreground">Nombre</label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Tu nombre"
+            className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-foreground"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs text-muted-foreground">Usuario</label>
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="usuario"
+            className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-foreground"
+          />
+        </div>
+
+        <div>
+          <p className="mb-2 text-xs text-muted-foreground">Mostrar en la app</p>
+          <div className="flex gap-2">
+            {(
+              [
+                { value: "name" as const, label: "Nombre" },
+                { value: "username" as const, label: "Usuario" },
+              ]
+            ).map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setDisplaySource(opt.value)}
+                className={cn(
+                  "flex-1 rounded-2xl border py-3 text-sm font-medium transition-colors",
+                  displaySource === opt.value
+                    ? "border-foreground bg-accent text-accent-foreground"
+                    : "border-border bg-background text-muted-foreground",
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {error && <p className="text-xs text-destructive">{error}</p>}
+
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving || name.trim().length === 0 || username.trim().length === 0}
+          className="flex items-center justify-center gap-2 rounded-full bg-accent py-3.5 text-sm font-medium text-accent-foreground transition-transform active:scale-[0.99] disabled:opacity-60"
+        >
+          <Check className="size-4" />
+          {saving ? "Guardando..." : "Guardar cambios"}
+        </button>
+      </div>
+    </div>
+  );
+
+  return portalTarget ? createPortal(content, portalTarget) : content;
 }
 
 /** Hoja de edicion de datos fisicos (peso, altura, sexo, objetivo). */
@@ -256,10 +396,12 @@ function EditPhysicalModal({
 export default function PerfilPage() {
   const { profile, sessions, ranks, preferences, resetAll } = useRogue();
   const [editOpen, setEditOpen] = useState(false);
+  const [identityOpen, setIdentityOpen] = useState(false);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
+  const displayName = getDisplayName(profile, preferences);
   const initials =
-    profile.name
+    displayName
       .split(" ")
       .map((p) => p[0])
       .filter(Boolean)
@@ -290,13 +432,27 @@ export default function PerfilPage() {
         </span>
         <div className="flex flex-col items-center">
           <h1 className="text-2xl font-semibold tracking-tight">
-            {profile.name || "Atleta"}
+            {displayName}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Objetivo: {profile.goal}
           </p>
         </div>
       </div>
+
+      <Section title="IDENTIDAD">
+        <RowCard
+          onRowClick={() => setIdentityOpen(true)}
+          rows={[
+            { label: "Nombre", value: profile.name || "—" },
+            { label: "Usuario", value: `@${profile.username}` },
+            {
+              label: "Mostrar en la app",
+              value: preferences.displayNameSource === "username" ? "Usuario" : "Nombre",
+            },
+          ]}
+        />
+      </Section>
 
       <div className="grid grid-cols-3 gap-3">
         <PastelCard variant="neutral" className="flex flex-col gap-1.5">
@@ -370,6 +526,15 @@ export default function PerfilPage() {
       </Section>
 
       <div className="flex flex-col gap-2">
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <LogOut className="size-4" />
+            Cerrar sesion
+          </button>
+        </form>
         <button
           type="button"
           onClick={() => setConfirmResetOpen(true)}
@@ -382,6 +547,7 @@ export default function PerfilPage() {
       </div>
 
       <EditPhysicalModal open={editOpen} onClose={() => setEditOpen(false)} />
+      <EditIdentityModal open={identityOpen} onClose={() => setIdentityOpen(false)} />
 
       <ConfirmDialog
         open={confirmResetOpen}

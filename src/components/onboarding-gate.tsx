@@ -4,18 +4,27 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useRogue } from "@/lib/store/rogue-store";
 
-/** Si el usuario no ha completado el onboarding, lo lleva alli. */
+/** Exige sesion de Supabase y onboarding completado antes de usar la app. */
 export function OnboardingGate() {
-  const { hydrated, profile } = useRogue();
+  const { hydrated, authenticated, profile } = useRogue();
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!profile.onboarded && pathname !== "/onboarding") {
-      router.replace("/onboarding");
+
+    if (!authenticated) {
+      if (pathname !== "/login") router.replace("/login");
+      return;
     }
-  }, [hydrated, profile.onboarded, pathname, router]);
+    if (!profile.onboarded) {
+      if (pathname !== "/onboarding") router.replace("/onboarding");
+      return;
+    }
+    if (pathname === "/login" || pathname === "/onboarding") {
+      router.replace("/");
+    }
+  }, [hydrated, authenticated, profile.onboarded, pathname, router]);
 
   return null;
 }

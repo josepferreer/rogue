@@ -12,13 +12,15 @@ import { WorkoutSessionModal } from "@/components/workout/workout-session-modal"
 /** Paginas que gestionan su propio layout completo (cabecera, scroll, ancho):
  *  no reciben el padding/max-width del AppShell ni la barra inferior. */
 function isFullBleed(pathname: string) {
-  return pathname === "/onboarding" || pathname === "/perfil";
+  return (
+    pathname === "/onboarding" || pathname === "/perfil" || pathname === "/login"
+  );
 }
 
-/** El onboarding es el unico flujo sin navegacion principal, en cualquier
- *  tamano de pantalla (primer uso, aun no hay perfil configurado). */
+/** Onboarding y login son los unicos flujos sin navegacion principal, en
+ *  cualquier tamano de pantalla (aun no hay sesion o perfil configurado). */
 function hidesSidebar(pathname: string) {
-  return pathname === "/onboarding";
+  return pathname === "/onboarding" || pathname === "/login";
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
