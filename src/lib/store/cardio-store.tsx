@@ -150,11 +150,13 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
       } = await supabase.auth.getUser();
 
       if (!user) {
+        // No tocar userIdRef si este efecto ya no esta vigente: un efecto
+        // abortado no debe "desmarcar" el usuario que un efecto posterior
+        // (valido) ya confirmo como autenticado.
+        if (!active) return;
         userIdRef.current = null;
-        if (active) {
-          setHistory([]);
-          setHydrated(true);
-        }
+        setHistory([]);
+        setHydrated(true);
         return;
       }
 

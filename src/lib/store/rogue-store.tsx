@@ -392,13 +392,15 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
       } = await supabase.auth.getUser();
 
       if (!user) {
+        // No tocar userIdRef si este efecto ya no esta vigente (mismo motivo
+        // que abajo): un efecto abortado no debe "desmarcar" el usuario que
+        // un efecto posterior (valido) ya confirmo como autenticado.
+        if (!active) return;
         userIdRef.current = null;
         routineIdRef.current = null;
-        if (active) {
-          setAuthenticated(false);
-          setState(DEFAULT_STATE);
-          setHydrated(true);
-        }
+        setAuthenticated(false);
+        setState(DEFAULT_STATE);
+        setHydrated(true);
         return;
       }
 
