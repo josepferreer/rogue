@@ -33,6 +33,9 @@ type WorkoutSessionContextValue = {
   restUntil: number | null;
   restRemaining: number;
   restTotal: number;
+  /** Segundos transcurridos desde que empezo la sesion (tiempo real, incluye
+   *  descansos y pausas). En fase "done" queda congelado a la duracion final. */
+  elapsedSec: number;
   doneCount: number;
   totalCount: number;
   start: (day: RoutineDay) => void;
@@ -85,6 +88,11 @@ export function WorkoutSessionProvider({
   const [restTotal, setRestTotal] = useState(0);
   const [now, setNow] = useState(() => Date.now());
 
+  // Cronometro de la sesion completa: timestamp de inicio + duracion congelada
+  // al finalizar. Cuenta tiempo real (descansos y pausas incluidos).
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [finalDurationSec, setFinalDurationSec] = useState<number | null>(null);
+
   // Avisa de que el descanso termino incluso si la pestana esta en 2.o plano
   // o el movil bloqueado: vibracion siempre, notificacion solo si no se ve.
   // Desactivable desde Perfil > Notificaciones.
@@ -115,6 +123,21 @@ export function WorkoutSessionProvider({
     return () => clearInterval(id);
   }, [restUntil]);
 
+  // Cronometro de la sesion: mientras esta activa avanza cada segundo. Anclado
+  // a startedAt, asi que se autocorrige tras estar en 2.o plano o bloqueado.
+  useEffect(() => {
+    if (phase !== "active" || startedAt === null) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [phase, startedAt]);
+
+  const elapsedSec =
+    finalDurationSec !== null
+      ? finalDurationSec
+      : startedAt !== null
+        ? Math.max(0, Math.floor((now - startedAt) / 1000))
+        : 0;
+
   const restRemaining =
     restUntil !== null ? Math.max(0, Math.ceil((restUntil - now) / 1000)) : 0;
   useEffect(() => {
@@ -138,6 +161,9 @@ export function WorkoutSessionProvider({
     setResult(null);
     setRestUntil(null);
     setMinimized(false);
+    setStartedAt(Date.now());
+    setFinalDurationSec(null);
+    setNow(Date.now());
     setActive(true);
   }, [preferences.unit]);
 
@@ -152,6 +178,8 @@ export function WorkoutSessionProvider({
     setResult(null);
     setRestUntil(null);
     setPhase("active");
+    setStartedAt(null);
+    setFinalDurationSec(null);
   }, []);
 
   const updateSet = useCallback(
@@ -246,11 +274,16 @@ export function WorkoutSessionProvider({
       }
     }
     if (sets.length === 0) return;
-    setResult(logSession(day.label, sets));
+    const durationSec =
+      startedAt !== null
+        ? Math.max(0, Math.floor((Date.now() - startedAt) / 1000))
+        : undefined;
+    setFinalDurationSec(durationSec ?? null);
+    setResult(logSession(day.label, sets, durationSec));
     setRestUntil(null);
     setMinimized(false);
     setPhase("done");
-  }, [day, rows, logSession, preferences.unit]);
+  }, [day, rows, logSession, preferences.unit, startedAt]);
 
   const { doneCount, totalCount } = useMemo(() => {
     const all = Object.values(rows).flat();
@@ -270,6 +303,7 @@ export function WorkoutSessionProvider({
     restUntil,
     restRemaining,
     restTotal,
+    elapsedSec,
     doneCount,
     totalCount,
     start,

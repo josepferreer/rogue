@@ -1,11 +1,12 @@
 "use client";
 
-import { Dumbbell, ListChecks } from "lucide-react";
+import { Clock, Dumbbell, ListChecks } from "lucide-react";
 import { useCardio } from "@/lib/store/cardio-store";
 import { useWorkoutSession } from "@/lib/store/workout-session-store";
+import { formatDuration } from "@/lib/utils";
 
 export function WorkoutMiniPlayer() {
-  const { active, minimized, day, doneCount, totalCount, maximize } =
+  const { active, minimized, day, elapsedSec, doneCount, totalCount, maximize } =
     useWorkoutSession();
   const cardio = useCardio();
 
@@ -34,8 +35,9 @@ export function WorkoutMiniPlayer() {
 
       <div className="flex flex-1 items-center justify-between">
         <div className="flex flex-col items-start">
-          <span className="font-mono text-[10px] tracking-wider text-muted-foreground">
-            ENTRENANDO
+          <span className="flex items-center gap-1 font-mono text-[10px] tracking-wider text-muted-foreground">
+            <Clock className="size-3" />
+            <span className="tabular-nums">{formatDuration(elapsedSec)}</span>
           </span>
           <span className="text-sm font-semibold">{day.label}</span>
         </div>

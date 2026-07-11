@@ -197,6 +197,9 @@ create table if not exists workout_sessions (
   routine_id uuid references routines (id) on delete set null,
   day_label text not null,
   date timestamptz not null default now(),
+  -- Duracion real de la sesion en segundos (inicio -> finalizar, incluye
+  -- descansos y pausas). Nullable para sesiones antiguas sin cronometro.
+  duration_sec int,
   created_at timestamptz not null default now()
 );
 

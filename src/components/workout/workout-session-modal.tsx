@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   ArrowRight,
   Check,
+  Clock,
   Minimize2,
   Plus,
   Repeat2,
@@ -19,7 +20,7 @@ import { getExerciseInfo, useRogue } from "@/lib/store/rogue-store";
 import { useWorkoutSession } from "@/lib/store/workout-session-store";
 import { getDivisionLabel, getRankTier } from "@/lib/ranks";
 import { formatWeight } from "@/lib/units";
-import { cn } from "@/lib/utils";
+import { cn, formatDuration } from "@/lib/utils";
 
 export function WorkoutSessionModal() {
   const { preferences } = useRogue();
@@ -33,6 +34,7 @@ export function WorkoutSessionModal() {
     restUntil,
     restRemaining,
     restTotal,
+    elapsedSec,
     doneCount,
     totalCount,
     minimize,
@@ -68,6 +70,12 @@ export function WorkoutSessionModal() {
             <p className="text-sm text-muted-foreground">
               {day.label} · {result.session.sets.length} series registradas
             </p>
+            {result.session.durationSec !== undefined && (
+              <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 font-mono text-xs tabular-nums text-muted-foreground">
+                <Clock className="size-3.5" />
+                {formatDuration(result.session.durationSec)}
+              </p>
+            )}
           </div>
 
           {result.rankChanges.length > 0 && (
@@ -150,7 +158,7 @@ export function WorkoutSessionModal() {
       <header className="mx-auto flex w-full shrink-0 items-center justify-between px-4 py-2 pt-10 md:max-w-2xl">
         <button
           type="button"
-          onClick={() => (doneCount > 0 ? setConfirmDiscard(true) : close())}
+          onClick={() => setConfirmDiscard(true)}
           aria-label="Descartar entreno"
           className="flex size-10 items-center justify-center rounded-full bg-surface hover:bg-muted"
         >
@@ -158,8 +166,15 @@ export function WorkoutSessionModal() {
         </button>
         <div className="text-center">
           <p className="text-sm font-semibold">{day.label}</p>
-          <p className="font-mono text-[11px] text-muted-foreground">
-            {doneCount}/{totalCount} series
+          <p className="flex items-center justify-center gap-1.5 font-mono text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1 tabular-nums">
+              <Clock className="size-3" />
+              {formatDuration(elapsedSec)}
+            </span>
+            <span aria-hidden>·</span>
+            <span>
+              {doneCount}/{totalCount} series
+            </span>
           </p>
         </div>
         <button
@@ -318,7 +333,11 @@ export function WorkoutSessionModal() {
       <ConfirmDialog
         open={confirmDiscard}
         title="¿Descartar entreno?"
-        description={`Perderas las ${doneCount} series completadas de esta sesion.`}
+        description={
+          doneCount > 0
+            ? `Perderas las ${doneCount} series completadas y no se guardara ningun registro de este entrenamiento.`
+            : "No se guardara ningun registro de este entrenamiento."
+        }
         confirmLabel="Descartar"
         onConfirm={() => {
           setConfirmDiscard(false);

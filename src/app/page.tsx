@@ -24,7 +24,7 @@ import { getDisplayName, type RoutineDay, type WorkoutSession } from "@/lib/work
 import { DEMO_EXERCISES } from "@/lib/exercises/repo";
 import { DIFFICULTY_LABELS, EQUIPMENT_LABELS } from "@/lib/exercises/types";
 import { formatWeight } from "@/lib/units";
-import { cn } from "@/lib/utils";
+import { cn, formatDuration } from "@/lib/utils";
 
 const WEEKDAY_LETTERS = ["L", "M", "X", "J", "V", "S", "D"];
 
@@ -372,7 +372,16 @@ function WeekCalendarCard({ sessions }: { sessions: WorkoutSession[] }) {
                     <div key={s.id} className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-medium">{s.dayLabel}</p>
-                        <p className="font-mono text-[10px] text-muted-foreground">
+                        <p className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+                          {s.durationSec !== undefined && (
+                            <>
+                              <Timer className="size-2.5" />
+                              <span className="tabular-nums">
+                                {formatDuration(s.durationSec)}
+                              </span>
+                              <span aria-hidden>·</span>
+                            </>
+                          )}
                           {groups.join(" · ")}
                         </p>
                       </div>
@@ -436,14 +445,21 @@ export default function Home() {
     });
   }
 
-  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const weekSessions = sessions.filter(
-    (s) => new Date(s.dateISO).getTime() >= weekAgo,
-  );
-  const weekVolume = weekSessions.reduce(
-    (sum, s) => sum + s.sets.reduce((a, set) => a + set.weightKg * set.reps, 0),
-    0,
-  );
+  // Momento de montaje: fija la ventana de "ultimos 7 dias" sin leer Date.now()
+  // durante el render (funcion impura).
+  const [mountedAt] = useState(() => Date.now());
+  const { weekSessions, weekVolume } = useMemo(() => {
+    const weekAgo = mountedAt - 7 * 24 * 60 * 60 * 1000;
+    const inWeek = sessions.filter(
+      (s) => new Date(s.dateISO).getTime() >= weekAgo,
+    );
+    const volume = inWeek.reduce(
+      (sum, s) =>
+        sum + s.sets.reduce((a, set) => a + set.weightKg * set.reps, 0),
+      0,
+    );
+    return { weekSessions: inWeek, weekVolume: volume };
+  }, [sessions, mountedAt]);
   const estMinutes = todayDay ? todayDay.exercises.length * 9 : 0;
 
   // Sugerencias reales: ejercicios compuestos de los grupos que menos has

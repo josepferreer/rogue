@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRogue } from "@/lib/store/rogue-store";
 
 /** Evita el parpadeo de datos vacios/por defecto mientras se lee el estado
@@ -10,9 +11,22 @@ export function HydrationGate({ children }: { children: React.ReactNode }) {
   if (!hydrated) {
     return (
       <div className="flex h-dvh w-full items-center justify-center bg-background">
-        <span className="flex size-14 animate-pulse items-center justify-center rounded-2xl bg-accent text-lg font-semibold text-accent-foreground">
-          R
-        </span>
+        <Image
+          src="/brand/logo-mark-black.png"
+          alt="Rogue"
+          width={56}
+          height={56}
+          priority
+          className="size-14 animate-pulse dark:hidden"
+        />
+        <Image
+          src="/brand/logo-mark-white.png"
+          alt="Rogue"
+          width={56}
+          height={56}
+          priority
+          className="hidden size-14 animate-pulse dark:block"
+        />
       </div>
     );
   }

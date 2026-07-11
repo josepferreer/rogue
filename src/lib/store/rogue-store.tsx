@@ -121,7 +121,11 @@ type RogueContextValue = {
   /** Username propio, con validacion de formato y unicidad. Devuelve un
    *  mensaje de error si no se pudo guardar (p.ej. ya esta en uso). */
   updateUsername: (username: string) => Promise<{ error?: string }>;
-  logSession: (dayLabel: string, sets: LoggedSet[]) => LogResult;
+  logSession: (
+    dayLabel: string,
+    sets: LoggedSet[],
+    durationSec?: number,
+  ) => LogResult;
   saveRoutine: (days: RoutineDay[]) => void;
   resetAll: () => void;
 };
@@ -264,7 +268,7 @@ async function fetchSessions(
 ): Promise<WorkoutSession[]> {
   const { data: sessionRows } = await supabase
     .from("workout_sessions")
-    .select("id, day_label, date")
+    .select("id, day_label, date, duration_sec")
     .eq("user_id", userId)
     .order("date", { ascending: true });
   if (!sessionRows || sessionRows.length === 0) return [];
@@ -293,6 +297,7 @@ async function fetchSessions(
     dateISO: s.date,
     dayLabel: s.day_label,
     sets: setsBySession.get(s.id) ?? [],
+    durationSec: s.duration_sec ?? undefined,
   }));
 }
 
@@ -342,6 +347,7 @@ async function insertWorkoutSession(
     user_id: userId,
     day_label: session.dayLabel,
     date: session.dateISO,
+    duration_sec: session.durationSec ?? null,
   });
   if (session.sets.length === 0) return;
   await supabase.from("workout_sets").insert(
@@ -521,7 +527,7 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logSession = useCallback(
-    (dayLabel: string, sets: LoggedSet[]): LogResult => {
+    (dayLabel: string, sets: LoggedSet[], durationSec?: number): LogResult => {
       const session: WorkoutSession = {
         id:
           typeof crypto !== "undefined" && crypto.randomUUID
@@ -530,6 +536,7 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
         dateISO: new Date().toISOString(),
         dayLabel,
         sets,
+        durationSec,
       };
 
       const prevBest = bestEst1RMByExercise(state.sessions);

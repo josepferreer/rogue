@@ -92,4 +92,7 @@ export type WorkoutSession = {
   dateISO: string;
   dayLabel: string;
   sets: LoggedSet[];
+  /** Duracion real de la sesion en segundos (inicio -> finalizar, incluye
+   *  descansos y pausas). Opcional: sesiones antiguas pueden no tenerla. */
+  durationSec?: number;
 };

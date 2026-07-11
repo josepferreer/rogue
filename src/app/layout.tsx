@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { AppShell } from "@/components/layout/app-shell";
 import { HydrationGate } from "@/components/hydration-gate";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeColorSync } from "@/components/theme-color-sync";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { RogueProvider } from "@/lib/store/rogue-store";
 import { CardioProvider } from "@/lib/store/cardio-store";
@@ -61,6 +62,7 @@ export default function RootLayout({
     >
       <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <ThemeColorSync />
           <RogueProvider>
             <WorkoutSessionProvider>
               <CardioProvider>
