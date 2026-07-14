@@ -196,6 +196,17 @@ export default function CardioPage() {
         )}
       </div>
 
+      {/* Action Button */}
+      <div className="mt-4 flex justify-center">
+        <button
+          onClick={isTracking ? maximize : startTracking}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-neutral-900 px-6 py-4 text-base font-semibold text-white shadow-lg transition-transform active:scale-95 dark:bg-white dark:text-neutral-900"
+        >
+          <Play className="size-5 fill-current" />
+          {isTracking ? "Ver Ruta Activa" : "Empezar Ruta Libre"}
+        </button>
+      </div>
+
       {/* Grid of stats */}
       <div className="grid grid-cols-2 gap-3">
         <PastelCard variant="blue" className="flex flex-col gap-2">
@@ -229,16 +240,7 @@ export default function CardioPage() {
         </PastelCard>
       </div>
 
-      {/* Action Button */}
-      <div className="mt-4 flex justify-center">
-        <button
-          onClick={isTracking ? maximize : startTracking}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-neutral-900 px-6 py-4 text-base font-semibold text-white shadow-lg transition-transform active:scale-95 dark:bg-white dark:text-neutral-900"
-        >
-          <Play className="size-5 fill-current" />
-          {isTracking ? "Ver Ruta Activa" : "Empezar Ruta Libre"}
-        </button>
-      </div>
+
 
       {/* History section */}
       <div className="mt-6 flex flex-col gap-4">

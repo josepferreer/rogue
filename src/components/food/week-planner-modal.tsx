@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useMeals, type MealType, MEAL_TYPES, dayKey, sumMacros } from "@/lib/store/meals-store";
 import { MealSheet } from "@/components/food/meal-sheet";
 
-const WEEKDAY_SHORT = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+const WEEKDAY_SHORT = ["L", "M", "X", "J", "V", "S", "D"];
 
 function getMondayOf(dateStr: string): Date {
   const base = new Date(`${dateStr}T00:00:00`);

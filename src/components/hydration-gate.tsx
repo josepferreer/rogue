@@ -10,9 +10,10 @@ export function HydrationGate({ children }: { children: React.ReactNode }) {
   if (!hydrated) {
     return (
       <div className="flex h-dvh w-full items-center justify-center bg-background">
-        <span className="flex size-14 animate-pulse items-center justify-center rounded-2xl bg-accent text-lg font-semibold text-accent-foreground">
-          R
-        </span>
+        <div className="animate-pulse">
+          <img src="/brand/logo-mark-black.png" alt="Rogue" className="size-16 block dark:hidden" />
+          <img src="/brand/logo-mark-white.png" alt="Rogue" className="size-16 hidden dark:block" />
+        </div>
       </div>
     );
   }
