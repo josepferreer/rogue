@@ -7,6 +7,7 @@ import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { RogueProvider } from "@/lib/store/rogue-store";
 import { CardioProvider } from "@/lib/store/cardio-store";
 import { WorkoutSessionProvider } from "@/lib/store/workout-session-store";
+import { MealsProvider } from "@/lib/store/meals-store";
 import { OnboardingGate } from "@/components/onboarding-gate";
 import "./globals.css";
 
@@ -63,12 +64,14 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <RogueProvider>
             <WorkoutSessionProvider>
-              <CardioProvider>
-                <HydrationGate>
-                  <AppShell>{children}</AppShell>
-                </HydrationGate>
-                <OnboardingGate />
-              </CardioProvider>
+              <MealsProvider>
+                <CardioProvider>
+                  <HydrationGate>
+                    <AppShell>{children}</AppShell>
+                  </HydrationGate>
+                  <OnboardingGate />
+                </CardioProvider>
+              </MealsProvider>
             </WorkoutSessionProvider>
           </RogueProvider>
         </ThemeProvider>

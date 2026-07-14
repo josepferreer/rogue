@@ -325,3 +325,48 @@ alter table cardio_sessions enable row level security;
 
 create policy "el usuario gestiona sus sesiones de cardio" on cardio_sessions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================
+-- 7. Comidas (diario nutricional + objetivos)
+-- ============================================================
+
+create table if not exists meal_entries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  -- Dia local (no timestamp): el diario se agrupa por dia natural.
+  date date not null,
+  meal_type text not null check (meal_type in ('desayuno', 'comida', 'cena', 'snack')),
+  name text not null,
+  brand text,
+  barcode text,
+  -- Gramos consumidos; los valores *_100 son por 100 g (base de Open Food
+  -- Facts) para poder recalcular al editar la cantidad.
+  quantity_g numeric not null,
+  kcal_100 numeric,
+  protein_100 numeric,
+  fat_100 numeric,
+  carbs_100 numeric,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists meal_entries_user_date_idx on meal_entries (user_id, date);
+
+alter table meal_entries enable row level security;
+
+create policy "el usuario gestiona sus comidas" on meal_entries
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Objetivos diarios (una fila por usuario).
+create table if not exists nutrition_goals (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  kcal_target int not null default 2000,
+  protein_target int not null default 130,
+  fat_target int not null default 65,
+  carbs_target int not null default 220,
+  updated_at timestamptz not null default now()
+);
+
+alter table nutrition_goals enable row level security;
+
+create policy "el usuario gestiona sus objetivos" on nutrition_goals
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
