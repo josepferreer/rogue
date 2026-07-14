@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import { BottomNav } from "./bottom-nav";
-import { FullscreenPrompt } from "./fullscreen-prompt";
 import { Sidebar } from "./sidebar";
 import { TopBar } from "./top-bar";
 import { CardioMiniPlayer } from "@/components/cardio/cardio-mini-player";
@@ -47,7 +46,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <CardioMiniPlayer />
             <WorkoutMiniPlayer />
             <BottomNav />
-            <FullscreenPrompt />
             <RouteTrackerModal />
             <WorkoutSessionModal />
           </>
