@@ -414,17 +414,26 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     // resumen; startTracking los resetea.
   }, [clearGPS, supabase, computeDuration, releaseWakeLock]);
 
-  // Recuperacion: al arrancar, si quedo una sesion a medias (la PWA murio
-  // sin pasar por stopTracking), se guarda como ruta terminada.
+  // Recuperacion: al arrancar, si quedo una sesion a medias (la PWA se cerro
+  // sin pasar por stopTracking), se REANUDA en pausa en vez de finalizarla. Asi
+  // la sesion "sigue en marcha" hasta que el usuario decida continuar (retoma el
+  // GPS) o finalizar. No se inventa tiempo: mientras la app estuvo cerrada el
+  // GPS no grababa, asi que el cronometro se corta en la ultima posicion real.
   const recoveredRef = useRef(false);
   useEffect(() => {
     if (!hydrated || isTracking || recoveredRef.current) return;
     recoveredRef.current = true;
     const snap = readSnapshot();
     if (!snap) return;
-    clearSnapshot();
 
     const lastCoord = snap.coordinates[snap.coordinates.length - 1];
+    const lastTs = lastCoord?.timestamp ?? 0;
+    // Sesion "zombie" (>12 h desde el ultimo dato): no tiene sentido reanudar.
+    if (!lastTs || Date.now() - lastTs > 12 * 60 * 60 * 1000) {
+      clearSnapshot();
+      return;
+    }
+
     // El tiempo "corriendo" tras el ultimo dato es humo: se corta en la
     // ultima posicion registrada.
     const runningSec =
@@ -432,25 +441,28 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
         ? Math.max(0, (lastCoord.timestamp - snap.runningSince) / 1000)
         : 0;
     const duration = Math.floor(snap.accumulatedSec + runningSec);
-    if (snap.distanceKm <= 0 && duration <= 10) return;
-
-    const recovered: CardioSession = {
-      id: crypto.randomUUID(),
-      dateISO: lastCoord
-        ? new Date(lastCoord.timestamp).toISOString()
-        : new Date().toISOString(),
-      coordinates: snap.coordinates,
-      distanceKm: snap.distanceKm,
-      durationSec: duration,
-    };
-    setHistory((prev) => [recovered, ...prev]);
-    const userId = userIdRef.current;
-    if (userId) {
-      syncWrite("la ruta de cardio", () =>
-        insertCardioSession(supabase, userId, recovered),
-      );
+    // Nada util grabado: descartar.
+    if (snap.distanceKm <= 0 && duration <= 10) {
+      clearSnapshot();
+      return;
     }
-  }, [hydrated, isTracking, supabase]);
+
+    // Restaura el estado en pausa. El snapshot se mantiene (sesion aun activa);
+    // el efecto de escritura lo refresca en cuanto isTracking pasa a true.
+    coordinatesRef.current = snap.coordinates;
+    distanceKmRef.current = snap.distanceKm;
+    accumulatedSecRef.current = duration;
+    runningSinceRef.current = null;
+    // Hidratacion unica desde localStorage tras el montaje (protegida por
+    // recoveredRef). Va en efecto a proposito: en el initializer romperia la
+    // hidratacion SSR al no existir localStorage en servidor.
+    setCoordinates(snap.coordinates);
+    setDistanceKm(snap.distanceKm);
+    setDurationSec(duration);
+    setIsPaused(true);
+    setIsMinimized(true);
+    setIsTracking(true);
+  }, [hydrated, isTracking]);
 
   const minimize = useCallback(() => setIsMinimized(true), []);
   const maximize = useCallback(() => setIsMinimized(false), []);

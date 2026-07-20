@@ -100,6 +100,51 @@ function buildRows(day: RoutineDay, unit: WeightUnit): Record<string, SetState[]
   return next;
 }
 
+// --- Sesion de entreno en curso: snapshot para sobrevivir a que el SO/PWA se
+//     cierre a mitad de entreno. Al reabrir, se restaura tal cual (el
+//     cronometro se autocorrige porque va anclado a startedAt). ---
+
+const ACTIVE_SNAPSHOT_KEY = "rogue.workout.active.v1";
+
+type WorkoutSnapshot = {
+  day: RoutineDay;
+  rows: Record<string, SetState[]>;
+  noteDrafts: Record<string, NoteDraft>;
+  reminders: Reminder[];
+  startedAt: number;
+  restUntil: number | null;
+  restTotal: number;
+  minimized: boolean;
+};
+
+function readWorkoutSnapshot(): WorkoutSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(ACTIVE_SNAPSHOT_KEY);
+    return raw ? (JSON.parse(raw) as WorkoutSnapshot) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeWorkoutSnapshot(snap: WorkoutSnapshot) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(ACTIVE_SNAPSHOT_KEY, JSON.stringify(snap));
+  } catch {
+    /* sin almacenamiento: la recuperacion no estara disponible */
+  }
+}
+
+function clearWorkoutSnapshot() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(ACTIVE_SNAPSHOT_KEY);
+  } catch {
+    /* nada */
+  }
+}
+
 export function WorkoutSessionProvider({
   children,
 }: {
@@ -191,6 +236,63 @@ export function WorkoutSessionProvider({
     }
   }, [now, restUntil, notifyRestEnd]);
 
+  // Restauracion: al montar, si quedo un entreno a medias (la PWA se cerro sin
+  // finalizar), se recupera y se muestra minimizado por defecto. Solo una vez.
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    const snap = readWorkoutSnapshot();
+    if (!snap || !snap.day) return;
+    // Descarta entrenos "zombies": si el snapshot es muy viejo (>12 h) no tiene
+    // sentido reanudarlo, seguramente se cerro la app y nunca se finalizo.
+    const MAX_AGE_MS = 12 * 60 * 60 * 1000;
+    if (snap.startedAt && Date.now() - snap.startedAt > MAX_AGE_MS) {
+      clearWorkoutSnapshot();
+      return;
+    }
+    setDay(snap.day);
+    setRows(snap.rows ?? {});
+    setNoteDrafts(snap.noteDrafts ?? {});
+    setReminders(snap.reminders ?? []);
+    setStartedAt(snap.startedAt);
+    setRestUntil(snap.restUntil);
+    setRestTotal(snap.restTotal);
+    setMinimized(snap.minimized ?? true);
+    setFinalDurationSec(null);
+    setPhase("active");
+    setNow(Date.now());
+    setActive(true);
+  }, []);
+
+  // Persistencia: mientras el entreno esta activo (no en la pantalla de
+  // resumen), guarda un snapshot en cada cambio relevante. En fase "done" el
+  // snapshot ya se limpio en finish(), asi que no se reescribe.
+  useEffect(() => {
+    if (!active || phase !== "active" || !day) return;
+    writeWorkoutSnapshot({
+      day,
+      rows,
+      noteDrafts,
+      reminders,
+      startedAt: startedAt ?? Date.now(),
+      restUntil,
+      restTotal,
+      minimized,
+    });
+  }, [
+    active,
+    phase,
+    day,
+    rows,
+    noteDrafts,
+    reminders,
+    startedAt,
+    restUntil,
+    restTotal,
+    minimized,
+  ]);
+
   const start = useCallback((d: RoutineDay) => {
     // Pedimos permiso de notificacion aqui (gesto de usuario) para poder
     // avisar de fin de descanso aunque la pestana este en 2.o plano.
@@ -239,6 +341,7 @@ export function WorkoutSessionProvider({
   const maximize = useCallback(() => setMinimized(false), []);
 
   const close = useCallback(() => {
+    clearWorkoutSnapshot();
     setActive(false);
     setMinimized(false);
     setDay(null);
@@ -402,6 +505,9 @@ export function WorkoutSessionProvider({
       startedAt !== null
         ? Math.max(0, Math.floor((Date.now() - startedAt) / 1000))
         : undefined;
+    // El entreno ya queda registrado: se descarta el snapshot para que al
+    // reabrir no reaparezca como sesion "en curso".
+    clearWorkoutSnapshot();
     setFinalDurationSec(durationSec ?? null);
     setResult(logSession(day.label, sets, durationSec, notes));
     setRestUntil(null);

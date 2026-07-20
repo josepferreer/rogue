@@ -6,6 +6,7 @@ import { WorkoutSessionProvider } from "@/lib/store/workout-session-store";
 import { MealsProvider } from "@/lib/store/meals-store";
 import { OnboardingGate } from "@/components/onboarding-gate";
 import { SyncErrorToast } from "@/components/sync-error-toast";
+import { ToastProvider } from "@/components/ui/toast";
 
 /**
  * Layout de la aplicacion autenticada (`/app/*`). Aqui viven todos los stores
@@ -22,11 +23,13 @@ export default function AppLayout({
       <WorkoutSessionProvider>
         <MealsProvider>
           <CardioProvider>
-            <HydrationGate>
-              <AppShell>{children}</AppShell>
-            </HydrationGate>
-            <OnboardingGate />
-            <SyncErrorToast />
+            <ToastProvider>
+              <HydrationGate>
+                <AppShell>{children}</AppShell>
+              </HydrationGate>
+              <OnboardingGate />
+              <SyncErrorToast />
+            </ToastProvider>
           </CardioProvider>
         </MealsProvider>
       </WorkoutSessionProvider>

@@ -24,6 +24,9 @@ export type Alimento = {
   fat: number;
   isFavorite: boolean;
   healthScore?: HealthScore;
+  /** Nombres de ingredientes de un producto listo escaneado (informativo).
+   *  Vacio/undefined para alimentos simples y creados a mano. */
+  ingredients?: string[];
 };
 
 export type PlatoFood = {
@@ -38,7 +41,22 @@ export type Plato = {
   foods: PlatoFood[];
   isFavorite: boolean;
   healthScore?: HealthScore;
+  /** Macros por 100 g de un plato "listo" (producto preparado escaneado). Solo
+   *  se usan cuando el plato no tiene ingredientes enlazables (foods vacio); en
+   *  los platos manuales las macros se calculan sumando sus alimentos. */
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  /** Nombres de ingredientes de un producto listo (informativo). */
+  ingredients?: string[];
 };
+
+/** Un plato "listo" (producto preparado escaneado) no tiene ingredientes
+ *  enlazados a la despensa: guarda sus propias macros por 100 g y se registra
+ *  por gramos como un alimento. Los platos manuales siempre tienen >=1 food. */
+export function isReadyPlato(p: Plato): boolean {
+  return p.foods.length === 0;
+}
 
 type PantryContextType = {
   alimentos: Alimento[];
@@ -105,6 +123,7 @@ type FoodRow = {
   protein: number;
   carbs: number;
   fat: number;
+  ingredients: string[] | null;
   is_favorite: boolean;
   health_score: HealthScore | null;
 };
@@ -128,6 +147,7 @@ function rowToAlimento(r: FoodRow): Alimento {
     fat: Number(r.fat),
     isFavorite: r.is_favorite,
     healthScore: r.health_score ?? undefined,
+    ingredients: r.ingredients && r.ingredients.length > 0 ? r.ingredients : undefined,
   };
 }
 
@@ -151,6 +171,7 @@ function alimentoToRow(userId: string, a: Alimento) {
     protein: a.protein,
     carbs: a.carbs,
     fat: a.fat,
+    ingredients: a.ingredients ?? [],
     is_favorite: a.isFavorite,
     health_score: a.healthScore ?? null,
   };
@@ -176,7 +197,7 @@ async function fetchPantry(
     fetchAllPages<FoodRow>(async (from, to) => {
       const { data, error } = await supabase
         .from("pantry_foods")
-        .select("id, name, kcal, protein, carbs, fat, is_favorite, health_score")
+        .select("id, name, kcal, protein, carbs, fat, ingredients, is_favorite, health_score")
         .eq("user_id", userId)
         .order("name")
         .order("id")

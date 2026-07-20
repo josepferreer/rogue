@@ -370,6 +370,8 @@ create table if not exists pantry_foods (
   protein numeric not null default 0,
   carbs numeric not null default 0,
   fat numeric not null default 0,
+  -- Ingredientes (solo nombres) de productos listos escaneados; informativo.
+  ingredients jsonb not null default '[]',
   is_favorite boolean not null default false,
   health_score text check (health_score in ('green', 'yellow', 'orange', 'red')),
   created_at timestamptz not null default now()

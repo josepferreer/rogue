@@ -131,6 +131,27 @@ body {
   color: var(--foreground);
 }
 
+/* Sensacion de app nativa: solo cuando esta instalada como PWA (standalone)
+   se desactiva la seleccion de texto y el menu contextual de iOS. En el
+   navegador normal el texto sigue siendo seleccionable. Los campos editables
+   y lo marcado como .selectable conservan la seleccion. */
+@media (display-mode: standalone) {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"],
+  .selectable {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+}
+
 * {
   border-color: var(--border);
 }
@@ -143,4 +164,10 @@ body {
 @keyframes ex-frame-alt {
   0%, 49% { opacity: 0; }
   50%, 100% { opacity: 1; }
+}
+
+/* Entrada de los avisos (toast) desde arriba */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }

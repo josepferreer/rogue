@@ -6,6 +6,7 @@ import { useTheme } from "next-themes";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import type { Coordinate } from "@/lib/store/cardio-store";
+import { matchToRoads } from "@/lib/cardio/map-matching";
 
 // Fix para los iconos por defecto de Leaflet en Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -17,6 +18,9 @@ L.Icon.Default.mergeOptions({
 
 interface MapViewProps {
   coordinates: Coordinate[];
+  /** Encaja la traza sobre las calles reales (map matching). Pensado para
+   *  rutas ya terminadas, no para el seguimiento en vivo. */
+  snapToRoads?: boolean;
 }
 
 function MapUpdater({ coordinates }: { coordinates: Coordinate[] }) {
@@ -42,13 +46,31 @@ function MapUpdater({ coordinates }: { coordinates: Coordinate[] }) {
   return null;
 }
 
-export default function MapView({ coordinates }: MapViewProps) {
+export default function MapView({ coordinates, snapToRoads = false }: MapViewProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  // Traza encajada a las calles (null hasta que llega / si falla el matching).
+  const [matchedPath, setMatchedPath] = useState<[number, number][] | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Map matching: se ejecuta una vez por traza cuando snapToRoads esta activo.
+  // Si falla o no encaja, matchedPath se queda null y se dibuja la traza cruda.
+  useEffect(() => {
+    if (!snapToRoads || coordinates.length < 2) {
+      setMatchedPath(null);
+      return;
+    }
+    let alive = true;
+    matchToRoads(coordinates).then((path) => {
+      if (alive) setMatchedPath(path);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [snapToRoads, coordinates]);
 
   if (!mounted) return null;
 
@@ -62,12 +84,14 @@ export default function MapView({ coordinates }: MapViewProps) {
     : [40.4168, -3.7038]; // Madrid por defecto
 
   const positions: [number, number][] = coordinates.map((c) => [c.lat, c.lng]);
+  // Linea a dibujar: la encajada a calles si esta disponible, si no la cruda.
+  const linePositions = matchedPath ?? positions;
 
   return (
     <div className="h-full w-full bg-muted">
-      <MapContainer 
-        center={defaultCenter} 
-        zoom={15} 
+      <MapContainer
+        center={defaultCenter}
+        zoom={15}
         style={{ height: "100%", width: "100%" }}
         zoomControl={false}
         attributionControl={false}
@@ -77,11 +101,11 @@ export default function MapView({ coordinates }: MapViewProps) {
         />
         {positions.length > 0 && (
           <>
-            <Polyline positions={positions} color="#3b82f6" weight={5} opacity={0.8} />
-            <CircleMarker 
-              center={positions[positions.length - 1]} 
+            <Polyline positions={linePositions} color="#3b82f6" weight={5} opacity={0.8} />
+            <CircleMarker
+              center={positions[positions.length - 1]}
               radius={8}
-              pathOptions={{ fillColor: "#3b82f6", color: "white", weight: 3, fillOpacity: 1 }} 
+              pathOptions={{ fillColor: "#3b82f6", color: "white", weight: 3, fillOpacity: 1 }}
             />
           </>
         )}

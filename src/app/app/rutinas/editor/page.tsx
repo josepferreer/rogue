@@ -144,6 +144,19 @@ export default function ConstructorPage() {
     });
   };
 
+  // Reordena los ejercicios dentro de un dia (arrastrar y soltar).
+  const reorderExercises = (dayId: string, activeExId: string, overExId: string) => {
+    setDays((prev) =>
+      prev.map((d) => {
+        if (d.id !== dayId) return d;
+        const from = d.exercises.findIndex((e) => e.exerciseId === activeExId);
+        const to = d.exercises.findIndex((e) => e.exerciseId === overExId);
+        if (from === -1 || to === -1) return d;
+        return { ...d, exercises: arrayMove(d.exercises, from, to) };
+      }),
+    );
+  };
+
   const handleSave = () => {
     saveRoutine(days);
     router.push("/app/rutinas");
@@ -197,6 +210,9 @@ export default function ConstructorPage() {
                   patchExercise(day.id, exId, patch)
                 }
                 onRemoveExercise={(exId) => removeExercise(day.id, exId)}
+                onReorderExercises={(activeExId, overExId) =>
+                  reorderExercises(day.id, activeExId, overExId)
+                }
                 onAddExercise={() => setSelectorForDay(day.id)}
                 onRemoveDay={() => setConfirmRemoveDay(day)}
               />
@@ -256,6 +272,7 @@ function SortableDay({
   onUpdate,
   onPatchExercise,
   onRemoveExercise,
+  onReorderExercises,
   onAddExercise,
   onRemoveDay,
 }: {
@@ -266,6 +283,7 @@ function SortableDay({
   onUpdate: (patch: Partial<RoutineDay>) => void;
   onPatchExercise: (exId: string, patch: Partial<RoutineExercise>) => void;
   onRemoveExercise: (exId: string) => void;
+  onReorderExercises: (activeExId: string, overExId: string) => void;
   onAddExercise: () => void;
   onRemoveDay: () => void;
 }) {
@@ -278,6 +296,20 @@ function SortableDay({
     transition,
     isDragging,
   } = useSortable({ id: day.id });
+
+  // DnD anidado para reordenar los ejercicios de este dia. Sensores propios
+  // (independientes del DnD de dias); mismo umbral de 6px para no disparar el
+  // arrastre al tocar los steppers.
+  const exerciseSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleExerciseDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    onReorderExercises(String(active.id), String(over.id));
+  };
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -397,14 +429,29 @@ function SortableDay({
                 Sin ejercicios todavía
               </p>
             )}
-            {day.exercises.map((ex) => (
-              <ExerciseRow
-                key={ex.exerciseId}
-                ex={ex}
-                onChange={(patch) => onPatchExercise(ex.exerciseId, patch)}
-                onRemove={() => onRemoveExercise(ex.exerciseId)}
-              />
-            ))}
+            <DndContext
+              id={`day-${day.id}-exercises-dnd`}
+              sensors={exerciseSensors}
+              collisionDetection={closestCenter}
+              modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+              onDragEnd={handleExerciseDragEnd}
+            >
+              <SortableContext
+                items={day.exercises.map((e) => e.exerciseId)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="flex flex-col gap-2">
+                  {day.exercises.map((ex) => (
+                    <ExerciseRow
+                      key={ex.exerciseId}
+                      ex={ex}
+                      onChange={(patch) => onPatchExercise(ex.exerciseId, patch)}
+                      onRemove={() => onRemoveExercise(ex.exerciseId)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           </div>
 
           {/* Botones */}
@@ -447,10 +494,44 @@ function ExerciseRow({
   const img0 = exercise ? `${EXERCISE_IMG_BASE}/${exercise.fuenteId}/0.jpg` : null;
   const img1 = exercise ? `${EXERCISE_IMG_BASE}/${exercise.fuenteId}/1.jpg` : null;
 
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: ex.exerciseId });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
   return (
-    <div className="rounded-2xl border border-border bg-background overflow-hidden">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "rounded-2xl border bg-background overflow-hidden",
+        isDragging
+          ? "z-10 border-foreground/40 shadow-[0_12px_30px_-12px_rgba(23,24,28,0.35)]"
+          : "border-border",
+      )}
+    >
       {/* Fila principal */}
-      <div className="flex items-center gap-2 px-3 pt-3">
+      <div className="flex items-center gap-1 px-2 pt-3">
+        <span
+          ref={setActivatorNodeRef}
+          {...attributes}
+          {...listeners}
+          aria-label="Arrastra para reordenar el ejercicio"
+          title="Arrastra para reordenar"
+          className="flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing"
+        >
+          <GripVertical className="size-4" />
+        </span>
         <p className="flex-1 text-sm font-medium leading-tight">{nombre}</p>
         <button
           onClick={() => setExpanded((v) => !v)}

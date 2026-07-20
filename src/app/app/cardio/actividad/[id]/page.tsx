@@ -86,7 +86,7 @@ export default function ActivityDetailsPage({
 
       {/* Map container */}
       <div className="relative h-[300px] w-full overflow-hidden rounded-3xl border border-border shadow-sm">
-        <MapView coordinates={session.coordinates} />
+        <MapView coordinates={session.coordinates} snapToRoads />
       </div>
 
       {/* Stats Grid */}

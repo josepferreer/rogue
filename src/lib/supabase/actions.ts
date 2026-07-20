@@ -73,6 +73,15 @@ export async function signUp(
 
 export async function signOut() {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  // scope "local": solo limpia la sesion de este dispositivo (borra las
+  // cookies). Evita la revocacion "global", que hace una llamada de red para
+  // invalidar TODAS las sesiones del usuario y bloqueaba el cierre de sesion
+  // (lento en PWA/movil). El try/catch garantiza que un fallo de red no impida
+  // el redirect: las cookies ya se han limpiado y el proxy hara de guard.
+  try {
+    await supabase.auth.signOut({ scope: "local" });
+  } catch {
+    // Ignorado a proposito: seguimos al redirect igualmente.
+  }
   redirect("/login");
 }

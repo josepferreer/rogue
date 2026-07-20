@@ -11,6 +11,8 @@ import { WeekPlannerModal } from "@/components/food/week-planner-modal";
 import { NutritionGoalsModal } from "@/components/food/nutrition-goals-modal";
 import { PantryProvider, usePantry } from "@/lib/store/pantry-store";
 import { BarcodeScanner } from "@/components/food/barcode-scanner";
+import { useToast } from "@/components/ui/toast";
+import { parseOffIngredients } from "@/lib/food/ingredients";
 import {
   dayKey,
   MEAL_TYPES,
@@ -258,11 +260,15 @@ function MacroBar({
 }
 
 function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void }) {
-  const { addAlimento, addPlato } = usePantry();
+  const { addAlimento } = usePantry();
+  const { notify } = useToast();
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannedProduct, setScannedProduct] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [portalTarget, setPortalTarget] = useState<Element | null>(null);
+
+  // Ingredientes + deteccion de "producto listo" del producto escaneado.
+  const parsed = useMemo(() => parseOffIngredients(scannedProduct), [scannedProduct]);
 
   useEffect(() => {
     setPortalTarget(document.getElementById("app-shell"));
@@ -277,10 +283,10 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
       if (data.status === 1 && data.product) {
         setScannedProduct(data.product);
       } else {
-        alert("Producto no encontrado en la base de datos.");
+        notify("Producto no encontrado en la base de datos.", "error");
       }
-    } catch (error) {
-      alert("Error al buscar el código de barras.");
+    } catch {
+      notify("Error al buscar el código de barras.", "error");
     } finally {
       setLoading(false);
     }
@@ -305,49 +311,19 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
       protein: n?.["proteins_100g"] || 0,
       carbs: n?.["carbohydrates_100g"] || 0,
       fat: n?.["fat_100g"] || 0,
-      healthScore
+      healthScore,
+      // Productos listos: guardamos la lista de ingredientes (informativa). Las
+      // macros del producto entero (por 100 g) ya son correctas; los gramos por
+      // ingrediente no los da OFF, se dejan en blanco.
+      ingredients: parsed.ingredients.length > 0 ? parsed.ingredients : undefined,
     });
     setScannedProduct(null);
-    alert("¡Alimento guardado en la despensa!");
-  };
-
-  const saveAsPlato = () => {
-    if (!scannedProduct) return;
-    const n = scannedProduct.nutriments;
-
-    let healthScore: "green" | "yellow" | "orange" | "red" | undefined = undefined;
-    if (scannedProduct.nutriscore_grade) {
-      const grade = scannedProduct.nutriscore_grade.toLowerCase();
-      if (grade === 'a' || grade === 'b') healthScore = "green";
-      else if (grade === 'c') healthScore = "yellow";
-      else if (grade === 'd') healthScore = "orange";
-      else if (grade === 'e') healthScore = "red";
-    }
-
-    const alimentoInfo = {
-      name: scannedProduct.product_name || "Desconocido",
-      kcal: n?.["energy-kcal_100g"] || 0,
-      protein: n?.["proteins_100g"] || 0,
-      carbs: n?.["carbohydrates_100g"] || 0,
-      fat: n?.["fat_100g"] || 0,
-      healthScore
-    };
-    
-    // Al ser sincrono en local, addAlimento no nos devuelve el ID (se genera un Date.now()).
-    // Para simplificar, añadiremos el alimento y luego un plato con un nuevo alimento que lo referencia.
-    // Usaremos un ID temporal que coincida, o simplemente guardamos el plato vacío si no podemos enlazarlo fácil.
-    // Mejor: creamos el alimento, esperamos (pero es sincrono), luego tendriamos que buscarlo.
-    // En este caso, simplemente guardaremos un Plato "rápido" que use ese alimento.
-    const tempId = Date.now().toString();
-    addAlimento({ ...alimentoInfo });
-    // Esto es un poco hacky para demo local, lo normal en BD es que devuelva el ID.
-    addPlato({
-      name: scannedProduct.product_name || "Desconocido",
-      kcal: alimentoInfo.kcal,
-      foods: [{ alimentoId: tempId, quantityG: 100 }] // Fallara la referencia visual, pero el plato existira
-    });
-    setScannedProduct(null);
-    alert("¡Plato guardado en la despensa!");
+    notify(
+      parsed.isReadyMeal
+        ? "¡Producto listo guardado en la despensa!"
+        : "¡Alimento guardado en la despensa!",
+      "success",
+    );
   };
 
   return (
@@ -384,8 +360,13 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-5 pb-3 pt-4">
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-1 min-w-0">
                   <p className="font-semibold line-clamp-1">{scannedProduct.product_name || "Producto desconocido"}</p>
+                  {parsed.isReadyMeal && (
+                    <span className="w-fit rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-foreground">
+                      Producto listo
+                    </span>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -432,14 +413,30 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
                   </div>
                 )}
 
-                <div className="flex flex-col gap-2">
-                  <Button fullWidth onClick={saveAsAlimento}>
-                    Guardar Alimento
-                  </Button>
-                  <Button variant="secondary" fullWidth onClick={saveAsPlato}>
-                    Guardar Plato
-                  </Button>
-                </div>
+                {parsed.ingredients.length > 0 && (
+                  <div className="flex flex-col gap-1.5">
+                    <p className="font-mono text-[11px] tracking-[0.2em] text-muted-foreground">
+                      INGREDIENTES
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {parsed.ingredients.map((ing, i) => (
+                        <span
+                          key={i}
+                          className="rounded-full bg-surface border border-border px-2.5 py-1 text-[11px] text-muted-foreground"
+                        >
+                          {ing}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground/70">
+                      Gramos por ingrediente no disponibles en el producto.
+                    </p>
+                  </div>
+                )}
+
+                <Button fullWidth onClick={saveAsAlimento}>
+                  {parsed.isReadyMeal ? "Guardar producto listo" : "Guardar alimento"}
+                </Button>
               </div>
             </div>
           </div>

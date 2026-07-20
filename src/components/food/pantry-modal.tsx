@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { usePantry, Alimento, Plato, PlatoFood } from "@/lib/store/pantry-store";
 import { BarcodeScanner } from "@/components/food/barcode-scanner";
+import { useToast } from "@/components/ui/toast";
 
 function estimateHealthScore(kcal: number, p: number, c: number, f: number): "green" | "yellow" | "orange" | "red" {
   let points = 0;
@@ -49,6 +50,7 @@ function AlimentoForm({
   const [isManualScore, setIsManualScore] = useState(!!initialData?.healthScore);
   const [scanning, setScanning] = useState(false);
   const [loadingCode, setLoadingCode] = useState(false);
+  const { notify } = useToast();
 
   useEffect(() => {
     if (isManualScore || scanning) return;
@@ -97,10 +99,10 @@ function AlimentoForm({
           setIsManualScore(true); // Don't let auto-calc override scanned score
         }
       } else {
-        alert("Producto no encontrado en la base de datos.");
+        notify("Producto no encontrado en la base de datos.", "error");
       }
-    } catch (error) {
-      alert("Error al buscar el código de barras.");
+    } catch {
+      notify("Error al buscar el código de barras.", "error");
     } finally {
       setLoadingCode(false);
     }
@@ -490,6 +492,15 @@ export function PantryModal({ open, onClose }: Props) {
                         <span>C: {alimento.carbs}g</span>
                         <span>G: {alimento.fat}g</span>
                       </div>
+                      {alimento.ingredients && alimento.ingredients.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {alimento.ingredients.map((ing, i) => (
+                            <span key={i} className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              {ing}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="flex gap-1">
                       <button type="button" onClick={() => toggleFavoriteAlimento(alimento.id)} className="flex size-10 items-center justify-center text-muted-foreground hover:text-red-500 transition-colors">
