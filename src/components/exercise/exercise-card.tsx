@@ -22,7 +22,7 @@ export function ExerciseCard({
 
   return (
     <Link
-      href={`/biblioteca/${exercise.id}`}
+      href={`/app/biblioteca/${exercise.id}`}
       className="relative flex items-center gap-3 rounded-3xl border border-border bg-surface p-3 transition-colors hover:bg-muted/60 active:bg-muted"
     >
       {badge && (

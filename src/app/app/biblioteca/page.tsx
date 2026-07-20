@@ -4,5 +4,5 @@ import { redirect } from "next/navigation";
 // "Ejercicios"). Se mantiene la ruta como redirect para no romper enlaces
 // antiguos. Las fichas de detalle siguen en /biblioteca/[id].
 export default function BibliotecaPage() {
-  redirect("/rutinas?tab=ejercicios");
+  redirect("/app/rutinas?tab=ejercicios");
 }

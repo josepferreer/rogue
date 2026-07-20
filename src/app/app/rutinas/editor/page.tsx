@@ -146,7 +146,7 @@ export default function ConstructorPage() {
 
   const handleSave = () => {
     saveRoutine(days);
-    router.push("/rutinas");
+    router.push("/app/rutinas");
   };
 
   return (

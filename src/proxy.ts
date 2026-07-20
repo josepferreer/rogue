@@ -2,8 +2,9 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
-// Rutas accesibles sin sesion. El resto exige estar autenticado.
-const PUBLIC_PATHS = ["/login"];
+// La zona autenticada es todo lo que cuelga de /app. El resto (landing "/",
+// /login, /api, assets) es publico.
+const APP_PREFIX = "/app";
 
 // Next.js 16 renombro "middleware" a "proxy" (mismo mecanismo). Ademas de
 // refrescar el token de sesion de Supabase en cada request (para que las
@@ -44,19 +45,18 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isPublic = PUBLIC_PATHS.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
-  );
+  const isAppZone =
+    pathname === APP_PREFIX || pathname.startsWith(`${APP_PREFIX}/`);
 
-  // Deslogueado en ruta protegida -> a login (en servidor, sin flash).
-  if (!user && !isPublic) {
+  // Deslogueado en la zona /app -> a login (en servidor, sin flash).
+  if (!user && isAppZone) {
     return redirectKeepingCookies(request, response, "/login");
   }
   // Logueado que intenta ver /login -> a la app. El onboarding (perfil sin
   // completar) lo sigue resolviendo OnboardingGate en cliente, que necesita
   // leer el perfil ya hidratado y evita una query extra por request aqui.
   if (user && pathname === "/login") {
-    return redirectKeepingCookies(request, response, "/");
+    return redirectKeepingCookies(request, response, "/app");
   }
 
   return response;

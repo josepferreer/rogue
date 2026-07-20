@@ -6,7 +6,11 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Rogue",
     description:
       "Planifica tus entrenamientos, explora la biblioteca de ejercicios y sube de rango musculo a musculo.",
-    start_url: "/",
+    id: "/app",
+    // La PWA instalada abre directa en la app; la landing publica vive en "/"
+    // y solo se ve desde el navegador. scope se queda en "/" para que /login
+    // (parte del flujo de sesion) siga dentro del ambito de la PWA.
+    start_url: "/app",
     scope: "/",
     display: "standalone",
     display_override: ["standalone"],

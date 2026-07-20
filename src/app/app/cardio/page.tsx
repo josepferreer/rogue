@@ -259,7 +259,7 @@ export default function CardioPage() {
           ) : (
             history.map((session) => (
               <Link
-                href={`/cardio/actividad/${session.id}`}
+                href={`/app/cardio/actividad/${session.id}`}
                 key={session.id}
                 className="flex items-center justify-between rounded-3xl border border-border bg-surface p-4 transition-colors hover:bg-muted/40 active:bg-muted"
               >

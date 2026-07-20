@@ -107,7 +107,7 @@ export default function OnboardingPage() {
       heightCm: Math.round(Number(height)),
       goal,
     });
-    router.replace("/");
+    router.replace("/app");
   }
 
   return (

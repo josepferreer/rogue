@@ -37,7 +37,7 @@ function RoutinePanel() {
           </p>
         </div>
         <Link
-          href="/rutinas/editor"
+          href="/app/rutinas/editor"
           className="mt-1 flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-xs font-semibold text-background"
         >
           <Pencil className="size-3.5" />
@@ -157,7 +157,7 @@ export default function EntrenoPage({
         </div>
         {tab === "rutina" && (
           <Link
-            href="/rutinas/editor"
+            href="/app/rutinas/editor"
             className="flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
           >
             <Pencil className="size-3.5" />

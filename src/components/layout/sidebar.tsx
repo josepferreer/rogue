@@ -23,7 +23,7 @@ export function Sidebar() {
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-border bg-surface px-4 py-6 md:flex">
-      <Link href="/" className="flex items-center gap-2 px-2">
+      <Link href="/app" className="flex items-center gap-2 px-2">
         <Image
           src="/brand/logo-mark-black.png"
           alt=""
@@ -46,7 +46,7 @@ export function Sidebar() {
       <nav className="mt-8 flex flex-col gap-1">
         {/* El perfil ya tiene su propia entrada con avatar al pie del sidebar;
             en escritorio se omite del listado para no duplicarlo. */}
-        {NAV_ITEMS.filter((item) => item.href !== "/perfil").map((item) => {
+        {NAV_ITEMS.filter((item) => item.href !== "/app/perfil").map((item) => {
           const active = isNavItemActive(pathname, item);
           const Icon = item.icon;
           return (
@@ -68,10 +68,10 @@ export function Sidebar() {
       </nav>
 
       <Link
-        href="/perfil"
+        href="/app/perfil"
         className={cn(
           "mt-auto flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted",
-          pathname === "/perfil" && "bg-muted"
+          pathname === "/app/perfil" && "bg-muted"
         )}
       >
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-foreground">

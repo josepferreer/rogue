@@ -45,7 +45,7 @@ export default async function ExercisePage({ params }: PageProps) {
       <div>
         <div className="flex items-center justify-between">
           <Link
-            href="/rutinas?tab=ejercicios"
+            href="/app/rutinas?tab=ejercicios"
             aria-label="Volver a ejercicios"
             className="flex size-10 items-center justify-center rounded-full bg-surface hover:bg-muted"
           >

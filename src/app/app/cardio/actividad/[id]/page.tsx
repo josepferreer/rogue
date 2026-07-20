@@ -42,7 +42,7 @@ export default function ActivityDetailsPage({
     return (
       <div className="flex flex-col items-center justify-center gap-4 pt-24 text-center">
         <p className="text-muted-foreground">Actividad no encontrada.</p>
-        <Button onClick={() => router.push("/cardio")} className="px-6 py-2">
+        <Button onClick={() => router.push("/app/cardio")} className="px-6 py-2">
           Volver a Cardio
         </Button>
       </div>
@@ -71,7 +71,7 @@ export default function ActivityDetailsPage({
     <div className="flex flex-col gap-6 pt-2 pb-8">
       <div className="flex items-center gap-3">
         <button
-          onClick={() => router.push("/cardio")}
+          onClick={() => router.push("/app/cardio")}
           className="flex size-10 items-center justify-center rounded-full bg-surface hover:bg-muted"
         >
           <ArrowLeft className="size-5" />

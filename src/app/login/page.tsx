@@ -15,7 +15,7 @@ export default function LoginPage() {
   );
 
   return (
-    <div className="relative mx-auto flex w-full flex-1 flex-col justify-center px-6 py-10 md:max-w-sm">
+    <div className="relative mx-auto flex min-h-dvh w-full flex-col justify-center bg-background px-6 py-10 md:max-w-sm">
       {/* Marca de agua: solo el simbolo, grande, muy tenue y difuminado. El
           contenido va en una capa z-10 por encima. */}
       <div

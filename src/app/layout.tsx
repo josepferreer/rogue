@@ -1,16 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
-import { AppShell } from "@/components/layout/app-shell";
-import { HydrationGate } from "@/components/hydration-gate";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeColorSync } from "@/components/theme-color-sync";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
-import { RogueProvider } from "@/lib/store/rogue-store";
-import { CardioProvider } from "@/lib/store/cardio-store";
-import { WorkoutSessionProvider } from "@/lib/store/workout-session-store";
-import { MealsProvider } from "@/lib/store/meals-store";
-import { OnboardingGate } from "@/components/onboarding-gate";
-import { SyncErrorToast } from "@/components/sync-error-toast";
 import { SetupNotice } from "@/components/setup-notice";
 import { getMissingSupabaseEnv } from "@/lib/supabase/env";
 import "./globals.css";
@@ -28,11 +20,11 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   applicationName: "Rogue",
   title: {
-    default: "Rogue - Entrena con rango",
+    default: "Rogue - Entrena, come y registra tu progreso",
     template: "%s · Rogue",
   },
   description:
-    "Planifica tus entrenamientos, explora la biblioteca de ejercicios y sube de rango musculo a musculo.",
+    "Controla tus rutinas y biblioteca de ejercicios, escanea alimentos por codigo de barras con sus macros y registra tus rutas de cardio. Todo en una PWA.",
   appleWebApp: {
     capable: true,
     title: "Rogue",
@@ -70,22 +62,10 @@ export default function RootLayout({
         {missingEnv.length > 0 ? (
           <SetupNotice missing={missingEnv} />
         ) : (
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <ThemeColorSync />
-          <RogueProvider>
-            <WorkoutSessionProvider>
-              <MealsProvider>
-                <CardioProvider>
-                  <HydrationGate>
-                    <AppShell>{children}</AppShell>
-                  </HydrationGate>
-                  <OnboardingGate />
-                  <SyncErrorToast />
-                </CardioProvider>
-              </MealsProvider>
-            </WorkoutSessionProvider>
-          </RogueProvider>
-        </ThemeProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <ThemeColorSync />
+            {children}
+          </ThemeProvider>
         )}
         <ServiceWorkerRegister />
       </body>

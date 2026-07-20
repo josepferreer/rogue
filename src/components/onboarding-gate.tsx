@@ -18,11 +18,11 @@ export function OnboardingGate() {
       return;
     }
     if (!profile.onboarded) {
-      if (pathname !== "/onboarding") router.replace("/onboarding");
+      if (pathname !== "/app/onboarding") router.replace("/app/onboarding");
       return;
     }
-    if (pathname === "/login" || pathname === "/onboarding") {
-      router.replace("/");
+    if (pathname === "/app/onboarding") {
+      router.replace("/app");
     }
   }, [hydrated, authenticated, profile.onboarded, pathname, router]);
 

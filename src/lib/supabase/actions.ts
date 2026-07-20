@@ -35,7 +35,7 @@ export async function signIn(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: "Usuario/email o contrasena incorrectos." };
 
-  redirect("/");
+  redirect("/app");
 }
 
 export async function signUp(
@@ -68,7 +68,7 @@ export async function signUp(
     return { error: error.message };
   }
 
-  redirect("/onboarding");
+  redirect("/app/onboarding");
 }
 
 export async function signOut() {
