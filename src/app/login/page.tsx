@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { signIn, signUp, type AuthState } from "@/lib/supabase/actions";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { InstallPwaButton } from "@/components/install-pwa-button";
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -14,15 +15,39 @@ export default function LoginPage() {
   );
 
   return (
-    <div className="mx-auto flex w-full flex-1 flex-col justify-center px-6 py-10 md:max-w-sm">
-      <h1 className="mb-1 text-2xl font-semibold">Rogue</h1>
-      <p className="mb-8 text-sm text-muted-foreground">
-        {mode === "login"
-          ? "Inicia sesion para ver tus rangos y tu historial."
-          : "Crea una cuenta para guardar tu progreso."}
-      </p>
+    <div className="relative mx-auto flex w-full flex-1 flex-col justify-center px-6 py-10 md:max-w-sm">
+      {/* Marca de agua: solo el simbolo, grande, muy tenue y difuminado. El
+          contenido va en una capa z-10 por encima. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/brand/logo-mark-black.png"
+          alt=""
+          className="w-80 max-w-[90%] opacity-[0.08] blur-[2px] dark:hidden"
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/brand/logo-mark-white.png"
+          alt=""
+          className="hidden w-80 max-w-[90%] opacity-[0.10] blur-[2px] dark:block"
+        />
+      </div>
 
-      <div className="mb-6 flex rounded-full border border-border p-1">
+      <div className="relative z-10 mb-8">
+        <h1 className="text-xl font-semibold tracking-tight">
+          Sube de rango
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {mode === "login"
+            ? "Registra cada entreno y escala de Principiante a Maestro, musculo a musculo."
+            : "Crea tu cuenta y empieza a subir de rango desde tu primera serie."}
+        </p>
+      </div>
+
+      <div className="relative z-10 mb-6 flex rounded-full border border-border p-1">
         <button
           type="button"
           onClick={() => setMode("login")}
@@ -49,7 +74,7 @@ export default function LoginPage() {
         </button>
       </div>
 
-      <form action={formAction} className="flex flex-col gap-4">
+      <form action={formAction} className="relative z-10 flex flex-col gap-4">
         {mode === "login" ? (
           <div className="flex flex-col gap-1.5">
             <label htmlFor="identifier" className="text-sm text-muted-foreground">
@@ -126,6 +151,10 @@ export default function LoginPage() {
               : "Crear cuenta"}
         </Button>
       </form>
+
+      <div className="relative z-10">
+        <InstallPwaButton />
+      </div>
     </div>
   );
 }

@@ -2,9 +2,14 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
-// Next.js 16 renombro "middleware" a "proxy" (mismo mecanismo). Esta funcion
-// se limita a refrescar el token de sesion de Supabase en cada request para
-// que las cookies no caduquen mientras el usuario navega.
+// Rutas accesibles sin sesion. El resto exige estar autenticado.
+const PUBLIC_PATHS = ["/login"];
+
+// Next.js 16 renombro "middleware" a "proxy" (mismo mecanismo). Ademas de
+// refrescar el token de sesion de Supabase en cada request (para que las
+// cookies no caduquen), hace de guard de autenticacion en servidor: asi el
+// usuario deslogueado cae en /login sin el parpadeo que producia el redirect
+// en cliente al abrir la PWA.
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -34,13 +39,53 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { pathname } = request.nextUrl;
+  const isPublic = PUBLIC_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
+
+  // Deslogueado en ruta protegida -> a login (en servidor, sin flash).
+  if (!user && !isPublic) {
+    return redirectKeepingCookies(request, response, "/login");
+  }
+  // Logueado que intenta ver /login -> a la app. El onboarding (perfil sin
+  // completar) lo sigue resolviendo OnboardingGate en cliente, que necesita
+  // leer el perfil ya hidratado y evita una query extra por request aqui.
+  if (user && pathname === "/login") {
+    return redirectKeepingCookies(request, response, "/");
+  }
 
   return response;
 }
 
+/**
+ * Redirige preservando las cookies de sesion que Supabase pudo refrescar en
+ * `response` (si se pierden, el usuario quedaria deslogueado tras el redirect).
+ */
+function redirectKeepingCookies(
+  request: NextRequest,
+  response: NextResponse,
+  pathname: string,
+): NextResponse {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  url.search = "";
+  const redirect = NextResponse.redirect(url);
+  for (const cookie of response.cookies.getAll()) {
+    redirect.cookies.set(cookie);
+  }
+  return redirect;
+}
+
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icons/).*)",
+    // Excluimos assets estaticos (incluida cualquier ruta con extension de
+    // imagen/fuente como /brand/*.png): si no, el guard de auth redirigiria
+    // esas peticiones a /login y no cargarian, p.ej. el logo del propio login.
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icons/|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|woff2?|ttf)$).*)",
   ],
 };
