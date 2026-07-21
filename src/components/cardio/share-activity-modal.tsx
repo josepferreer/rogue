@@ -501,7 +501,9 @@ export function ShareActivityModal({
     const a = document.createElement("a");
     a.href = url;
     a.download = `rogue-${session.dateISO.slice(0, 10)}.png`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
