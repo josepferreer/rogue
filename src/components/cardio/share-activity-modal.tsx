@@ -22,25 +22,33 @@ const FORMATS: Record<ShareFormat, { w: number; h: number; label: string }> = {
   square: { w: 1080, h: 1080, label: "Cuadrado" },
 };
 
-/** Temas del mapa: el mapa base se re-colorea con un duotono (oscuro→`low`,
- *  claro→`high`), dando un mapa monocromo en el tono del tema. `dark` decide el
- *  color de ruta/texto. */
+/**
+ * Temas del mapa:
+ *  - `raw`: usa las tiles de CartoDB tal cual (mismo mapa que al registrar la
+ *    ruta), sin duotono. Noche = `dark_all`, Claro = `light_all` (con
+ *    etiquetas). Solo cambia el color del trayecto/texto (`fg`).
+ *  - resto: `dark_nolabels` re-coloreado con un duotono (oscuro→`low`,
+ *    claro→`high`) para un mapa monocromo en el tono del tema.
+ *  `dark` decide el color base de ruta/texto y los scrims.
+ */
 type MapTheme = {
   id: string;
   label: string;
   dot: string;
   dark: boolean;
-  low: string;
-  high: string;
+  tile: string;
   fg: string;
+  raw?: boolean;
+  low?: string;
+  high?: string;
 };
 
 const MAP_THEMES: MapTheme[] = [
-  { id: "noche", label: "Noche", dot: "#17181c", dark: true, low: "#0a0a0c", high: "#52535a", fg: "#ffffff" },
-  { id: "claro", label: "Claro", dot: "#e6e6e9", dark: false, low: "#ffffff", high: "#6b7280", fg: "#17181c" },
-  { id: "lila", label: "Lila", dot: "#a99cf0", dark: false, low: "#ece9fb", high: "#4b3e7a", fg: "#3a2f63" },
-  { id: "azul", label: "Azul", dot: "#7db8e8", dark: false, low: "#e1f1fc", high: "#2c5d7a", fg: "#22485f" },
-  { id: "menta", label: "Menta", dot: "#79d3ad", dark: false, low: "#e2f7ee", high: "#276e51", fg: "#1d5a41" },
+  { id: "noche", label: "Noche", dot: "#17181c", dark: true, raw: true, tile: "dark_all", fg: "#ffffff" },
+  { id: "claro", label: "Claro", dot: "#e6e6e9", dark: false, raw: true, tile: "light_all", fg: "#17181c" },
+  { id: "lila", label: "Lila", dot: "#a99cf0", dark: false, tile: "dark_nolabels", low: "#ece9fb", high: "#4b3e7a", fg: "#3a2f63" },
+  { id: "azul", label: "Azul", dot: "#7db8e8", dark: false, tile: "dark_nolabels", low: "#e1f1fc", high: "#2c5d7a", fg: "#22485f" },
+  { id: "menta", label: "Menta", dot: "#79d3ad", dark: false, tile: "dark_nolabels", low: "#e2f7ee", high: "#276e51", fg: "#1d5a41" },
 ];
 
 const TILE = 256;
@@ -161,13 +169,20 @@ export function ShareActivityModal({
     setView(initialView(format));
   }, [format, initialView]);
 
+  // Dibuja el mapa en un canvas OFFSCREEN y lo devuelve. Asi un draw obsoleto
+  // (que resuelve tarde) nunca machaca el canvas principal: el llamador decide
+  // si volcarlo tras comprobar el token.
   const drawMap = useCallback(
-    async (ctx: CanvasRenderingContext2D, W: number, H: number, th: MapTheme, v: View) => {
+    async (W: number, H: number, th: MapTheme, v: View): Promise<HTMLCanvasElement> => {
+      const off = document.createElement("canvas");
+      off.width = W;
+      off.height = H;
+      const ctx = off.getContext("2d")!;
       const tz = clamp(Math.round(v.zoom), 0, 19);
       const sf = 2 ** (v.zoom - tz);
       const n = 2 ** tz;
 
-      ctx.fillStyle = "#0a0a0c";
+      ctx.fillStyle = th.dark ? "#0e0f12" : "#f4f4f6";
       ctx.fillRect(0, 0, W, H);
 
       const jobs: Promise<{ img: HTMLImageElement | null; dx: number; dy: number }>[] = [];
@@ -180,7 +195,7 @@ export function ShareActivityModal({
           if (ty < 0 || ty >= n) continue;
           const wx = ((tx % n) + n) % n;
           const sub = "abcd"[Math.abs(tx + ty) % 4];
-          const url = `https://${sub}.basemaps.cartocdn.com/dark_nolabels/${tz}/${wx}/${ty}@2x.png`;
+          const url = `https://${sub}.basemaps.cartocdn.com/${th.tile}/${tz}/${wx}/${ty}@2x.png`;
           const dx = tx * TILE * sf - v.ox;
           const dy = ty * TILE * sf - v.oy;
           const cached = tileCache.current.get(url);
@@ -202,17 +217,24 @@ export function ShareActivityModal({
       const size = TILE * sf;
       for (const t of tiles) if (t.img) ctx.drawImage(t.img, t.dx, t.dy, size, size);
 
-      const lo = hexToRgb(th.low);
-      const hi = hexToRgb(th.high);
-      const imgData = ctx.getImageData(0, 0, W, H);
-      const d = imgData.data;
-      for (let i = 0; i < d.length; i += 4) {
-        const lum = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255;
-        d[i] = lo.r + (hi.r - lo.r) * lum;
-        d[i + 1] = lo.g + (hi.g - lo.g) * lum;
-        d[i + 2] = lo.b + (hi.b - lo.b) * lum;
+      // Temas `raw` (Noche/Claro): mapa tal cual, sin duotono ni filtros.
+      if (!th.raw && th.low && th.high) {
+        const lo = hexToRgb(th.low);
+        const hi = hexToRgb(th.high);
+        const imgData = ctx.getImageData(0, 0, W, H);
+        const d = imgData.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const lum = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255;
+          // Curva (gamma <1) para levantar las calles (tonos medios-bajos).
+          const L = Math.pow(lum, 0.6);
+          d[i] = lo.r + (hi.r - lo.r) * L;
+          d[i + 1] = lo.g + (hi.g - lo.g) * L;
+          d[i + 2] = lo.b + (hi.b - lo.b) * L;
+        }
+        ctx.putImageData(imgData, 0, 0);
       }
-      ctx.putImageData(imgData, 0, 0);
+
+      return off;
     },
     [],
   );
@@ -239,24 +261,31 @@ export function ShareActivityModal({
       const dh = photo.naturalHeight * scale;
       ctx.drawImage(photo, (W - dw) / 2, (H - dh) / 2, dw, dh);
     } else if (withMap) {
-      await drawMap(ctx, W, H, theme, view);
-      if (token !== drawToken.current) return;
+      const mapCanvas = await drawMap(W, H, theme, view);
+      if (token !== drawToken.current) return; // obsoleto: descarta el offscreen
+      ctx.drawImage(mapCanvas, 0, 0);
     } else {
-      ctx.fillStyle = theme.low;
+      // Sin ruta ni foto: fondo plano del tema.
+      ctx.fillStyle = theme.low ?? (theme.dark ? "#0e0f12" : "#f4f4f6");
       ctx.fillRect(0, 0, W, H);
     }
 
     if (usingPhoto || (withMap && dark)) {
-      const top = ctx.createLinearGradient(0, 0, 0, H * 0.26);
-      top.addColorStop(0, "rgba(0,0,0,0.5)");
+      // Sobre foto los scrims son mas fuertes (fondos impredecibles); sobre el
+      // mapa oscuro son suaves para no tapar las calles.
+      const topA = usingPhoto ? 0.5 : 0.26;
+      const botA = usingPhoto ? 0.8 : 0.58;
+      const botStart = usingPhoto ? 0.52 : 0.62;
+      const top = ctx.createLinearGradient(0, 0, 0, H * 0.22);
+      top.addColorStop(0, `rgba(0,0,0,${topA})`);
       top.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = top;
-      ctx.fillRect(0, 0, W, H * 0.26);
-      const bot = ctx.createLinearGradient(0, H * 0.52, 0, H);
+      ctx.fillRect(0, 0, W, H * 0.22);
+      const bot = ctx.createLinearGradient(0, H * botStart, 0, H);
       bot.addColorStop(0, "rgba(0,0,0,0)");
-      bot.addColorStop(1, "rgba(0,0,0,0.8)");
+      bot.addColorStop(1, `rgba(0,0,0,${botA})`);
       ctx.fillStyle = bot;
-      ctx.fillRect(0, H * 0.52, W, H * 0.48);
+      ctx.fillRect(0, H * botStart, W, H * (1 - botStart));
     }
 
     const P = 72;
