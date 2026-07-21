@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   Pencil,
@@ -124,6 +125,13 @@ export function ShareActivityModal({
   const [editing, setEditing] = useState(false);
   const [adjusting, setAdjusting] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Portal al shell de la app (como el resto de modales): asi la vista a
+  // pantalla completa tapa el TopBar y la barra inferior en vez de quedar
+  // atrapada dentro del scroll de la pagina.
+  const [portalTarget, setPortalTarget] = useState<Element | null>(null);
+  useEffect(() => {
+    setPortalTarget(document.getElementById("app-shell"));
+  }, []);
 
   const theme = MAP_THEMES.find((t) => t.id === themeId) ?? MAP_THEMES[0];
   const hasRoute = session.coordinates.length > 1;
@@ -532,11 +540,11 @@ export function ShareActivityModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#0c0c0f]">
+  const content = (
+    <div className="fixed inset-0 z-[60] flex flex-col bg-[#0c0c0f]">
       {/* Barra superior */}
       {!adjusting && (
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
           <button
             onClick={onClose}
             className="flex size-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
@@ -573,7 +581,7 @@ export function ShareActivityModal({
 
       {/* Barra inferior: acciones o ajuste */}
       {adjusting ? (
-        <div className="flex items-center justify-between gap-3 px-4 py-4">
+        <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
           <button
             onClick={() => setView(initialView(format))}
             className="flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-2.5 text-sm font-medium text-white hover:bg-white/20"
@@ -593,7 +601,7 @@ export function ShareActivityModal({
           </button>
         </div>
       ) : (
-        <div className="flex gap-2 px-4 py-4">
+        <div className="flex gap-2 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
           <button
             onClick={download}
             disabled={busy}
@@ -621,7 +629,7 @@ export function ShareActivityModal({
             onClick={() => setEditing(false)}
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
           />
-          <div className="relative rounded-t-3xl border-t border-border bg-surface p-5 pb-7">
+          <div className="relative rounded-t-3xl border-t border-border bg-surface p-5 pb-[calc(env(safe-area-inset-bottom)+1.75rem)]">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-base font-semibold">Editar historia</h3>
               <button
@@ -726,4 +734,6 @@ export function ShareActivityModal({
       />
     </div>
   );
+
+  return portalTarget ? createPortal(content, portalTarget) : null;
 }
