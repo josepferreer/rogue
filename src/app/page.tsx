@@ -9,7 +9,7 @@ import {
   Plus,
 } from "lucide-react";
 import { PastelCard } from "@/components/ui/pastel-card";
-import { InstallPwaButton } from "@/components/install-pwa-button";
+import { DownloadAppModal } from "@/components/download-app-modal";
 
 const FEATURES = [
   {
@@ -403,7 +403,7 @@ export default function LandingPage() {
             <Link href="/login" className="rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-accent-foreground transition-transform active:scale-[0.98]">
               Empezar gratis
             </Link>
-            <InstallPwaButton />
+            <DownloadAppModal className="flex w-full items-center justify-center gap-2 rounded-full border border-border bg-surface px-7 py-3.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" />
           </div>
         </section>
       </Container>
