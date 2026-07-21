@@ -552,20 +552,20 @@ export function ShareActivityModal({
   });
 
   const content = (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-[#0c0c0f]">
+    <div className="fixed inset-0 z-[60] flex flex-col bg-background">
       {/* Barra superior */}
       {!adjusting && (
         <div className="flex items-center justify-between px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
           <button
             onClick={onClose}
-            className="flex size-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+            className="flex size-10 items-center justify-center rounded-full bg-foreground/10 text-foreground hover:bg-foreground/20"
             aria-label="Cerrar"
           >
             <X className="size-5" />
           </button>
           <button
             onClick={() => setEditing(true)}
-            className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20"
+            className="flex items-center gap-2 rounded-full bg-foreground/10 px-4 py-2 text-sm font-medium text-foreground hover:bg-foreground/20"
           >
             <Pencil className="size-4" />
             Editar
@@ -595,17 +595,17 @@ export function ShareActivityModal({
         <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
           <button
             onClick={() => setView(initialView(format))}
-            className="flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-2.5 text-sm font-medium text-white hover:bg-white/20"
+            className="flex items-center gap-1.5 rounded-full bg-foreground/10 px-4 py-2.5 text-sm font-medium text-foreground hover:bg-foreground/20"
           >
             <Crosshair className="size-4" />
             Recentrar
           </button>
-          <span className="flex-1 text-center text-xs text-white/60">
+          <span className="flex-1 text-center text-xs text-muted-foreground">
             Arrastra y pellizca para ajustar
           </span>
           <button
             onClick={() => setAdjusting(false)}
-            className="flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#0c0c0f]"
+            className="flex items-center gap-1.5 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background"
           >
             <Check className="size-4" />
             Listo
@@ -616,7 +616,7 @@ export function ShareActivityModal({
           <button
             onClick={download}
             disabled={busy}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full border border-white/25 py-3 text-sm font-medium text-white hover:bg-white/10 disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-2 rounded-full border border-border py-3 text-sm font-medium text-foreground hover:bg-foreground/10 disabled:opacity-50"
           >
             <Download className="size-4" />
             Descargar
@@ -624,7 +624,7 @@ export function ShareActivityModal({
           <button
             onClick={share}
             disabled={busy}
-            className="flex flex-[1.5] items-center justify-center gap-2 rounded-full bg-white py-3 text-sm font-semibold text-[#0c0c0f] transition-transform active:scale-[0.98] disabled:opacity-50"
+            className="flex flex-[1.5] items-center justify-center gap-2 rounded-full bg-foreground py-3 text-sm font-semibold text-background transition-transform active:scale-[0.98] disabled:opacity-50"
           >
             <Share2 className="size-4" />
             Compartir
