@@ -15,6 +15,10 @@ import {
   type LogResult,
 } from "@/lib/store/rogue-store";
 import { fromKg, toKg } from "@/lib/units";
+import {
+  requestNotifyPermission,
+  fireRestEndNotification,
+} from "@/lib/notifications/rest-notifier";
 import type {
   ExerciseNoteFlag,
   ExerciseNoteInput,
@@ -190,19 +194,9 @@ export function WorkoutSessionProvider({
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       navigator.vibrate([200, 100, 200]);
     }
-    if (
-      typeof document !== "undefined" &&
-      document.hidden &&
-      typeof window !== "undefined" &&
-      "Notification" in window &&
-      Notification.permission === "granted"
-    ) {
-      new Notification("Descanso terminado", {
-        body: "Toca para seguir con la siguiente serie.",
-        icon: "/icon-192.png",
-        tag: "rogue-rest-end",
-      });
-    }
+    // Nativo: notificacion del sistema aunque la app este en 2.o plano/bloqueada.
+    // Web: solo si la pestana no esta visible (lo resuelve el helper).
+    fireRestEndNotification();
   }, [preferences.notifyRestEnd]);
 
   // Cronometro del descanso (anclado a timestamp, se autocorrige en 2.º plano).
@@ -295,12 +289,9 @@ export function WorkoutSessionProvider({
 
   const start = useCallback((d: RoutineDay) => {
     // Pedimos permiso de notificacion aqui (gesto de usuario) para poder
-    // avisar de fin de descanso aunque la pestana este en 2.o plano.
-    if (typeof window !== "undefined" && "Notification" in window) {
-      if (Notification.permission === "default") {
-        Notification.requestPermission().catch(() => {});
-      }
-    }
+    // avisar de fin de descanso aunque la app este en 2.o plano. En nativo usa
+    // el plugin de Capacitor; en web, la Web Notification API.
+    requestNotifyPermission();
     setDay(d);
     setRows(buildRows(d, preferences.unit));
     setPhase("active");
