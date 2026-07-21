@@ -13,11 +13,13 @@ import {
   Pencil,
   Minus,
   Plus,
+  Share2,
 } from "lucide-react";
 import { PastelCard } from "@/components/ui/pastel-card";
 import { Button } from "@/components/ui/button";
-import { useCardio } from "@/lib/store/cardio-store";
+import { useCardio, type CardioSession } from "@/lib/store/cardio-store";
 import { useRogue } from "@/lib/store/rogue-store";
+import { ShareActivityModal } from "@/components/cardio/share-activity-modal";
 
 /** Zancada media (m) para estimar pasos desde la distancia recorrida.
  *  La web no tiene acceso al podometro del telefono, asi que los pasos se
@@ -96,6 +98,8 @@ export default function CardioPage() {
   // Objetivo de pasos editable (guardado en este dispositivo).
   const [stepGoal, setStepGoal] = useState(DEFAULT_STEP_GOAL);
   const [editingGoal, setEditingGoal] = useState(false);
+  // Actividad seleccionada para compartir (abre el editor de imagen).
+  const [shareSession, setShareSession] = useState<CardioSession | null>(null);
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STEP_GOAL_KEY);
@@ -258,16 +262,18 @@ export default function CardioPage() {
             </div>
           ) : (
             history.map((session) => (
-              <Link
-                href={`/app/cardio/actividad/${session.id}`}
+              <div
                 key={session.id}
-                className="flex items-center justify-between rounded-3xl border border-border bg-surface p-4 transition-colors hover:bg-muted/40 active:bg-muted"
+                className="flex items-center rounded-3xl border border-border bg-surface transition-colors hover:bg-muted/40"
               >
-                <div className="flex items-center gap-4">
-                  <span className="flex size-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                <Link
+                  href={`/app/cardio/actividad/${session.id}`}
+                  className="flex min-w-0 flex-1 items-center gap-4 p-4 active:bg-muted"
+                >
+                  <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
                     <Activity className="size-5" />
                   </span>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-semibold">
                       {new Intl.DateTimeFormat("es-ES", {
                         weekday: "short",
@@ -279,14 +285,36 @@ export default function CardioPage() {
                       {session.distanceKm.toFixed(2)} km · {formatDuration(session.durationSec)}
                     </p>
                   </div>
-                </div>
-                <ChevronRight className="size-5 text-muted-foreground" />
-              </Link>
+                </Link>
+                {session.coordinates.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setShareSession(session)}
+                    aria-label="Compartir actividad"
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <Share2 className="size-5" />
+                  </button>
+                )}
+                <Link
+                  href={`/app/cardio/actividad/${session.id}`}
+                  aria-label="Ver actividad"
+                  className="flex size-10 shrink-0 items-center justify-center pr-2 text-muted-foreground"
+                >
+                  <ChevronRight className="size-5" />
+                </Link>
+              </div>
             ))
           )}
         </div>
       </div>
 
+      {shareSession && (
+        <ShareActivityModal
+          session={shareSession}
+          onClose={() => setShareSession(null)}
+        />
+      )}
     </div>
   );
 }
