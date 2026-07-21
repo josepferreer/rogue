@@ -12,6 +12,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { useCardio } from "@/lib/store/cardio-store";
+import { useBackButton } from "@/lib/use-back-button";
 
 const MapView = dynamic(() => import("./map-view"), {
   ssr: false,
@@ -42,6 +43,9 @@ export function RouteTrackerModal() {
     stopTracking,
     minimize,
   } = useCardio();
+
+  // "Atrás" (APK/PWA) minimiza la ruta en vez de sacar la app al home.
+  useBackButton(isTracking && !isMinimized, minimize);
 
   if (!isTracking || isMinimized) return null;
 

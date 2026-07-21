@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import type { CardioSession } from "@/lib/store/cardio-store";
 import { useToast } from "@/components/ui/toast";
+import { useBackButton } from "@/lib/use-back-button";
 
 type ShareFormat = "story" | "square";
 
@@ -539,6 +540,14 @@ export function ShareActivityModal({
       setBusy(false);
     }
   };
+
+  // "Atrás" (APK/PWA): sale del sub-modo (ajuste/edición) o cierra el editor,
+  // en vez de navegar fuera o sacar la app al home.
+  useBackButton(true, () => {
+    if (adjusting) setAdjusting(false);
+    else if (editing) setEditing(false);
+    else onClose();
+  });
 
   const content = (
     <div className="fixed inset-0 z-[60] flex flex-col bg-[#0c0c0f]">

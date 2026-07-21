@@ -23,6 +23,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ExerciseSelectorModal } from "@/components/routines/exercise-selector-modal";
 import { getExerciseInfo, useRogue } from "@/lib/store/rogue-store";
 import { useWorkoutSession } from "@/lib/store/workout-session-store";
+import { useBackButton } from "@/lib/use-back-button";
 import { getDivisionLabel, getRankTier } from "@/lib/ranks";
 import { formatWeight } from "@/lib/units";
 import { cn, formatDuration } from "@/lib/utils";
@@ -63,6 +64,9 @@ export function WorkoutSessionModal() {
   const [swapForExId, setSwapForExId] = useState<string | null>(null);
   // Confirmacion antes de descartar la sesion activa.
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+
+  // "Atrás" (APK/PWA) minimiza el entreno en vez de sacar la app al home.
+  useBackButton(active && !minimized && !!day, minimize);
 
   if (!active || minimized || !day) return null;
 
