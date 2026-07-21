@@ -1,13 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { NAV_ITEMS, isNavItemActive } from "./nav-items";
 import { cn } from "@/lib/utils";
+import { useBackButton } from "@/lib/use-back-button";
 
 /** Navegacion inferior, solo en movil/tablet (el escritorio usa Sidebar). */
 export function BottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Activar la trampa del botón "atrás" solo si estamos exactamente en la raíz
+  // de una pestaña que no sea el Home. Si estamos dentro de una sub-página
+  // (ej. /app/rutinas/123), queremos el comportamiento nativo de "atrás".
+  const isOtherRootTab = NAV_ITEMS.some(
+    (item) => item.href !== "/app" && pathname === item.href
+  );
+
+  useBackButton(isOtherRootTab, () => {
+    router.replace("/app");
+  });
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-40 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:hidden">
@@ -26,6 +39,7 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              replace
               aria-label={item.label}
               className={cn(
                 "flex items-center justify-center gap-1 rounded-full px-3.5 py-3.5 transition-colors",
