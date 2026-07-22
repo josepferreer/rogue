@@ -10,7 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package || exit 0"
   },
   "dependencies": {
     "@capacitor-community/background-geolocation": "1.2.26",
