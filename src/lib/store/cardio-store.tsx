@@ -33,6 +33,15 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// Rechazo de outliers para el calculo de distancia (mismos umbrales que el map
+// matching de /api/match). Un tramo que implica una velocidad imposible a pie
+// (>28.8 km/h) es un salto del sensor, no movimiento real: sin esto, la deriva
+// del GPS inflaba los km guardados. Un salto tras un apagon largo (dt grande)
+// da velocidad baja y SI cuenta, que es lo correcto (desplazamiento real).
+const MAX_SPEED_MPS = 8;
+// Sin timestamps fiables (dt<=0), cae a un umbral de distancia bruto.
+const MAX_JUMP_M = 80;
+
 // --- Types ---
 
 export type Coordinate = { lat: number; lng: number; timestamp: number };
@@ -277,6 +286,10 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
   // el insert dentro duplicaba la sesion cuando React los re-invoca).
   const coordinatesRef = useRef<Coordinate[]>([]);
   const distanceKmRef = useRef(0);
+  // Ultimo punto ACEPTADO para la distancia (no el ultimo crudo): al rechazar un
+  // salto no se actualiza, para que el siguiente punto se compare con el ultimo
+  // bueno y la traza se auto-corrija (igual que cleanTrace en /api/match).
+  const lastAcceptedRef = useRef<Coordinate | null>(null);
 
   // Cronometro por timestamps: aunque el navegador congele los timers en
   // segundo plano, al volver el tiempo mostrado se recalcula y es correcto.
@@ -351,12 +364,25 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
             setGpsError(null);
             setGpsNeedsSettings(false);
             const newCoord: Coordinate = { lat: p.lat, lng: p.lng, timestamp: p.timestamp };
-            const prev = coordinatesRef.current;
-            if (prev.length > 0) {
-              const last = prev[prev.length - 1];
-              distanceKmRef.current += haversineKm(last.lat, last.lng, newCoord.lat, newCoord.lng);
+            const last = lastAcceptedRef.current;
+            if (last) {
+              const distKm = haversineKm(last.lat, last.lng, newCoord.lat, newCoord.lng);
+              const dtSec = (newCoord.timestamp - last.timestamp) / 1000;
+              const isOutlier =
+                dtSec > 0
+                  ? (distKm * 1000) / dtSec > MAX_SPEED_MPS
+                  : distKm * 1000 > MAX_JUMP_M;
+              // Solo cuenta (y avanza el punto de referencia) si no es un salto
+              // imposible. Un outlier se guarda igual en coordinatesRef para el
+              // mapa (que re-limpia con /api/match), pero no infla la distancia.
+              if (!isOutlier) {
+                distanceKmRef.current += distKm;
+                lastAcceptedRef.current = newCoord;
+              }
+            } else {
+              lastAcceptedRef.current = newCoord;
             }
-            coordinatesRef.current = [...prev, newCoord];
+            coordinatesRef.current = [...coordinatesRef.current, newCoord];
             setCoordinates(coordinatesRef.current);
             setDistanceKm(distanceKmRef.current);
           },
@@ -399,6 +425,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     setIsMinimized(false);
     coordinatesRef.current = [];
     distanceKmRef.current = 0;
+    lastAcceptedRef.current = null;
     setCoordinates([]);
     setDistanceKm(0);
     setDurationSec(0);
@@ -499,6 +526,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     // el efecto de escritura lo refresca en cuanto isTracking pasa a true.
     coordinatesRef.current = snap.coordinates;
     distanceKmRef.current = snap.distanceKm;
+    lastAcceptedRef.current = snap.coordinates[snap.coordinates.length - 1] ?? null;
     accumulatedSecRef.current = duration;
     runningSinceRef.current = null;
     // Hidratacion unica desde localStorage tras el montaje (protegida por
