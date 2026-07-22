@@ -26,7 +26,7 @@ index a92fcf9..43412f0 100644
                          alias = "location"
                  )
 diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
-index fafbb86..d7d9f9c 100644
+index fafbb86..fcc974b 100644
 --- a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
 +++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
 @@ -8,6 +8,8 @@ import android.location.Location;
@@ -57,10 +57,20 @@ index fafbb86..d7d9f9c 100644
          stopSelf();
          return false;
      }
-@@ -124,6 +131,14 @@ public class BackgroundGeolocationService extends Service {
-                 );
-             } catch (SecurityException ignore) {}
+@@ -113,16 +120,13 @@ public class BackgroundGeolocationService extends Service {
+             watcher.backgroundNotification = backgroundNotification;
+             watchers.add(watcher);
  
+-            // According to Android Studio, this method can throw a Security Exception if
+-            // permissions are not yet granted. Rather than check the permissions, which is fiddly,
+-            // we simply ignore the exception.
+-            try {
+-                watcher.client.requestLocationUpdates(
+-                        watcher.locationRequest,
+-                        watcher.locationCallback,
+-                        null
+-                );
+-            } catch (SecurityException ignore) {}
 +            if (wakeLock == null) {
 +                PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
 +                if (pm != null) {
@@ -68,11 +78,23 @@ index fafbb86..d7d9f9c 100644
 +                    wakeLock.acquire();
 +                }
 +            }
-+
+ 
              // Promote the service to the foreground if necessary.
              // Ideally we would only call 'startForeground' if the service is not already
-             // foregrounded. Unfortunately, 'getForegroundServiceType' was only introduced
-@@ -135,7 +150,11 @@ public class BackgroundGeolocationService extends Service {
+@@ -130,16 +134,39 @@ public class BackgroundGeolocationService extends Service {
+             // in API level 29 and seems to behave weirdly, as reported in #120. However,
+             // it appears that 'startForeground' is idempotent, so we just call it repeatedly
+             // each time a background watcher is added.
++            //
++            // IMPORTANT: 'startForeground' MUST run BEFORE 'requestLocationUpdates'. On modern
++            // Android (high targetSdk) a location request registered while the service is not
++            // yet a foreground-service of type 'location' is treated as a background request and
++            // gets throttled/stopped the first time the app is minimised. Once the app has been
++            // foregrounded again (e.g. pause/resume) the process keeps a recent FGS-location
++            // association and the request survives, which is why re-adding the watcher "fixed"
++            // it. Starting the FGS first makes the very first watcher record in the background.
+             if (backgroundNotification != null) {
+                 try {
                      // This method has been known to fail due to weird
                      // permission bugs, so we prevent any exceptions from
                      // crashing the app. See issue #86.
@@ -85,7 +107,22 @@ index fafbb86..d7d9f9c 100644
                  } catch (Exception exception) {
                      Logger.error("Failed to foreground service", exception);
                  }
-@@ -149,6 +168,10 @@ public class BackgroundGeolocationService extends Service {
+             }
++
++            // According to Android Studio, this method can throw a Security Exception if
++            // permissions are not yet granted. Rather than check the permissions, which is fiddly,
++            // we simply ignore the exception.
++            try {
++                watcher.client.requestLocationUpdates(
++                        watcher.locationRequest,
++                        watcher.locationCallback,
++                        null
++                );
++            } catch (SecurityException ignore) {}
+         }
+ 
+         void removeWatcher(String id) {
+@@ -149,6 +176,10 @@ public class BackgroundGeolocationService extends Service {
                      watchers.remove(watcher);
                      if (getNotification() == null) {
                          stopForeground(true);
