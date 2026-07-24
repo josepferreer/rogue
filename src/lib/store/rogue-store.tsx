@@ -15,6 +15,7 @@ import type { ExerciseCategory } from "@/lib/exercises/types";
 import { DEMO_EXERCISES } from "@/lib/exercises/repo";
 import {
   aggregateToGroups,
+  averageRank,
   computeMuscleRanks,
   computeRanks,
   estimate1RM,
@@ -55,6 +56,8 @@ const DEFAULT_PREFERENCES: Preferences = {
   notifyReminders: true,
   notifyRestEnd: true,
   notifyWeeklySummary: false,
+  shareRanks: true,
+  shareStats: true,
 };
 
 type ExerciseInfo = { nombre: string; grupo: ExerciseCategory };
@@ -73,7 +76,7 @@ const EXERCISE_MUSCLES = new Map<string, ExerciseMuscles>(
     { primarios: e.musculosPrimarios, secundarios: e.musculosSecundarios },
   ]),
 );
-const muscleLookup = (id: string): ExerciseMuscles | null =>
+export const muscleLookup = (id: string): ExerciseMuscles | null =>
   EXERCISE_MUSCLES.get(id) ?? null;
 
 export type PrResult = { exerciseId: string; nombre: string; est1RM: number };
@@ -174,6 +177,8 @@ type ProfileRow = {
   notify_reminders: boolean;
   notify_rest_end: boolean;
   notify_weekly_summary: boolean;
+  share_ranks: boolean;
+  share_stats: boolean;
 };
 
 function rowToProfile(row: ProfileRow): Profile {
@@ -195,6 +200,8 @@ function rowToPreferences(row: ProfileRow): Preferences {
     notifyReminders: row.notify_reminders,
     notifyRestEnd: row.notify_rest_end,
     notifyWeeklySummary: row.notify_weekly_summary,
+    shareRanks: row.share_ranks,
+    shareStats: row.share_stats,
   };
 }
 
@@ -221,6 +228,8 @@ function toProfileRowPatch(
     row.notify_rest_end = patch.notifyRestEnd;
   if (patch.notifyWeeklySummary !== undefined)
     row.notify_weekly_summary = patch.notifyWeeklySummary;
+  if (patch.shareRanks !== undefined) row.share_ranks = patch.shareRanks;
+  if (patch.shareStats !== undefined) row.share_stats = patch.shareStats;
   return row;
 }
 
@@ -901,6 +910,45 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
   );
 
   const ranks = useMemo(() => aggregateToGroups(muscleRanks), [muscleRanks]);
+
+  /** Rango medio (el que se ensena a los amigos junto al avatar). */
+  const overallRank = useMemo(
+    () =>
+      averageRank(
+        ranks.filter((r): r is Extract<ComputedRank, { ranked: true }> => r.ranked),
+      ),
+    [ranks],
+  );
+
+  // Cachea el rango medio en `profiles` para que la tira de amigos de la home
+  // pueda pintar el punto de color de todos de una sola consulta, sin bajarse
+  // el historial de cada uno. Solo escribe cuando cambia de verdad.
+  //
+  // NO pasa por syncWrite a proposito: el dato es puramente cosmetico (lo que
+  // ven tus amigos junto a tu avatar) y se recalcula solo en la siguiente
+  // sesion. Si falla, no hay nada que el usuario haya "perdido", asi que no
+  // merece el toast de "cambios sin guardar" ni la cola de reintentos.
+  const syncedRankRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!hydrated || !authenticated || !userIdRef.current) return;
+    const key = overallRank
+      ? `${overallRank.tier}:${overallRank.division}`
+      : "none";
+    if (syncedRankRef.current === key) return;
+    syncedRankRef.current = key;
+
+    supabase
+      .from("profiles")
+      .update({
+        rank_tier: overallRank?.tier ?? null,
+        rank_division: overallRank?.division ?? null,
+        rank_updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userIdRef.current)
+      .then(({ error }) => {
+        if (error) console.warn("No se pudo cachear tu rango:", error.message);
+      });
+  }, [hydrated, authenticated, overallRank, supabase]);
 
   const todayDays = useMemo(() => {
     const weekday = new Date().getDay(); // 0=domingo..6=sabado

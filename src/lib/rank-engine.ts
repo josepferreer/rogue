@@ -132,6 +132,13 @@ export function rankScore(value: RankValue): number {
   return Math.round(rankToScale(value) * 1000);
 }
 
+/** Rango medio de un conjunto (promedio en la escala global). */
+export function averageRank(values: RankValue[]): RankValue | null {
+  if (values.length === 0) return null;
+  const avg = values.reduce((sum, v) => sum + rankToScale(v), 0) / values.length;
+  return scaleToRank(avg);
+}
+
 export type ComputedMuscleRank =
   | { muscle: MuscleId; group: MuscleGroup; ranked: false; sessions: number }
   | ({

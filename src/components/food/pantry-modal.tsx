@@ -156,7 +156,7 @@ function AlimentoForm({
           <input type="number" value={fat} onChange={e => setFat(e.target.value)} className="mt-1 rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none" />
         </label>
       </div>
-      <div className="mt-4 flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <button type="button" aria-label="Verde" onClick={() => { setHealthScore("green"); setIsManualScore(true); }} className={cn("size-8 rounded-full bg-green-500", healthScore === "green" ? "ring-2 ring-foreground ring-offset-1 ring-offset-background" : "opacity-30")} />
           <button type="button" aria-label="Amarillo" onClick={() => { setHealthScore("yellow"); setIsManualScore(true); }} className={cn("size-8 rounded-full bg-yellow-400", healthScore === "yellow" ? "ring-2 ring-foreground ring-offset-1 ring-offset-background" : "opacity-30")} />
@@ -165,7 +165,7 @@ function AlimentoForm({
           {healthScore && <button type="button" onClick={() => { setHealthScore(undefined); setIsManualScore(true); }} className="ml-2 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted">Quitar</button>}
         </div>
       </div>
-      <div className="mt-6 flex justify-end gap-3">
+      <div className="flex justify-end gap-3">
         <Button variant="ghost" onClick={onCancel} disabled={loadingCode}>Cancelar</Button>
         <Button onClick={handleSave} disabled={loadingCode}>Guardar</Button>
       </div>

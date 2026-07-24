@@ -576,6 +576,25 @@ export default function PerfilPage({
         <UnitToggle />
       </Section>
 
+      <Section title="PRIVACIDAD">
+        <PastelCard variant="neutral" className="flex flex-col divide-y divide-border p-0">
+          <SwitchRow
+            label="Compartir mis rangos"
+            description="Tus amigos ven tu rango y tu mapa corporal"
+            prefKey="shareRanks"
+          />
+          <SwitchRow
+            label="Compartir mis estadisticas"
+            description="Entrenos, racha y kilometros de cardio"
+            prefKey="shareStats"
+          />
+        </PastelCard>
+        <p className="px-1 text-xs text-muted-foreground">
+          Solo afecta a quien ya es amigo tuyo. Nadie mas puede ver estos datos,
+          y tu peso, tus cargas en kilos y tus comidas no salen nunca.
+        </p>
+      </Section>
+
       <Section title="NOTIFICACIONES">
         <PastelCard variant="neutral" className="flex flex-col divide-y divide-border p-0">
           <SwitchRow

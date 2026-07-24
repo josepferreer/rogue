@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Check,
   Search,
@@ -33,14 +34,18 @@ function Avatar({ name }: { name: string }) {
 function PersonRow({
   displayName,
   username,
+  href,
   children,
 }: {
   displayName: string;
   username: string;
+  /** Si se pasa, el bloque nombre/avatar navega al perfil de esa persona. Los
+   *  botones de accion quedan FUERA del enlace para que no lo disparen. */
+  href?: string;
   children?: React.ReactNode;
 }) {
-  return (
-    <div className="flex items-center gap-3 rounded-3xl border border-border bg-surface p-3">
+  const identity = (
+    <>
       <Avatar name={displayName} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold">{displayName}</p>
@@ -48,6 +53,21 @@ function PersonRow({
           @{username}
         </p>
       </div>
+    </>
+  );
+
+  return (
+    <div className="flex items-center gap-3 rounded-3xl border border-border bg-surface p-3">
+      {href ? (
+        <Link
+          href={href}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl transition-opacity hover:opacity-70"
+        >
+          {identity}
+        </Link>
+      ) : (
+        identity
+      )}
       <div className="flex shrink-0 items-center gap-1.5">{children}</div>
     </div>
   );
@@ -55,7 +75,15 @@ function PersonRow({
 
 type Tab = "amigos" | "solicitudes" | "buscar";
 
-export default function AmigosPage() {
+function parseTab(value: string | undefined): Tab {
+  return value === "solicitudes" || value === "buscar" ? value : "amigos";
+}
+
+export default function AmigosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const {
     hydrated,
     friends,
@@ -69,7 +97,13 @@ export default function AmigosPage() {
   } = useFriends();
   const { notify } = useToast();
 
-  const [tab, setTab] = useState<Tab>("amigos");
+  // Pestana inicial via URL (?tab=buscar, usado por la tira de amigos de la
+  // home). Mismo patron que /app/perfil: el toggle local es un override ligado
+  // al valor de la URL, sin efectos de sincronizacion.
+  const urlTab = parseTab(use(searchParams).tab);
+  const [override, setOverride] = useState<{ base: Tab; tab: Tab } | null>(null);
+  const tab = override && override.base === urlTab ? override.tab : urlTab;
+  const setTab = (next: Tab) => setOverride({ base: urlTab, tab: next });
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -187,6 +221,7 @@ export default function AmigosPage() {
                     key={f.id}
                     displayName={f.otherDisplayName}
                     username={f.otherUsername}
+                    href={`/app/amigos/${encodeURIComponent(f.otherUsername)}`}
                   >
                     <button
                       type="button"
@@ -205,7 +240,7 @@ export default function AmigosPage() {
           {/* ── Solicitudes ───────────────────────────────────────────── */}
           {tab === "solicitudes" && (
             <div className="flex flex-col gap-5">
-              <section className="flex flex-col gap-2.5">
+              <section className="flex flex-col gap-2">
                 <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
                   RECIBIDAS
                 </p>
@@ -247,7 +282,7 @@ export default function AmigosPage() {
                 )}
               </section>
 
-              <section className="flex flex-col gap-2.5">
+              <section className="flex flex-col gap-2">
                 <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
                   ENVIADAS
                 </p>

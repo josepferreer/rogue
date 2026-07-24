@@ -26,12 +26,16 @@ import {
 } from "@/lib/exercises/types";
 import { cn } from "@/lib/utils";
 
-function BodyRankSummary({
+/** Mapa corporal pintado por rango, con toggle media/por musculo. Se reutiliza
+ *  tal cual en el perfil de un amigo (`/app/amigos/[username]`). */
+export function BodyRankSummary({
   ranks,
   muscleRanks,
+  title = "TU CUERPO POR RANGO",
 }: {
   ranks: ComputedRank[];
   muscleRanks: ComputedMuscleRank[];
+  title?: string;
 }) {
   const [view, setView] = useState<"media" | "musculo">("media");
 
@@ -53,7 +57,7 @@ function BodyRankSummary({
   return (
     <PastelCard variant="neutral" className="flex flex-col gap-4 py-5">
       <p className="text-center font-mono text-xs tracking-[0.2em] text-muted-foreground">
-        TU CUERPO POR RANGO
+        {title}
       </p>
 
       <div className="mx-auto flex w-full max-w-[220px] rounded-full bg-muted p-1">

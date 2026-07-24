@@ -12,6 +12,7 @@ import {
 import { usePathname } from "next/navigation";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import type { RankId } from "@/lib/ranks";
 
 // --- Tipos ---
 
@@ -50,6 +51,61 @@ const SEND_MESSAGES: Record<string, string> = {
 
 export type SendResult = { ok: boolean; message: string };
 
+/** Una serie del amigo con el peso YA normalizado por su peso corporal: el
+ *  servidor nunca envia kilos absolutos ni el peso del amigo. */
+export type FriendSet = {
+  /** id de la sesion a la que pertenece. */
+  s: string;
+  /** fecha ISO de la sesion. */
+  d: string;
+  /** exercise_id. */
+  e: string;
+  /** peso / peso corporal. */
+  w: number;
+  /** repeticiones. */
+  r: number;
+};
+
+export type FriendStats = {
+  workouts?: number;
+  first_workout?: string | null;
+  last_workout?: string | null;
+  week_streak?: number;
+  cardio_sessions?: number;
+  cardio_km?: number;
+};
+
+/** Respuesta de la RPC friend_profile(). */
+export type FriendProfile = {
+  ok: true;
+  code: "ok";
+  user_id: string;
+  username: string;
+  display_name: string;
+  sex: "hombre" | "mujer";
+  friends_since: string | null;
+  share_ranks: boolean;
+  share_stats: boolean;
+  stats: FriendStats;
+  sets: FriendSet[];
+};
+
+/** Rango medio cacheado de un amigo, para el punto de color de la home. Es un
+ *  dato auto-declarado por el cliente del amigo (ver la migracion): sirve de
+ *  adorno, no de fuente de verdad. */
+export type FriendRank = {
+  userId: string;
+  tier: RankId | null;
+  division: number | null;
+};
+
+export type FriendProfileError = {
+  ok: false;
+  code: "not_authenticated" | "not_found" | "not_friends" | "error";
+};
+
+export type FriendProfileResult = FriendProfile | FriendProfileError;
+
 export type FriendsContextValue = {
   hydrated: boolean;
   /** Amistades aceptadas. */
@@ -60,12 +116,17 @@ export type FriendsContextValue = {
   outgoing: Friendship[];
   /** Atajo para el badge de "tienes solicitudes". */
   pendingCount: number;
+  /** Rango medio de cada amigo, indexado por su user_id. */
+  ranks: Record<string, FriendRank>;
   sendRequest: (username: string) => Promise<SendResult>;
   acceptRequest: (id: string) => Promise<void>;
   /** Rechaza una solicitud recibida, cancela una enviada o elimina un amigo:
    *  las tres cosas borran la fila. */
   removeFriendship: (id: string) => Promise<void>;
   searchUsers: (query: string) => Promise<UserSearchResult[]>;
+  /** Perfil publico de un amigo (rangos + contadores). Solo devuelve datos si
+   *  la amistad esta aceptada; el servidor es quien lo comprueba. */
+  getFriendProfile: (username: string) => Promise<FriendProfileResult>;
 };
 
 const FriendsContext = createContext<FriendsContextValue | null>(null);
@@ -97,17 +158,43 @@ export function FriendsProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const [items, setItems] = useState<Friendship[]>([]);
+  const [ranks, setRanks] = useState<Record<string, FriendRank>>({});
   const [hydrated, setHydrated] = useState(false);
   const userIdRef = useRef<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   const refresh = useCallback(async () => {
-    const { data, error } = await supabase.rpc("my_friendships");
-    if (error) {
-      console.error("No se pudieron cargar las amistades:", error);
+    // Las dos RPC van juntas: la tira de amigos de la home necesita nombre y
+    // rango a la vez, y asi Realtime solo dispara un refresco.
+    const [list, ranksRes] = await Promise.all([
+      supabase.rpc("my_friendships"),
+      supabase.rpc("friends_ranks"),
+    ]);
+
+    if (list.error) {
+      console.error("No se pudieron cargar las amistades:", list.error);
       return;
     }
-    setItems(((data ?? []) as RpcRow[]).map(toFriendship));
+    setItems(((list.data ?? []) as RpcRow[]).map(toFriendship));
+
+    if (ranksRes.error) {
+      console.error("No se pudieron cargar los rangos:", ranksRes.error);
+      return;
+    }
+    setRanks(
+      Object.fromEntries(
+        (
+          (ranksRes.data ?? []) as {
+            user_id: string;
+            rank_tier: RankId | null;
+            rank_division: number | null;
+          }[]
+        ).map((r) => [
+          r.user_id,
+          { userId: r.user_id, tier: r.rank_tier, division: r.rank_division },
+        ]),
+      ),
+    );
   }, [supabase]);
 
   // Carga inicial + suscripcion Realtime. Se re-comprueba en cada navegacion
@@ -129,6 +216,7 @@ export function FriendsProvider({ children }: { children: React.ReactNode }) {
           channelRef.current = null;
         }
         setItems([]);
+        setRanks({});
         setHydrated(true);
         return;
       }
@@ -266,6 +354,20 @@ export function FriendsProvider({ children }: { children: React.ReactNode }) {
     [supabase],
   );
 
+  const getFriendProfile = useCallback(
+    async (username: string): Promise<FriendProfileResult> => {
+      const { data, error } = await supabase.rpc("friend_profile", {
+        p_username: username.trim(),
+      });
+      if (error) {
+        console.error("Error al cargar el perfil del amigo:", error);
+        return { ok: false, code: "error" };
+      }
+      return data as FriendProfileResult;
+    },
+    [supabase],
+  );
+
   const { friends, incoming, outgoing } = useMemo(() => {
     const friends: Friendship[] = [];
     const incoming: Friendship[] = [];
@@ -285,20 +387,24 @@ export function FriendsProvider({ children }: { children: React.ReactNode }) {
       incoming,
       outgoing,
       pendingCount: incoming.length,
+      ranks,
       sendRequest,
       acceptRequest,
       removeFriendship,
       searchUsers,
+      getFriendProfile,
     }),
     [
       hydrated,
       friends,
       incoming,
       outgoing,
+      ranks,
       sendRequest,
       acceptRequest,
       removeFriendship,
       searchUsers,
+      getFriendProfile,
     ],
   );
 

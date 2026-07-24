@@ -204,7 +204,7 @@ export default function CardioPage() {
       </div>
 
       {/* Action Button */}
-      <div className="mt-4 flex justify-center">
+      <div className="flex justify-center">
         <Button
           fullWidth
           onClick={isTracking ? maximize : startTracking}
@@ -217,17 +217,17 @@ export default function CardioPage() {
 
       {/* Grid of stats */}
       <div className="grid grid-cols-2 gap-3">
-        <PastelCard variant="blue" className="flex flex-col gap-2">
+        <PastelCard variant="blue" className="flex flex-col gap-4">
           <Flame className="size-4 text-blue-600/70" />
-          <div className="mt-2">
+          <div>
             <p className="text-2xl font-semibold leading-none">{kcal}</p>
             <p className="mt-1 text-xs text-muted-foreground">kcal quemadas</p>
           </div>
         </PastelCard>
 
-        <PastelCard variant="mint" className="flex flex-col gap-2">
+        <PastelCard variant="mint" className="flex flex-col gap-4">
           <Timer className="size-4 text-green-600/70" />
-          <div className="mt-2">
+          <div>
             <p className="text-2xl font-semibold leading-none">
               {activeMin}
               <span className="text-base font-normal text-muted-foreground">m</span>
@@ -236,9 +236,9 @@ export default function CardioPage() {
           </div>
         </PastelCard>
 
-        <PastelCard variant="lilac" className="flex flex-col gap-2">
+        <PastelCard variant="lilac" className="flex flex-col gap-4">
           <TrendingUp className="size-4 text-purple-600/70" />
-          <div className="mt-2">
+          <div>
             <p className="text-2xl font-semibold leading-none">
               {today.distanceKm.toFixed(1)}
               <span className="text-base font-normal text-muted-foreground">km</span>
@@ -251,12 +251,10 @@ export default function CardioPage() {
 
 
       {/* History section */}
-      <div className="mt-6 flex flex-col gap-4">
-        <div>
-          <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
-            HISTORIAL
-          </p>
-        </div>
+      <div className="flex flex-col gap-2">
+        <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
+          HISTORIAL
+        </p>
         <div className="flex flex-col gap-3 md:grid md:grid-cols-2 md:gap-3">
           {history.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground md:col-span-2">

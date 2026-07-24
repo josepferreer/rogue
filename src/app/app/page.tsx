@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { RankBadge } from "@/components/ui/rank-badge";
+import { FriendsStrip } from "@/components/friends/friends-strip";
 import { getDivisionLabel, getRankTier } from "@/lib/ranks";
 import { useRogue } from "@/lib/store/rogue-store";
 import { useWorkoutSession } from "@/lib/store/workout-session-store";
@@ -714,7 +715,7 @@ export default function Home() {
         </div>
       </Link>
 
-      <div>
+      <div className="flex flex-col gap-3">
         <div
           className="-mx-5 overflow-hidden transition-[height] duration-200 ease-out"
           style={{ height: carouselHeight }}
@@ -746,7 +747,7 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <div className="mt-3 flex items-center justify-center gap-1.5">
+        <div className="flex items-center justify-center gap-1.5">
           {["Ver hoy", "Ver volumen semanal", "Ver calendario"].map(
             (label, i) => (
               <button
@@ -764,35 +765,46 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <PastelCard variant="neutral" className="flex flex-col gap-2">
-          <Flame className="size-4 text-muted-foreground" />
-          <div>
-            <p className="font-mono text-lg font-medium leading-none">
-              {weekSummary.streak}
-              <span className="text-xs font-normal text-muted-foreground">
-                {" "}
-                {weekSummary.streak === 1 ? "día" : "días"}
-              </span>
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">racha</p>
-          </div>
-        </PastelCard>
+      {/* Tarjetas de resumen: la de nutricion va en el mismo bloque que las dos
+          de arriba para que la separacion vertical sea la misma que la
+          horizontal entre ellas (gap-3), no el gap-6 de la pagina. */}
+      <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-3">
+          <PastelCard variant="neutral" className="flex flex-col gap-2">
+            <Flame className="size-4 text-muted-foreground" />
+            <div>
+              <p className="font-mono text-lg font-medium leading-none">
+                {weekSummary.streak}
+                <span className="text-xs font-normal text-muted-foreground">
+                  {" "}
+                  {weekSummary.streak === 1 ? "día" : "días"}
+                </span>
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">racha</p>
+            </div>
+          </PastelCard>
 
-        <PastelCard variant="neutral" className="flex flex-col gap-2">
-          <Clock className="size-4 text-muted-foreground" />
-          <div>
-            <p className="font-mono text-lg font-medium leading-none">
-              {timeStats.count > 0 ? formatDurationLabel(timeStats.avgSec) : "—"}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">media / entreno</p>
-          </div>
-        </PastelCard>
+          <PastelCard variant="neutral" className="flex flex-col gap-2">
+            <Clock className="size-4 text-muted-foreground" />
+            <div>
+              <p className="font-mono text-lg font-medium leading-none">
+                {timeStats.count > 0
+                  ? formatDurationLabel(timeStats.avgSec)
+                  : "—"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                media / entreno
+              </p>
+            </div>
+          </PastelCard>
+        </div>
+
+        <NutritionCard kcalToday={kcalToday} kcalGoal={goals.kcal} />
       </div>
 
-      <NutritionCard kcalToday={kcalToday} kcalGoal={goals.kcal} />
+      <FriendsStrip />
 
-      <div>
+      <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
             TUS RANGOS
@@ -805,14 +817,14 @@ export default function Home() {
             <ArrowRight className="size-3.5" />
           </Link>
         </div>
-        <div className="no-scrollbar -mx-5 mt-3 flex gap-3 overflow-x-auto px-5 py-1">
+        <div className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 py-1">
           {ranks.map((rank) => (
             <RankChip key={rank.muscle} rank={rank} />
           ))}
         </div>
       </div>
 
-      <div className="pb-4">
+      <div className="flex flex-col gap-2 pb-4">
         <div className="flex items-center justify-between">
           <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
             DESCUBRE EJERCICIOS
@@ -825,7 +837,7 @@ export default function Home() {
             <ArrowRight className="size-3.5" />
           </Link>
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {suggestions.map(({ ex, variant }) => (
             <PastelCard
               key={ex.id}

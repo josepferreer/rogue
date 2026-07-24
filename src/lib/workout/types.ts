@@ -28,6 +28,10 @@ export type Preferences = {
   notifyRestEnd: boolean;
   /** Resumen semanal de progreso. */
   notifyWeeklySummary: boolean;
+  /** Deja que tus amigos vean tus rangos (perfil y punto de color en la home). */
+  shareRanks: boolean;
+  /** Deja que tus amigos vean tus contadores: entrenos, racha y km de cardio. */
+  shareStats: boolean;
 };
 
 /** Nombre o username segun la preferencia del usuario, con fallback. */

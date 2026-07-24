@@ -4,8 +4,11 @@ Rogue es una PWA de fitness tracking hecha con Next.js 16 (App Router, Turbopack
 React 19, TypeScript y Tailwind v4. Está en `C:\Users\Grupo Hogares\Desktop\rogue`.
 
 ## Stack y convenciones
-- App Router con rutas: `/`, `/onboarding`, `/rutinas` (+ `/rutinas/editor`), `/biblioteca`
-  (+ `/biblioteca/[id]`), `/cardio` (+ `/cardio/actividad/[id]`), `/rangos`, `/perfil`.
+- App Router. La app autenticada cuelga de `/app`: `/app` (home), `/app/onboarding`,
+  `/app/rutinas` (+ `/app/rutinas/editor`), `/app/biblioteca` (+ `/app/biblioteca/[id]`),
+  `/app/cardio` (+ `/app/cardio/actividad/[id]`), `/app/comidas`, `/app/perfil`,
+  `/app/amigos` (+ `/app/amigos/[username]`). Fuera de `/app`: landing `/` y `/login`.
+  `/app/rangos` es solo un redirect a `/app/perfil?tab=rangos`.
 - Diseño mobile-first: un "shell" único (`src/components/layout/app-shell.tsx`)
   centra el contenido en `max-w-[440px]` en desktop y ocupa el ancho completo en
   móvil, simulando un frame de app nativa. Navegación inferior fija en
@@ -32,6 +35,9 @@ React 19, TypeScript y Tailwind v4. Está en `C:\Users\Grupo Hogares\Desktop\rog
   - `src/lib/store/workout-session-store.tsx` — sesión de entreno activa,
     minimizable igual que cardio (mini-player global), con acciones como
     addSet/removeSet/toggleDone/replaceExercise/finish.
+  - `src/lib/store/friends-store.tsx` — amistades (aceptadas / recibidas /
+    enviadas), rangos cacheados de los amigos y perfil de un amigo. Se
+    resuscribe por Realtime a la tabla `friendships`.
 - Rangos (`/rangos`): sistema de tiers Principiante/Intermedio/Avanzado/
   Experto/Maestro (antes Bronce/Plata/Oro/Esmeralda/Maestro), calculados en
   `src/lib/rank-engine.ts` y `src/lib/ranks.ts`, con vista de mapa corporal y
@@ -39,6 +45,24 @@ React 19, TypeScript y Tailwind v4. Está en `C:\Users\Grupo Hogares\Desktop\rog
 - Tipos de dominio clave en `src/lib/workout/types.ts`:
   `WorkoutSession { id, dateISO, dayLabel, sets: LoggedSet[] }`,
   `LoggedSet { exerciseId, grupo, weightKg, reps }`, `RoutineDay`, `Routine`.
+- Amistades: tabla `friendships` con RLS estricta (solo ves filas donde
+  participas). Todo lo que mira el perfil de OTRO usuario pasa por funciones
+  `security definer` con proyección explícita de columnas, para no aflojar la
+  RLS de `profiles` (que es "solo tu propia fila"). RPC disponibles:
+  `search_users`, `my_friendships`, `send_friend_request`,
+  `respond_friend_request`, `is_friend_of`, `friend_profile`, `friends_ranks`.
+  El email nunca sale de la base de datos.
+  - `friend_profile(username)` devuelve el perfil del amigo en una sola llamada.
+    Las series van NORMALIZADAS (`weight_kg / bodyweight_kg`), así que el
+    cliente calcula sus rangos con el mismo `rank-engine.ts` llamando con
+    `bodyweightKg = 1` — sin conocer ni su peso ni sus cargas reales.
+  - `profiles.rank_tier` / `rank_division` son una CACHÉ del rango medio que
+    escribe el propio cliente, solo para pintar el punto de color de la tira de
+    amigos de la home sin bajarse el historial de cada uno. Es un dato
+    auto-declarado: vale de adorno, no como fuente de verdad.
+  - Privacidad: `profiles.share_ranks` y `share_stats` (por defecto `true`),
+    editables en `/app/perfil?tab=ajustes`. Peso corporal, cargas en kilos,
+    comidas y trazas GPS no se comparten en ningún caso.
 - Ejercicios: catálogo y helpers en `src/lib/exercises/` (repo, types,
   filtros); selector reutilizable en
   `src/components/routines/exercise-selector-modal.tsx` (se usa tanto para
@@ -47,9 +71,10 @@ React 19, TypeScript y Tailwind v4. Está en `C:\Users\Grupo Hogares\Desktop\rog
 
 ## Estructura relevante
 ```
-src/app/          rutas (page.tsx por carpeta, App Router)
-src/components/   cardio/, exercise/, layout/, profile/, routines/, ui/, workout/
-src/lib/          store/ (contexts), exercises/, workout/, rank-engine.ts, ranks.ts, mock-data.ts, utils.ts
+src/app/          rutas (page.tsx por carpeta, App Router); la app va bajo src/app/app/
+src/components/   cardio/, exercise/, food/, friends/, layout/, profile/, routines/, ui/, workout/
+src/lib/          store/ (contexts), exercises/, food/, supabase/, workout/, rank-engine.ts, ranks.ts, utils.ts
+supabase/         schema.sql + migrations/ (se aplican a mano en el SQL editor)
 ```
 
 ## Cosas a tener en cuenta al trabajar aquí
@@ -61,13 +86,35 @@ src/lib/          store/ (contexts), exercises/, workout/, rank-engine.ts, ranks
 - Preferencia de estilo: mobile-first, tarjetas redondeadas (`rounded-2xl`/`3xl`),
   bottom sheets para modales, tipografía mono para datos numéricos/labels
   tipo "HOY · TIRON".
+- Espaciado SIEMPRE con `gap-*` en el contenedor padre, nunca `mt-*` en el hijo
+  (un margen dentro de un padre con `gap` suma dos espaciados). Una sección con
+  cabecera mono + contenido va en un `flex flex-col gap-2`. Si hace falta otra
+  distancia, se agrupa en un sub-envoltorio con su propio `gap-*`.
+- Las migraciones de `supabase/migrations/` NO se aplican solas: hay que
+  pegarlas en el SQL editor de Supabase. Un `{}` vacío como error de
+  supabase-js suele significar que falta aplicar una.
 
 ## Estado actual (última sesión de trabajo)
-Se rediseñó la home (`src/app/page.tsx`): la tarjeta "hoy" es ahora un
-carrusel de scroll nativo (scroll-snap, no drag manual) de 2 páginas — "Hoy"
-(entreno del día) y "Calendario" (últimos 7 días / mes completo desplegable
-con `ResizeObserver` ajustando la altura del contenedor dinámicamente). El
-calendario mensual distingue días entrenados (círculo negro), hoy sin
-entrenar (anillo), pasado sin entrenar (gris) y futuro (muy atenuado), y al
-tocar un día entrenado muestra un panel con detalle de esa sesión (grupo
-muscular, series, volumen).
+Fase 2 de amistades: al pulsar sobre un amigo se abre su perfil en
+`/app/amigos/[username]` con su rango medio, el mapa corporal por rango
+(reutilizando `BodyRankSummary` de `ranks-panel.tsx`) y contadores de entrenos,
+racha en semanas y km de cardio. En la home se añadió `FriendsStrip`
+(`src/components/friends/friends-strip.tsx`), una tira horizontal de avatares
+con el punto de color del rango de cada amigo. Migraciones nuevas:
+`20260724_friend_profile.sql` y `20260724_friends_ranks.sql`.
+
+Antes de eso se rediseñó la home (`src/app/app/page.tsx`): la tarjeta "hoy" es
+un carrusel de scroll nativo (scroll-snap, no drag manual) de 3 páginas — "Hoy"
+(entreno del día), "Volumen semanal" y "Calendario" (últimos 7 días / mes
+completo desplegable con `ResizeObserver` ajustando la altura del contenedor
+dinámicamente). El calendario mensual distingue días entrenados (círculo
+negro), hoy sin entrenar (anillo), pasado sin entrenar (gris) y futuro (muy
+atenuado), y al tocar un día entrenado muestra un panel con detalle de esa
+sesión (grupo muscular, series, volumen).
+
+### Pendiente / ideas siguientes
+- Comparativa "tú vs. él" en el perfil del amigo (mapa corporal superpuesto,
+  PRs lado a lado en ejercicios comunes).
+- Copiar la rutina de un amigo a la tuya.
+- Ranking semanal de amigos en la home (necesita una RPC de agregados nueva).
+- Retos entre amigos y feed de actividad (requiere tabla de eventos).
