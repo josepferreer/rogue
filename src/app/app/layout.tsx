@@ -4,6 +4,7 @@ import { RogueProvider } from "@/lib/store/rogue-store";
 import { CardioProvider } from "@/lib/store/cardio-store";
 import { WorkoutSessionProvider } from "@/lib/store/workout-session-store";
 import { MealsProvider } from "@/lib/store/meals-store";
+import { FriendsProvider } from "@/lib/store/friends-store";
 import { OnboardingGate } from "@/components/onboarding-gate";
 import { SyncErrorToast } from "@/components/sync-error-toast";
 import { ToastProvider } from "@/components/ui/toast";
@@ -23,13 +24,15 @@ export default function AppLayout({
       <WorkoutSessionProvider>
         <MealsProvider>
           <CardioProvider>
-            <ToastProvider>
-              <HydrationGate>
-                <AppShell>{children}</AppShell>
-              </HydrationGate>
-              <OnboardingGate />
-              <SyncErrorToast />
-            </ToastProvider>
+            <FriendsProvider>
+              <ToastProvider>
+                <HydrationGate>
+                  <AppShell>{children}</AppShell>
+                </HydrationGate>
+                <OnboardingGate />
+                <SyncErrorToast />
+              </ToastProvider>
+            </FriendsProvider>
           </CardioProvider>
         </MealsProvider>
       </WorkoutSessionProvider>

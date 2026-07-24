@@ -10,9 +10,11 @@ import {
   Plus,
   RotateCcw,
   Shield,
+  Users,
   Weight,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useEffect } from "react";
 import { RanksPanel } from "@/components/profile/ranks-panel";
@@ -26,6 +28,7 @@ import {
   UnitToggle,
 } from "@/components/profile/preference-controls";
 import { useRogue } from "@/lib/store/rogue-store";
+import { useFriends } from "@/lib/store/friends-store";
 import { formatWeight } from "@/lib/units";
 import { getDisplayName, type Sex } from "@/lib/workout/types";
 import { cn } from "@/lib/utils";
@@ -413,6 +416,8 @@ export default function PerfilPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { profile, sessions, ranks, preferences, resetAll } = useRogue();
+  const { friends, pendingCount: friendRequests } = useFriends();
+  const friendsCount = friends.length;
   const [editOpen, setEditOpen] = useState(false);
   const [identityOpen, setIdentityOpen] = useState(false);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
@@ -489,6 +494,31 @@ export default function PerfilPage({
             },
           ]}
         />
+      </Section>
+
+      <Section title="SOCIAL">
+        <Link
+          href="/app/amigos"
+          className="flex items-center gap-3 rounded-3xl border border-border bg-surface px-4 py-3 transition-colors hover:bg-muted/50"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <Users className="size-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Amigos</p>
+            <p className="font-mono text-xs text-muted-foreground">
+              {friendsCount === 0
+                ? "Aún no tienes amigos"
+                : `${friendsCount} ${friendsCount === 1 ? "amigo" : "amigos"}`}
+            </p>
+          </div>
+          {friendRequests > 0 && (
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-destructive font-mono text-[11px] font-semibold text-destructive-foreground">
+              {friendRequests}
+            </span>
+          )}
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+        </Link>
       </Section>
 
       <div className="grid grid-cols-3 gap-3">
