@@ -4,6 +4,8 @@ import { useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { CloudOff, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NOTIFICATION_CARD_CLASS } from "@/components/ui/notification-stack";
+import { cn } from "@/lib/utils";
 import {
   dismissFailedWrites,
   getFailedWrites,
@@ -32,39 +34,36 @@ export function SyncErrorToast() {
   );
 
   if (failed.length === 0 || !mounted) return null;
-  const portalTarget = document.getElementById("app-shell");
+  // Contenedor compartido con el resto de avisos (ver notification-stack.tsx):
+  // se apilan sobre la barra de navegacion en vez de solaparse.
+  const portalTarget = document.getElementById("notification-stack");
   if (!portalTarget) return null;
 
   const labels = [...new Set(failed.map((f) => f.label))].join(", ");
 
   return createPortal(
-    <div className="absolute inset-x-0 bottom-24 z-[70] px-5 md:bottom-6">
-      <div
-        role="alert"
-        className="mx-auto flex w-full items-center gap-3 rounded-2xl border border-border bg-surface p-3 shadow-2xl md:max-w-sm"
-      >
-        <CloudOff className="size-5 shrink-0 text-destructive" />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">Cambios sin guardar</p>
-          <p className="truncate text-xs text-muted-foreground">
-            No se pudo guardar: {labels}.
-          </p>
-        </div>
-        <Button
-          onClick={retryFailedWrites}
-          className="shrink-0 px-4 py-2 text-xs"
-        >
-          Reintentar
-        </Button>
-        <button
-          type="button"
-          onClick={dismissFailedWrites}
-          aria-label="Descartar aviso"
-          className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <X className="size-4" />
-        </button>
+    <div
+      role="alert"
+      className={cn(NOTIFICATION_CARD_CLASS, "[animation:toast-in_0.2s_ease-out]")}
+    >
+      <CloudOff className="size-5 shrink-0 text-destructive" />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">Cambios sin guardar</p>
+        <p className="truncate text-xs text-muted-foreground">
+          No se pudo guardar: {labels}.
+        </p>
       </div>
+      <Button onClick={retryFailedWrites} className="shrink-0 px-3 py-1.5 text-xs">
+        Reintentar
+      </Button>
+      <button
+        type="button"
+        onClick={dismissFailedWrites}
+        aria-label="Descartar aviso"
+        className="flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      >
+        <X className="size-4" />
+      </button>
     </div>,
     portalTarget,
   );

@@ -8,6 +8,7 @@ import { CardioMiniPlayer } from "@/components/cardio/cardio-mini-player";
 import { RouteTrackerModal } from "@/components/cardio/route-tracker-modal";
 import { WorkoutMiniPlayer } from "@/components/workout/workout-mini-player";
 import { WorkoutSessionModal } from "@/components/workout/workout-session-modal";
+import { NotificationStack } from "@/components/ui/notification-stack";
 
 /** Paginas que gestionan su propio layout completo (cabecera, scroll, ancho):
  *  no reciben el padding/max-width del AppShell ni la barra inferior. */
@@ -44,6 +45,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </main>
             <CardioMiniPlayer />
             <WorkoutMiniPlayer />
+            <NotificationStack />
             <BottomNav />
             <RouteTrackerModal />
             <WorkoutSessionModal />

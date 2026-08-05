@@ -4,13 +4,14 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
+import { NOTIFICATION_CARD_CLASS } from "./notification-stack";
 import { cn } from "@/lib/utils";
 
 export type ToastVariant = "success" | "error" | "info";
@@ -39,16 +40,25 @@ const VARIANT_META: Record<
 
 const AUTO_DISMISS_MS = 3200;
 
+/** Sin suscripcion real: solo distingue servidor (false) de cliente (true). */
+const subscribeNever = () => () => {};
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
-  // #app-shell no existe cuando este provider se monta: HydrationGate muestra un
-  // loader y solo monta AppShell (que tiene ese id) tras hidratar. Por eso NO se
-  // puede cachear el target una vez al montar (quedaria null para siempre y los
-  // toasts nunca se pintarian). Se resuelve en cada render, ya con el DOM listo;
-  // los toasts se disparan siempre por interaccion, mucho despues de la hidratacion.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const portalTarget = mounted ? document.getElementById("app-shell") : null;
+  // #notification-stack no existe cuando este provider se monta: HydrationGate
+  // muestra un loader y solo monta AppShell (que lo contiene) tras hidratar. Por
+  // eso NO se puede cachear el target una vez al montar (quedaria null para
+  // siempre y los toasts nunca se pintarian). Se resuelve en cada render, ya con
+  // el DOM listo; los toasts se disparan por interaccion, mucho despues.
+  // false en SSR/hidratacion, true tras montar (mismo patron que SyncErrorToast).
+  const mounted = useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false,
+  );
+  const portalTarget = mounted
+    ? document.getElementById("notification-stack")
+    : null;
   const idRef = useRef(0);
 
   const dismiss = useCallback((id: number) => {
@@ -69,7 +79,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const overlay =
     portalTarget && toasts.length > 0
       ? createPortal(
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-[70] flex flex-col items-center gap-2 px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          <>
             {toasts.map((t) => {
               const meta = VARIANT_META[t.variant];
               const Icon = meta.icon;
@@ -77,7 +87,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 <div
                   key={t.id}
                   role="status"
-                  className="pointer-events-auto flex w-full max-w-sm items-center gap-2.5 rounded-2xl border border-border bg-surface px-4 py-3 shadow-2xl [animation:toast-in_0.2s_ease-out]"
+                  className={cn(
+                    NOTIFICATION_CARD_CLASS,
+                    "[animation:toast-in_0.2s_ease-out]",
+                  )}
                 >
                   <Icon className={cn("size-5 shrink-0", meta.dot)} />
                   <p className="flex-1 text-sm font-medium">{t.message}</p>
@@ -92,7 +105,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 </div>
               );
             })}
-          </div>,
+          </>,
           portalTarget,
         )
       : null;
