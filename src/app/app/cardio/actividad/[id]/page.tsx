@@ -1,11 +1,16 @@
 "use client";
 
-import { use, useMemo } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ArrowLeft, MapPin, Activity, Clock, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCardio } from "@/lib/store/cardio-store";
+import { createClient } from "@/lib/supabase/client";
+import {
+  fetchCoordinates,
+  useCardio,
+  type Coordinate,
+} from "@/lib/store/cardio-store";
 
 const MapView = dynamic(() => import("@/components/cardio/map-view"), {
   ssr: false,
@@ -37,6 +42,30 @@ export default function ActivityDetailsPage({
     () => history.find((s) => s.id === id),
     [history, id],
   );
+
+  // La polilinea NO viene en el listado (son ~130 KB por ruta y solo se pinta
+  // aqui): se pide por id al abrir el detalle. Si la sesion acaba de terminar,
+  // ya la trae en memoria y no hace falta consultar.
+  const [fetched, setFetched] = useState<Coordinate[] | null>(null);
+  // Derivado, no copiado: si la sesion ya trae la traza (acaba de terminar) se
+  // usa esa; si no, la que se haya descargado.
+  const coordinates = session?.coordinates ?? fetched ?? [];
+
+  useEffect(() => {
+    if (session?.coordinates) return;
+    let vigente = true;
+    const supabase = createClient();
+    fetchCoordinates(supabase, id)
+      .then((puntos) => {
+        if (vigente) setFetched(puntos);
+      })
+      .catch((err) => {
+        console.error("No se pudo cargar la ruta:", err);
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [id, session?.coordinates]);
 
   if (!session) {
     return (
@@ -86,7 +115,7 @@ export default function ActivityDetailsPage({
 
       {/* Map container */}
       <div className="relative h-[300px] w-full overflow-hidden rounded-3xl border border-border shadow-sm">
-        <MapView coordinates={session.coordinates} snapToRoads />
+        <MapView coordinates={coordinates} snapToRoads />
       </div>
 
       {/* Stats Grid */}
