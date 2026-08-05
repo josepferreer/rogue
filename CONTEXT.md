@@ -62,7 +62,45 @@ src/lib/          store/ (contexts), exercises/, workout/ (types.ts, one-rm.ts),
   bottom sheets para modales, tipografía mono para datos numéricos/labels
   tipo "HOY · TIRON".
 
-## Estado actual (última sesión de trabajo)
+## Auditoría para beta pública (en curso, rama `auditoria/pilar-1-entrenamientos`)
+
+Auditoría crítica módulo a módulo. Tres pilares: **Entrenamientos**, **Cardio**,
+**Nutrición**. El APK (C1) se toca **al final**, cuando los tres estén hechos.
+
+- **Pilar 1 — Entrenamientos: CERRADO.** Preparación para producción 4,0 → 7,5.
+  Hecho: guardado atómico de rutinas (`save_routine`), aviso de descanso
+  programado en el SO, unidades ancladas a la sesión, contextos memoizados,
+  pila del botón atrás, descanso y peso editables + prellenado con la última
+  sesión, guard de cambios sin guardar, agregados en Postgres
+  (`workout_stats`) y ventana de historial de 1 año, timeout de carga.
+- **Pilar 2 — Cardio: PARCIAL.** ~3,5 → ~6,5. Hecho: persistencia incremental
+  durante la ruta (`upsert_cardio_progress`, envía solo puntos nuevos y es
+  idempotente), listado sin la polilínea (se carga al abrir el detalle),
+  contexto memoizado, snapshot con throttle.
+  **Pendiente, decisión de producto:** tipo de actividad + elevación (sin tipo,
+  el filtro de outliers a 28,8 km/h descarta la bici entera) y pasos/kcal, hoy
+  estimados pero mostrados como cifras exactas.
+- **Pilar 3 — Nutrición: SIN EMPEZAR.**
+
+### Lista de dependencias de C1 (el APK es un WebView a una URL remota)
+Sin conexión la app **no abre**. Además Apple rechaza envoltorios web (guía 4.2).
+Acumular aquí todo lo que dependa de resolverlo:
+1. Offline de registro de entrenos.
+2. La cola de escrituras fallidas (`sync.ts`) vive en memoria: se pierde al recargar.
+3. Carga bajo demanda del calendario más allá de la ventana de 1 año.
+4. Versionado de cliente (hoy no se sabe qué versión ejecuta un usuario).
+5. `public/sw.js` usa un nombre de caché constante: nunca se purga nada.
+6. Sin cobertura, el WebView no puede recargarse y una ruta a medias es irrecuperable.
+
+### Migraciones — aplicar SIEMPRE antes de desplegar el código
+Las funciones nuevas degradan solas si aún no existen (avisan por consola en vez
+de tumbar la app), pero el orden correcto es BD primero. **Las FK de
+`exercise_id` están desactivadas a propósito**: se aplicaron con el catálogo
+`exercises` sin sembrar y bloquearon toda escritura de entrenos. Para reponerlas
+hay que ejecutar antes `node scripts/seed-supabase.mjs`; la migración ya aborta
+sola si el catálogo no está listo.
+
+## Estado anterior
 **Desinstalación completa del módulo de Rangos Musculares (05/08/2026).** Se
 borraron `lib/ranks.ts`, `lib/rank-engine.ts`, `components/profile/ranks-panel.tsx`,
 `components/ui/rank-badge.tsx`, la ruta `/app/rangos` y `public/ranks/` (16 SVG).
