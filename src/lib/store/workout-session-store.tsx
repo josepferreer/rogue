@@ -193,7 +193,7 @@ export function WorkoutSessionProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const { logSession, preferences, exerciseNotes, acknowledgeReminders, sessions } =
+  const { logSession, preferences, exerciseNotes, acknowledgeReminders, stats } =
     useRogue();
 
   // Unidad con la que se escribieron los pesos que hay en `rows`. Se fija al
@@ -218,21 +218,13 @@ export function WorkoutSessionProvider({
   const notesRef = useRef(exerciseNotes);
   notesRef.current = exerciseNotes;
 
-  // Ultimo peso/reps por ejercicio, para prellenar las filas al empezar. Se
-  // recorre el historial una vez por cambio de sesiones, no en cada arranque.
-  const lastPerformance = useMemo(() => {
-    const map: LastPerformance = {};
-    for (const session of sessions) {
-      for (const set of session.sets) {
-        // sessions viene ordenado ascendente por fecha: el ultimo que se ve de
-        // cada ejercicio es el mas reciente.
-        map[set.exerciseId] = { weightKg: set.weightKg, reps: set.reps };
-      }
-    }
-    return map;
-  }, [sessions]);
-  const lastPerformanceRef = useRef(lastPerformance);
-  lastPerformanceRef.current = lastPerformance;
+  // Ultimo peso/reps por ejercicio, para prellenar las filas al empezar. Lo
+  // calcula Postgres sobre el historial COMPLETO (workout_stats): recorrerlo en
+  // cliente obligaba a tener todas las sesiones en memoria, que es justo lo que
+  // se quiso quitar. Asi el prellenado sigue siendo correcto aunque la ultima
+  // vez que se hizo ese ejercicio quede fuera de la ventana cargada.
+  const lastPerformanceRef = useRef<LastPerformance>(stats.lastByExercise);
+  lastPerformanceRef.current = stats.lastByExercise;
 
   // Espejo de la preferencia de aviso: la leen callbacks que no deben
   // recrearse (toggleDone, adjustRest) cada vez que el usuario la cambia.

@@ -27,7 +27,6 @@ import {
   EXERCISE_CATEGORIES,
   DIFFICULTY_LABELS,
   EQUIPMENT_LABELS,
-  type ExerciseCategory,
 } from "@/lib/exercises/types";
 import { formatWeight } from "@/lib/units";
 import { cn, formatDurationLabel } from "@/lib/utils";
@@ -571,7 +570,8 @@ function NutritionCard({
 }
 
 export default function Home() {
-  const { profile, sessions, todayDay, routineDays, preferences } = useRogue();
+  const { profile, sessions, stats, todayDay, routineDays, preferences } =
+    useRogue();
   const { start: startWorkout } = useWorkoutSession();
   const { entriesForDay, goals } = useMeals();
   const [page, setPage] = useState(0);
@@ -616,21 +616,14 @@ export default function Home() {
   // render (funcion impura).
   const [mountedAt] = useState(() => Date.now());
 
-  // Estadisticas de duracion sobre todas las sesiones que la tengan registrada
-  // (sesiones antiguas sin cronometro se ignoran para no falsear la media).
-  const timeStats = useMemo(() => {
-    const timed = sessions.filter(
-      (s) => s.durationSec !== undefined && s.durationSec > 0,
-    );
-    if (timed.length === 0) return { avgSec: 0, longestSec: 0, count: 0 };
-    const total = timed.reduce((sum, s) => sum + (s.durationSec ?? 0), 0);
-    const longest = timed.reduce((m, s) => Math.max(m, s.durationSec ?? 0), 0);
-    return {
-      avgSec: Math.round(total / timed.length),
-      longestSec: longest,
-      count: timed.length,
-    };
-  }, [sessions]);
+  // Duracion media sobre TODAS las sesiones cronometradas, no solo las de la
+  // ventana cargada: la calcula Postgres (workout_stats). Las sesiones antiguas
+  // sin cronometro se ignoran alli mismo para no falsear la media.
+  const timeStats = {
+    avgSec: stats.avgDurationSec,
+    longestSec: stats.longestDurationSec,
+    count: stats.timedCount,
+  };
   const estMinutes = todayDay ? todayDay.exercises.length * 9 : 0;
 
   const weekSummary = useWeekSummary(sessions, mountedAt);
@@ -640,22 +633,17 @@ export default function Home() {
   }, [entriesForDay]);
 
   // Sugerencias reales: ejercicios compuestos de las categorias que menos has
-  // entrenado, sacados de la biblioteca. Se cuenta por series registradas
-  // (set.grupo ya es la categoria del ejercicio, la misma que Exercise.grupo).
+  // entrenado. El recuento por categoria viene de workout_stats (historial
+  // completo); `trainedIds` se queda en la ventana cargada a proposito, porque
+  // "no lo has hecho ultimamente" es mejor sugerencia que "no lo has hecho
+  // nunca en dos anos".
   const suggestions = useMemo(() => {
     const trainedIds = new Set(
       sessions.flatMap((s) => s.sets.map((set) => set.exerciseId)),
     );
-    const setsByCategory = new Map<ExerciseCategory, number>(
-      EXERCISE_CATEGORIES.map((categoria) => [categoria, 0]),
-    );
-    for (const session of sessions) {
-      for (const set of session.sets) {
-        setsByCategory.set(set.grupo, (setsByCategory.get(set.grupo) ?? 0) + 1);
-      }
-    }
+    const setsByCategory = stats.setsByCategory;
     const categoriesByNeed = [...EXERCISE_CATEGORIES].sort(
-      (a, b) => (setsByCategory.get(a) ?? 0) - (setsByCategory.get(b) ?? 0),
+      (a, b) => (setsByCategory[a] ?? 0) - (setsByCategory[b] ?? 0),
     );
     const variants = ["lilac", "blue"] as const;
     const picks: { ex: (typeof DEMO_EXERCISES)[number]; variant: (typeof variants)[number] }[] = [];
@@ -673,7 +661,7 @@ export default function Home() {
       }
     }
     return picks;
-  }, [sessions]);
+  }, [sessions, stats.setsByCategory]);
 
   const displayName = getDisplayName(profile, preferences);
   const initials =

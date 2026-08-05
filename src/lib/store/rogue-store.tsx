@@ -47,6 +47,38 @@ const DEFAULT_PREFERENCES: Preferences = {
   notifyWeeklySummary: false,
 };
 
+/**
+ * Ventana de historial que se trae al arrancar. Nada de la UI necesita ya el
+ * historial completo --los agregados los calcula Postgres (workout_stats)-- y
+ * traerlo entero crecia sin techo con la antiguedad del usuario. Un ano cubre
+ * de sobra el calendario, la racha y el volumen semanal.
+ *
+ * Pendiente: cargar bajo demanda los meses anteriores cuando el usuario navega
+ * el calendario mas atras de la ventana (hoy simplemente no los ve).
+ */
+const HISTORY_WINDOW_DAYS = 365;
+
+/** Agregados sobre TODO el historial, calculados en servidor. */
+export type WorkoutStats = {
+  totalSessions: number;
+  timedCount: number;
+  avgDurationSec: number;
+  longestDurationSec: number;
+  /** Series registradas por categoria de ejercicio. */
+  setsByCategory: Record<string, number>;
+  /** Ultimo peso (kg) y reps de cada ejercicio, para prellenar la sesion. */
+  lastByExercise: Record<string, { weightKg: number; reps: number }>;
+};
+
+const EMPTY_STATS: WorkoutStats = {
+  totalSessions: 0,
+  timedCount: 0,
+  avgDurationSec: 0,
+  longestDurationSec: 0,
+  setsByCategory: {},
+  lastByExercise: {},
+};
+
 type ExerciseInfo = { nombre: string; grupo: ExerciseCategory };
 const EXERCISE_INFO = new Map<string, ExerciseInfo>(
   DEMO_EXERCISES.map((e) => [e.id, { nombre: e.nombre, grupo: e.grupo }]),
@@ -65,6 +97,7 @@ export type LogResult = {
 type RogueState = {
   profile: Profile;
   sessions: WorkoutSession[];
+  stats: WorkoutStats;
   routineDays: RoutineDay[];
   preferences: Preferences;
   exerciseNotes: ExerciseNote[];
@@ -73,6 +106,7 @@ type RogueState = {
 const DEFAULT_STATE: RogueState = {
   profile: DEFAULT_PROFILE,
   sessions: [],
+  stats: EMPTY_STATS,
   routineDays: DEMO_ROUTINE.days,
   preferences: DEFAULT_PREFERENCES,
   exerciseNotes: [],
@@ -83,7 +117,11 @@ type RogueContextValue = {
   /** Si hay sesion de Supabase activa. false => OnboardingGate manda a /login. */
   authenticated: boolean;
   profile: Profile;
+  /** Historial reciente (ventana de HISTORY_WINDOW_DAYS), NO todo el historico.
+   *  Para cifras de siempre (total de entrenos, media, ultimo peso) usar
+   *  `stats`, que las calcula Postgres sobre el historial completo. */
   sessions: WorkoutSession[];
+  stats: WorkoutStats;
   routineDays: RoutineDay[];
   /** Dias de rutina programados para el dia de la semana actual (getDay()).
    *  Vacio = hoy toca descanso (o no hay rutina). */
@@ -117,6 +155,51 @@ type RogueContextValue = {
 };
 
 const RogueContext = createContext<RogueContextValue | null>(null);
+
+/** Agregados calculados en cliente sobre las sesiones cargadas. Solo se usa
+ *  como red de seguridad cuando workout_stats no esta disponible: las cifras
+ *  "de siempre" salen entonces limitadas a la ventana. */
+function statsFromSessions(sessions: WorkoutSession[]): WorkoutStats {
+  return sessions.reduce<WorkoutStats>(
+    (acc, session) => applySessionToStats(acc, session),
+    EMPTY_STATS,
+  );
+}
+
+/** Incorpora una sesion recien registrada a los agregados ya cargados. */
+function applySessionToStats(
+  stats: WorkoutStats,
+  session: WorkoutSession,
+): WorkoutStats {
+  const setsByCategory = { ...stats.setsByCategory };
+  const lastByExercise = { ...stats.lastByExercise };
+  for (const set of session.sets) {
+    setsByCategory[set.grupo] = (setsByCategory[set.grupo] ?? 0) + 1;
+    // El ultimo set de cada ejercicio en esta sesion manda: es lo mas reciente.
+    lastByExercise[set.exerciseId] = { weightKg: set.weightKg, reps: set.reps };
+  }
+
+  const timed = session.durationSec !== undefined && session.durationSec > 0;
+  const timedCount = stats.timedCount + (timed ? 1 : 0);
+  const avgDurationSec = timed
+    ? Math.round(
+        (stats.avgDurationSec * stats.timedCount + (session.durationSec ?? 0)) /
+          timedCount,
+      )
+    : stats.avgDurationSec;
+
+  return {
+    totalSessions: stats.totalSessions + 1,
+    timedCount,
+    avgDurationSec,
+    longestDurationSec: Math.max(
+      stats.longestDurationSec,
+      session.durationSec ?? 0,
+    ),
+    setsByCategory,
+    lastByExercise,
+  };
+}
 
 function bestEst1RMByExercise(sessions: WorkoutSession[]): Map<string, number> {
   const map = new Map<string, number>();
@@ -195,6 +278,39 @@ function toProfileRowPatch(
 }
 
 type SupabaseClient = ReturnType<typeof createClient>;
+
+/**
+ * Techo para la carga inicial. Sin esto, una peticion que ni resuelve ni
+ * rechaza --tipico en movil: la red "existe" pero el paquete no llega nunca--
+ * dejaba `hydrated` en false para siempre y la app se quedaba en el splash sin
+ * timeout, sin reintento y sin forma de salir salvo matar el proceso. Al
+ * vencer, cae en la pantalla de reintento que ya existia para los errores.
+ */
+const LOAD_TIMEOUT_MS = 15_000;
+
+
+function withTimeout<T>(
+  promise: PromiseLike<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const id = setTimeout(
+      () => reject(new Error(`Tiempo de espera agotado cargando ${label}`)),
+      ms,
+    );
+    Promise.resolve(promise).then(
+      (value) => {
+        clearTimeout(id);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(id);
+        reject(err);
+      },
+    );
+  });
+}
 
 async function fetchProfile(
   supabase: SupabaseClient,
@@ -279,10 +395,44 @@ type SessionRow = {
   }[];
 };
 
+/**
+ * Agregados desde Postgres. Devuelve null --sin lanzar-- si la funcion todavia
+ * no existe en la base de datos.
+ *
+ * Es deliberado: cliente y BD no se despliegan a la vez, y si el codigo nuevo
+ * llega antes que la migracion, hacer fallar esta lectura tumbaria la carga
+ * entera y dejaria la app inutilizable en vez de solo mostrar cifras algo
+ * peores. Con null se cae al calculo local sobre la ventana cargada.
+ */
+async function fetchStats(
+  supabase: SupabaseClient,
+): Promise<WorkoutStats | null> {
+  const { data, error } = await supabase.rpc("workout_stats");
+  if (error) {
+    console.warn(
+      "workout_stats no disponible; se usaran agregados de la ventana cargada:",
+      error.message,
+    );
+    return null;
+  }
+  const raw = (data ?? {}) as Record<string, unknown>;
+  return {
+    totalSessions: Number(raw.total_sessions ?? 0),
+    timedCount: Number(raw.timed_count ?? 0),
+    avgDurationSec: Number(raw.avg_duration_sec ?? 0),
+    longestDurationSec: Number(raw.longest_duration_sec ?? 0),
+    setsByCategory: (raw.sets_by_category ?? {}) as Record<string, number>,
+    lastByExercise: (raw.last_by_exercise ?? {}) as WorkoutStats["lastByExercise"],
+  };
+}
+
 async function fetchSessions(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<WorkoutSession[]> {
+  const since = new Date(
+    Date.now() - HISTORY_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
   // Sets embebidos en la misma consulta (un .in() con cientos de ids de
   // sesion acababa generando URLs enormes) y paginado con .range() para que
   // el historial no se trunque en las 1000 filas por defecto de PostgREST.
@@ -293,6 +443,7 @@ async function fetchSessions(
         "id, day_label, date, duration_sec, workout_sets (exercise_id, categoria, weight_kg, reps, position)",
       )
       .eq("user_id", userId)
+      .gte("date", since)
       .order("date", { ascending: true })
       .order("id", { ascending: true })
       .order("position", { referencedTable: "workout_sets" })
@@ -460,9 +611,23 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
     let active = true;
 
     async function load() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      let user: { id: string } | null;
+      try {
+        // getUser() tambien va con timeout: si se cuelga aqui --antes del
+        // try/catch de las lecturas-- no habia forma de salir de la pantalla
+        // de carga.
+        const result = await withTimeout(
+          supabase.auth.getUser(),
+          LOAD_TIMEOUT_MS,
+          "la sesion",
+        );
+        user = result.data.user;
+      } catch (err) {
+        if (!active) return;
+        console.error("No se pudo comprobar la sesion:", err);
+        setLoadError(true);
+        return;
+      }
 
       if (!user) {
         // No tocar userIdRef si este efecto ya no esta vigente (mismo motivo
@@ -490,13 +655,19 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
       let routine: Awaited<ReturnType<typeof fetchRoutine>>;
       let sessions: WorkoutSession[];
       let exerciseNotes: ExerciseNote[];
+      let stats: WorkoutStats | null;
       try {
-        [profileRow, routine, sessions, exerciseNotes] = await Promise.all([
-          fetchProfile(supabase, user.id),
-          fetchRoutine(supabase, user.id),
-          fetchSessions(supabase, user.id),
-          fetchExerciseNotes(supabase, user.id),
-        ]);
+        [profileRow, routine, sessions, exerciseNotes, stats] = await withTimeout(
+          Promise.all([
+            fetchProfile(supabase, user.id),
+            fetchRoutine(supabase, user.id),
+            fetchSessions(supabase, user.id),
+            fetchExerciseNotes(supabase, user.id),
+            fetchStats(supabase),
+          ]),
+          LOAD_TIMEOUT_MS,
+          "tus datos",
+        );
       } catch (err) {
         if (!active) return;
         console.error("No se pudieron cargar los datos del usuario:", err);
@@ -518,6 +689,7 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
         profile: profileRow ? rowToProfile(profileRow) : DEFAULT_PROFILE,
         preferences: profileRow ? rowToPreferences(profileRow) : DEFAULT_PREFERENCES,
         sessions,
+        stats: stats ?? statsFromSessions(sessions),
         routineDays: routine && routine.days.length > 0 ? routine.days : DEMO_ROUTINE.days,
         exerciseNotes,
       });
@@ -686,6 +858,10 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         sessions: [...prev.sessions, session],
         exerciseNotes: [...prev.exerciseNotes, ...noteRows],
+        // Los agregados los calcula Postgres, pero solo al arrancar: aqui se
+        // adelantan a mano para que el perfil, la media de duracion y el
+        // prellenado reflejen el entreno recien hecho sin recargar.
+        stats: applySessionToStats(prev.stats, session),
       }));
 
       const userId = userIdRef.current;
@@ -705,11 +881,29 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
     (id: string) => {
       // Optimista: fuera del estado al instante. Tambien se quitan sus notas
       // locales.
-      setState((prev) => ({
-        ...prev,
-        sessions: prev.sessions.filter((s) => s.id !== id),
-        exerciseNotes: prev.exerciseNotes.filter((n) => n.sessionId !== id),
-      }));
+      setState((prev) => {
+        const removed = prev.sessions.find((s) => s.id === id);
+        const setsByCategory = { ...prev.stats.setsByCategory };
+        for (const set of removed?.sets ?? []) {
+          setsByCategory[set.grupo] = Math.max(
+            0,
+            (setsByCategory[set.grupo] ?? 0) - 1,
+          );
+        }
+        return {
+          ...prev,
+          sessions: prev.sessions.filter((s) => s.id !== id),
+          exerciseNotes: prev.exerciseNotes.filter((n) => n.sessionId !== id),
+          stats: {
+            ...prev.stats,
+            totalSessions: Math.max(0, prev.stats.totalSessions - 1),
+            setsByCategory,
+            // avgDuration y lastByExercise no se recalculan aqui: exigirian
+            // rehacer el agregado sobre TODO el historial, que es justo lo que
+            // se quiere evitar en cliente. Se corrigen solos al recargar.
+          },
+        };
+      });
 
       const userId = userIdRef.current;
       if (userId) {
@@ -831,6 +1025,7 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
       authenticated,
       profile: state.profile,
       sessions: state.sessions,
+      stats: state.stats,
       routineDays: state.routineDays,
       todayDays,
       todayDay,
@@ -851,6 +1046,7 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
       authenticated,
       state.profile,
       state.sessions,
+      state.stats,
       state.routineDays,
       todayDays,
       todayDay,

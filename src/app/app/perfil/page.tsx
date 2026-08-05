@@ -408,7 +408,7 @@ export default function PerfilPage({
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
-  const { profile, sessions, preferences, resetAll } = useRogue();
+  const { profile, stats, preferences, resetAll } = useRogue();
   const { friends, pendingCount: friendRequests } = useFriends();
   const friendsCount = friends.length;
   const [editOpen, setEditOpen] = useState(false);
@@ -514,7 +514,7 @@ export default function PerfilPage({
         <PastelCard variant="neutral" className="flex flex-col gap-1.5">
           <Flame className="size-4 text-muted-foreground" />
           <p className="font-mono text-lg font-medium leading-none">
-            {sessions.length}
+            {stats.totalSessions}
           </p>
           <p className="text-[11px] text-muted-foreground">entrenos</p>
         </PastelCard>
