@@ -5,7 +5,7 @@ React 19, TypeScript y Tailwind v4. Está en `C:\Users\Grupo Hogares\Desktop\rog
 
 ## Stack y convenciones
 - App Router con rutas: `/`, `/onboarding`, `/rutinas` (+ `/rutinas/editor`), `/biblioteca`
-  (+ `/biblioteca/[id]`), `/cardio` (+ `/cardio/actividad/[id]`), `/rangos`, `/perfil`.
+  (+ `/biblioteca/[id]`), `/cardio` (+ `/cardio/actividad/[id]`), `/perfil`.
 - Diseño mobile-first: un "shell" único (`src/components/layout/app-shell.tsx`)
   centra el contenido en `max-w-[440px]` en desktop y ocupa el ancho completo en
   móvil, simulando un frame de app nativa. Navegación inferior fija en
@@ -32,10 +32,10 @@ React 19, TypeScript y Tailwind v4. Está en `C:\Users\Grupo Hogares\Desktop\rog
   - `src/lib/store/workout-session-store.tsx` — sesión de entreno activa,
     minimizable igual que cardio (mini-player global), con acciones como
     addSet/removeSet/toggleDone/replaceExercise/finish.
-- Rangos (`/rangos`): sistema de tiers Principiante/Intermedio/Avanzado/
-  Experto/Maestro (antes Bronce/Plata/Oro/Esmeralda/Maestro), calculados en
-  `src/lib/rank-engine.ts` y `src/lib/ranks.ts`, con vista de mapa corporal y
-  toggle "media vs. por músculo".
+- **No existe sistema de rangos musculares.** Se eliminó por completo el
+  05/08/2026 (motor, UI, assets y columnas de BD). En una fase posterior se
+  construirá un sistema de análisis muscular por Heatmaps, que todavía NO está
+  implementado: no reintroduzcas tiers, divisiones ni `MUSCLE_TO_GROUP`.
 - Tipos de dominio clave en `src/lib/workout/types.ts`:
   `WorkoutSession { id, dateISO, dayLabel, sets: LoggedSet[] }`,
   `LoggedSet { exerciseId, grupo, weightKg, reps }`, `RoutineDay`, `Routine`.
@@ -49,7 +49,7 @@ React 19, TypeScript y Tailwind v4. Está en `C:\Users\Grupo Hogares\Desktop\rog
 ```
 src/app/          rutas (page.tsx por carpeta, App Router)
 src/components/   cardio/, exercise/, layout/, profile/, routines/, ui/, workout/
-src/lib/          store/ (contexts), exercises/, workout/, rank-engine.ts, ranks.ts, mock-data.ts, utils.ts
+src/lib/          store/ (contexts), exercises/, workout/ (types.ts, one-rm.ts), mock-data.ts, utils.ts
 ```
 
 ## Cosas a tener en cuenta al trabajar aquí
@@ -63,7 +63,18 @@ src/lib/          store/ (contexts), exercises/, workout/, rank-engine.ts, ranks
   tipo "HOY · TIRON".
 
 ## Estado actual (última sesión de trabajo)
-Se rediseñó la home (`src/app/page.tsx`): la tarjeta "hoy" es ahora un
+**Desinstalación completa del módulo de Rangos Musculares (05/08/2026).** Se
+borraron `lib/ranks.ts`, `lib/rank-engine.ts`, `components/profile/ranks-panel.tsx`,
+`components/ui/rank-badge.tsx`, la ruta `/app/rangos` y `public/ranks/` (16 SVG).
+`estimate1RM` sobrevivió en `lib/workout/one-rm.ts` porque lo usan las marcas
+personales y la ficha de ejercicio. El perfil pasó de 3 pestañas a 2
+(General/Ajustes). Los tokens `--rank-*` de `globals.css` se renombraron a
+`--accent-green` / `--accent-red` (los otros tres se borraron). En Supabase se
+eliminaron 4 columnas huérfanas de `profiles` (`share_ranks`, `rank_tier`,
+`rank_division`, `rank_updated_at`) — ver
+`supabase/migrations/20260805_remove_ranks.sql`.
+
+Antes de eso se rediseñó la home (`src/app/page.tsx`): la tarjeta "hoy" es ahora un
 carrusel de scroll nativo (scroll-snap, no drag manual) de 2 páginas — "Hoy"
 (entreno del día) y "Calendario" (últimos 7 días / mes completo desplegable
 con `ResizeObserver` ajustando la altura del contenedor dinámicamente). El

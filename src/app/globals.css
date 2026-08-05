@@ -24,11 +24,8 @@
   --card-mint: #e2f7ee;
   --card-mint-foreground: #276e51;
 
-  --rank-bronce: #b08361;
-  --rank-plata: #3689c9;
-  --rank-oro: #c7a34d;
-  --rank-esmeralda: #4e9d5e;
-  --rank-maestro: #b5594f;
+  --accent-green: #4e9d5e;
+  --accent-red: #b5594f;
 
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
@@ -56,11 +53,8 @@
   --card-mint: #16241d;
   --card-mint-foreground: #a3dcc0;
 
-  --rank-bronce: #c99b76;
-  --rank-plata: #5ea3d4;
-  --rank-oro: #dbb968;
-  --rank-esmeralda: #74c07e;
-  --rank-maestro: #c87669;
+  --accent-green: #74c07e;
+  --accent-red: #c87669;
 
   --destructive: #f87171;
   --destructive-foreground: #17181c;
@@ -91,11 +85,8 @@
   --color-card-mint: var(--card-mint);
   --color-card-mint-foreground: var(--card-mint-foreground);
 
-  --color-rank-bronce: var(--rank-bronce);
-  --color-rank-plata: var(--rank-plata);
-  --color-rank-oro: var(--rank-oro);
-  --color-rank-esmeralda: var(--rank-esmeralda);
-  --color-rank-maestro: var(--rank-maestro);
+  --color-accent-green: var(--accent-green);
+  --color-accent-red: var(--accent-red);
 
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
@@ -167,7 +158,8 @@ body {
 }
 
 /* Entrada de los avisos (toast) desde arriba */
+/* Los avisos entran desde abajo: viven sobre la barra de navegacion. */
 @keyframes toast-in {
-  from { opacity: 0; transform: translateY(-8px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }

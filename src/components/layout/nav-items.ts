@@ -7,8 +7,7 @@ import {
 } from "lucide-react";
 
 /** Navegacion principal, compartida entre BottomNav (movil) y Sidebar (escritorio).
- *  Los rangos viven dentro de Perfil (pestana "Rangos") y la biblioteca de
- *  ejercicios dentro de Entreno (pestana "Ejercicios"). */
+ *  La biblioteca de ejercicios vive dentro de Entreno (pestana "Ejercicios"). */
 export const NAV_ITEMS = [
   { href: "/app", label: "Inicio", icon: Home },
   // "Entreno" agrupa rutina + biblioteca de ejercicios. matchPrefixes marca la

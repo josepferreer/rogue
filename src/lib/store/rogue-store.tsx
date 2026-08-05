@@ -10,19 +10,9 @@ import {
   useState,
 } from "react";
 import { usePathname } from "next/navigation";
-import type { MuscleGroup } from "@/lib/ranks";
 import type { ExerciseCategory } from "@/lib/exercises/types";
 import { DEMO_EXERCISES } from "@/lib/exercises/repo";
-import {
-  aggregateToGroups,
-  computeMuscleRanks,
-  computeRanks,
-  estimate1RM,
-  rankScore,
-  type ComputedMuscleRank,
-  type ComputedRank,
-  type ExerciseMuscles,
-} from "@/lib/rank-engine";
+import { estimate1RM } from "@/lib/workout/one-rm";
 import { DEMO_ROUTINE } from "@/data/routine.demo";
 import { createClient } from "@/lib/supabase/client";
 import { fetchAllPages } from "@/lib/supabase/fetch-all";
@@ -66,28 +56,10 @@ export function getExerciseInfo(id: string): ExerciseInfo {
   return EXERCISE_INFO.get(id) ?? { nombre: id, grupo: "Core" };
 }
 
-/** Musculos primarios/secundarios por ejercicio, para el motor por musculo. */
-const EXERCISE_MUSCLES = new Map<string, ExerciseMuscles>(
-  DEMO_EXERCISES.map((e) => [
-    e.id,
-    { primarios: e.musculosPrimarios, secundarios: e.musculosSecundarios },
-  ]),
-);
-const muscleLookup = (id: string): ExerciseMuscles | null =>
-  EXERCISE_MUSCLES.get(id) ?? null;
-
 export type PrResult = { exerciseId: string; nombre: string; est1RM: number };
-export type RankChange = {
-  muscle: MuscleGroup;
-  before: ComputedRank;
-  after: ComputedRank;
-  up: boolean;
-  newlyRanked: boolean;
-};
 export type LogResult = {
   session: WorkoutSession;
   prs: PrResult[];
-  rankChanges: RankChange[];
 };
 
 type RogueState = {
@@ -112,8 +84,6 @@ type RogueContextValue = {
   authenticated: boolean;
   profile: Profile;
   sessions: WorkoutSession[];
-  ranks: ComputedRank[];
-  muscleRanks: ComputedMuscleRank[];
   routineDays: RoutineDay[];
   /** Dias de rutina programados para el dia de la semana actual (getDay()).
    *  Vacio = hoy toca descanso (o no hay rutina). */
@@ -345,74 +315,45 @@ async function fetchSessions(
   }));
 }
 
-/** Inserta dias + ejercicios de una rutina existente (borra los anteriores).
- *  Lanza al primer error para que syncWrite reintente; como empieza borrando
- *  los dias de la rutina, repetirla desde cero es seguro (idempotente). */
-async function persistRoutineDays(
+/**
+ * Guarda la rutina entera (rutina + dias + ejercicios) en UNA transaccion, via
+ * la funcion `save_routine` de Postgres
+ * (ver supabase/migrations/20260805_save_routine_rpc.sql).
+ *
+ * Antes esto eran 1 + 2N peticiones HTTP sueltas: un delete de todos los dias
+ * seguido de inserts uno a uno. Si la red se cortaba despues del delete, la
+ * rutina quedaba VACIA en servidor mientras la pantalla seguia mostrandola
+ * entera, y si los reintentos fallaban el usuario acababa con la rutina de
+ * demo. Mismo fallo que arrastraban los entrenos hasta que se creo log_workout.
+ *
+ * Devuelve el id de la rutina (la crea si el usuario aun no tenia ninguna) para
+ * que routineIdRef quede fijado. Es idempotente: un reintento no duplica.
+ */
+async function saveRoutineToDb(
   supabase: SupabaseClient,
-  routineId: string,
+  routineId: string | null,
+  name: string,
   days: RoutineDay[],
-) {
-  const { error: deleteError } = await supabase
-    .from("routine_days")
-    .delete()
-    .eq("routine_id", routineId);
-  if (deleteError) throw deleteError;
-  for (let i = 0; i < days.length; i++) {
-    const day = days[i];
-    const { data: dayRow, error: dayError } = await supabase
-      .from("routine_days")
-      .insert({
-        routine_id: routineId,
-        position: i,
-        label: day.label,
-        focus: day.focus,
-        weekdays: day.weekdays ?? [],
-      })
-      .select("id")
-      .single();
-    if (dayError) throw dayError;
-    if (day.exercises.length === 0) continue;
-    const { error: exercisesError } = await supabase.from("routine_exercises").insert(
-      day.exercises.map((ex, j) => ({
-        routine_day_id: dayRow.id,
-        exercise_id: ex.exerciseId,
-        position: j,
+): Promise<string> {
+  const { data, error } = await supabase.rpc("save_routine", {
+    p_routine_id: routineId,
+    p_name: name,
+    p_days: days.map((day) => ({
+      id: day.id,
+      label: day.label,
+      focus: day.focus,
+      weekdays: day.weekdays ?? [],
+      exercises: day.exercises.map((ex) => ({
+        exerciseId: ex.exerciseId,
         sets: ex.sets,
         reps: ex.reps,
-        rest_sec: ex.restSec,
-        suggested_kg: ex.suggestedKg,
+        restSec: ex.restSec,
+        suggestedKg: ex.suggestedKg,
       })),
-    );
-    if (exercisesError) throw exercisesError;
-  }
-}
-
-/** Devuelve el id de la (unica) rutina del usuario, creandola solo si no existe
- *  ninguna. Consulta la BD antes de insertar para no duplicar cuando el ref
- *  local todavia no esta fijado (carga en curso u onboarding re-ejecutado). */
-async function ensureRoutineId(
-  supabase: SupabaseClient,
-  userId: string,
-  name: string,
-): Promise<string> {
-  const { data: existing, error: selectError } = await supabase
-    .from("routines")
-    .select("id")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (selectError) throw selectError;
-  if (existing) return existing.id;
-
-  const { data: created, error: insertError } = await supabase
-    .from("routines")
-    .insert({ user_id: userId, name })
-    .select("id")
-    .single();
-  if (insertError) throw insertError;
-  return created.id;
+    })),
+  });
+  if (error) throw error;
+  return (data as { routine_id: string }).routine_id;
 }
 
 /**
@@ -430,12 +371,17 @@ async function saveWorkout(
   supabase: SupabaseClient,
   session: WorkoutSession,
   notes: ExerciseNote[],
+  routineId: string | null,
 ) {
   const { error } = await supabase.rpc("log_workout", {
     p_session_id: session.id,
     p_day_label: session.dayLabel,
     p_date: session.dateISO,
     p_duration_sec: session.durationSec ?? null,
+    // Sin esto workout_sessions.routine_id era siempre NULL: el trigger
+    // touch_routine_last_used no llegaba a dispararse nunca y se perdia la
+    // trazabilidad entreno -> rutina.
+    p_routine_id: routineId,
     p_sets: session.sets.map((set, i) => ({
       exercise_id: set.exerciseId,
       categoria: set.grupo,
@@ -606,7 +552,7 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
       // no en DEFAULT_PROFILE, para no borrarlo al completar el onboarding.
       const profile: Profile = { ...DEFAULT_PROFILE, ...state.profile, ...data, onboarded: true };
       // Sin historial de demo: los usuarios nuevos empiezan de cero, sin
-      // rangos ni entrenos falsos. La rutina de partida si se ofrece.
+      // entrenos falsos. La rutina de partida si se ofrece.
       setState((prev) => ({ ...prev, profile, sessions: [], routineDays: DEMO_ROUTINE.days }));
 
       const userId = userIdRef.current;
@@ -618,12 +564,12 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
           .eq("user_id", userId);
         if (error) throw error;
 
-        let routineId = routineIdRef.current;
-        if (!routineId) {
-          routineId = await ensureRoutineId(supabase, userId, DEMO_ROUTINE.name);
-          routineIdRef.current = routineId;
-        }
-        await persistRoutineDays(supabase, routineId, DEMO_ROUTINE.days);
+        routineIdRef.current = await saveRoutineToDb(
+          supabase,
+          routineIdRef.current,
+          DEMO_ROUTINE.name,
+          DEMO_ROUTINE.days,
+        );
       });
     },
     [supabase, state.profile],
@@ -736,50 +682,29 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      const before = computeRanks(
-        state.sessions,
-        state.profile.bodyweightKg,
-        state.profile.sex,
-        muscleLookup,
-      );
-      const nextSessions = [...state.sessions, session];
-      const after = computeRanks(
-        nextSessions,
-        state.profile.bodyweightKg,
-        state.profile.sex,
-        muscleLookup,
-      );
-
-      const rankChanges: RankChange[] = [];
-      for (const a of after) {
-        const b = before.find((x) => x.muscle === a.muscle)!;
-        if (!a.ranked) continue;
-        const newlyRanked = !b.ranked;
-        const up =
-          newlyRanked || (a.ranked && b.ranked && rankScore(a) > rankScore(b));
-        if (up) rankChanges.push({ muscle: a.muscle, before: b, after: a, up, newlyRanked });
-      }
-
       setState((prev) => ({
         ...prev,
-        sessions: nextSessions,
+        sessions: [...prev.sessions, session],
         exerciseNotes: [...prev.exerciseNotes, ...noteRows],
       }));
 
       const userId = userIdRef.current;
       if (userId) {
-        syncWrite("el entreno", () => saveWorkout(supabase, session, noteRows));
+        const routineId = routineIdRef.current;
+        syncWrite("el entreno", () =>
+          saveWorkout(supabase, session, noteRows, routineId),
+        );
       }
 
-      return { session, prs, rankChanges };
+      return { session, prs };
     },
-    [state.sessions, state.profile.bodyweightKg, state.profile.sex, supabase],
+    [state.sessions, supabase],
   );
 
   const deleteSession = useCallback(
     (id: string) => {
-      // Optimista: fuera del estado al instante (los rangos se recalculan solos
-      // via useMemo sobre state.sessions). Tambien se quitan sus notas locales.
+      // Optimista: fuera del estado al instante. Tambien se quitan sus notas
+      // locales.
       setState((prev) => ({
         ...prev,
         sessions: prev.sessions.filter((s) => s.id !== id),
@@ -847,12 +772,12 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
       const userId = userIdRef.current;
       if (!userId) return;
       syncWrite("la rutina", async () => {
-        let routineId = routineIdRef.current;
-        if (!routineId) {
-          routineId = await ensureRoutineId(supabase, userId, "Mi rutina");
-          routineIdRef.current = routineId;
-        }
-        await persistRoutineDays(supabase, routineId, days);
+        routineIdRef.current = await saveRoutineToDb(
+          supabase,
+          routineIdRef.current,
+          "Mi rutina",
+          days,
+        );
       });
     },
     [supabase],
@@ -889,19 +814,6 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
     });
   }, [supabase, state.profile.username]);
 
-  const muscleRanks = useMemo(
-    () =>
-      computeMuscleRanks(
-        state.sessions,
-        state.profile.bodyweightKg,
-        state.profile.sex,
-        muscleLookup,
-      ),
-    [state.sessions, state.profile.bodyweightKg, state.profile.sex],
-  );
-
-  const ranks = useMemo(() => aggregateToGroups(muscleRanks), [muscleRanks]);
-
   const todayDays = useMemo(() => {
     const weekday = new Date().getDay(); // 0=domingo..6=sabado
     return state.routineDays.filter((d) => d.weekdays.includes(weekday));
@@ -912,15 +824,13 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
   // Memoizado para que el objeto de contexto sea estable entre renders y no
   // fuerce un re-render de todos los consumidores de useRogue en cada render
   // del provider. Las acciones ya son estables (useCallback) y los derivados
-  // (ranks/todayDays) van memoizados aparte.
+  // (todayDays) van memoizados aparte.
   const value: RogueContextValue = useMemo(
     () => ({
       hydrated,
       authenticated,
       profile: state.profile,
       sessions: state.sessions,
-      ranks,
-      muscleRanks,
       routineDays: state.routineDays,
       todayDays,
       todayDay,
@@ -941,8 +851,6 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
       authenticated,
       state.profile,
       state.sessions,
-      ranks,
-      muscleRanks,
       state.routineDays,
       todayDays,
       todayDay,

@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Rogue - Entrena con rango",
+    name: "Rogue - Entrena y progresa",
     short_name: "Rogue",
     description:
-      "Planifica tus entrenamientos, explora la biblioteca de ejercicios y sube de rango musculo a musculo.",
+      "Planifica tus entrenamientos, explora la biblioteca de ejercicios y sigue tu progreso serie a serie.",
     id: "/app",
     // La PWA instalada abre directa en la app; la landing publica vive en "/"
     // y solo se ve desde el navegador. scope se queda en "/" para que /login

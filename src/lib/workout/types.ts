@@ -81,7 +81,7 @@ export const WEEKDAY_LABELS: Record<number, string> = {
 /** Una serie efectivamente registrada en una sesion. */
 export type LoggedSet = {
   exerciseId: string;
-  /** Categoria del ejercicio (para mostrar tags de historial), no la region de rango. */
+  /** Categoria del ejercicio, para mostrar tags de historial. */
   grupo: ExerciseCategory;
   weightKg: number;
   reps: number;

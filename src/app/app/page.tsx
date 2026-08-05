@@ -11,7 +11,6 @@ import {
   ChevronRight,
   Clock,
   Flame,
-  Lock,
   Timer,
   Trash2,
 } from "lucide-react";
@@ -19,15 +18,17 @@ import { PastelCard } from "@/components/ui/pastel-card";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
-import { RankBadge } from "@/components/ui/rank-badge";
-import { getDivisionLabel, getRankTier } from "@/lib/ranks";
 import { useRogue } from "@/lib/store/rogue-store";
 import { useWorkoutSession } from "@/lib/store/workout-session-store";
 import { dayKey, sumMacros, useMeals } from "@/lib/store/meals-store";
-import type { ComputedRank } from "@/lib/rank-engine";
 import { getDisplayName, type RoutineDay, type WorkoutSession } from "@/lib/workout/types";
 import { DEMO_EXERCISES } from "@/lib/exercises/repo";
-import { DIFFICULTY_LABELS, EQUIPMENT_LABELS } from "@/lib/exercises/types";
+import {
+  EXERCISE_CATEGORIES,
+  DIFFICULTY_LABELS,
+  EQUIPMENT_LABELS,
+  type ExerciseCategory,
+} from "@/lib/exercises/types";
 import { formatWeight } from "@/lib/units";
 import { cn, formatDurationLabel } from "@/lib/utils";
 
@@ -70,30 +71,6 @@ function formatToday() {
     .format(new Date())
     .toUpperCase()
     .replace(".", "");
-}
-
-function RankChip({ rank }: { rank: ComputedRank }) {
-  if (!rank.ranked) {
-    return (
-      <div className="flex min-w-[76px] flex-col items-center gap-1.5">
-        <span className="flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground ring-1 ring-border">
-          <Lock className="size-5" />
-        </span>
-        <p className="text-xs font-medium">{rank.muscle}</p>
-        <p className="font-mono text-[10px] text-muted-foreground">SIN RANGO</p>
-      </div>
-    );
-  }
-  const tier = getRankTier(rank.tier);
-  return (
-    <div className="flex min-w-[76px] flex-col items-center gap-1.5">
-      <RankBadge tier={rank.tier} division={rank.division} size="sm" />
-      <p className="text-xs font-medium">{rank.muscle}</p>
-      <p className="font-mono text-[10px] text-muted-foreground">
-        {tier.label.toUpperCase()} {getDivisionLabel(tier, rank.division)}
-      </p>
-    </div>
-  );
 }
 
 function TodayCard({
@@ -515,7 +492,7 @@ function WeekVolumeCard({
           <span
             className={cn(
               "font-mono text-[11px] font-medium",
-              deltaPct >= 0 ? "text-rank-esmeralda" : "text-muted-foreground",
+              deltaPct >= 0 ? "text-accent-green" : "text-muted-foreground",
             )}
           >
             {deltaPct >= 0 ? "+" : ""}
@@ -594,8 +571,7 @@ function NutritionCard({
 }
 
 export default function Home() {
-  const { profile, ranks, sessions, todayDay, routineDays, preferences } =
-    useRogue();
+  const { profile, sessions, todayDay, routineDays, preferences } = useRogue();
   const { start: startWorkout } = useWorkoutSession();
   const { entriesForDay, goals } = useMeals();
   const [page, setPage] = useState(0);
@@ -663,30 +639,41 @@ export default function Home() {
     return Math.round(eaten.kcal);
   }, [entriesForDay]);
 
-  // Sugerencias reales: ejercicios compuestos de los grupos que menos has
-  // entrenado (sin rango o con menos sesiones), sacados de la biblioteca.
+  // Sugerencias reales: ejercicios compuestos de las categorias que menos has
+  // entrenado, sacados de la biblioteca. Se cuenta por series registradas
+  // (set.grupo ya es la categoria del ejercicio, la misma que Exercise.grupo).
   const suggestions = useMemo(() => {
     const trainedIds = new Set(
       sessions.flatMap((s) => s.sets.map((set) => set.exerciseId)),
     );
-    const groupsByNeed = [...ranks].sort((a, b) => a.sessions - b.sessions);
+    const setsByCategory = new Map<ExerciseCategory, number>(
+      EXERCISE_CATEGORIES.map((categoria) => [categoria, 0]),
+    );
+    for (const session of sessions) {
+      for (const set of session.sets) {
+        setsByCategory.set(set.grupo, (setsByCategory.get(set.grupo) ?? 0) + 1);
+      }
+    }
+    const categoriesByNeed = [...EXERCISE_CATEGORIES].sort(
+      (a, b) => (setsByCategory.get(a) ?? 0) - (setsByCategory.get(b) ?? 0),
+    );
     const variants = ["lilac", "blue"] as const;
     const picks: { ex: (typeof DEMO_EXERCISES)[number]; variant: (typeof variants)[number] }[] = [];
-    for (const rank of groupsByNeed) {
+    for (const categoria of categoriesByNeed) {
       if (picks.length >= 2) break;
       const candidate =
         DEMO_EXERCISES.find(
           (e) =>
-            e.grupo === rank.muscle &&
+            e.grupo === categoria &&
             e.mecanica === "compuesto" &&
             !trainedIds.has(e.id),
-        ) ?? DEMO_EXERCISES.find((e) => e.grupo === rank.muscle);
+        ) ?? DEMO_EXERCISES.find((e) => e.grupo === categoria);
       if (candidate && !picks.some((p) => p.ex.id === candidate.id)) {
         picks.push({ ex: candidate, variant: variants[picks.length] });
       }
     }
     return picks;
-  }, [ranks, sessions]);
+  }, [sessions]);
 
   const displayName = getDisplayName(profile, preferences);
   const initials =
@@ -791,26 +778,6 @@ export default function Home() {
       </div>
 
       <NutritionCard kcalToday={kcalToday} kcalGoal={goals.kcal} />
-
-      <div>
-        <div className="flex items-center justify-between">
-          <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
-            TUS RANGOS
-          </p>
-          <Link
-            href="/app/perfil?tab=rangos"
-            className="flex items-center gap-1 rounded-full py-2 pl-2 pr-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-          >
-            Ver todo
-            <ArrowRight className="size-3.5" />
-          </Link>
-        </div>
-        <div className="no-scrollbar -mx-5 mt-3 flex gap-3 overflow-x-auto px-5 py-1">
-          {ranks.map((rank) => (
-            <RankChip key={rank.muscle} rank={rank} />
-          ))}
-        </div>
-      </div>
 
       <div className="pb-4">
         <div className="flex items-center justify-between">

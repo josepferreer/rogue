@@ -3,8 +3,8 @@
  *
  * PostgREST (Supabase) limita cada respuesta a 1000 filas por defecto y
  * trunca EN SILENCIO: sin esto, el historial de un usuario constante
- * desapareceria a partir de cierto volumen (sesiones vacias, rangos mal
- * calculados). `page` recibe los indices [from, to] para pasar a .range()
+ * desapareceria a partir de cierto volumen (sesiones vacias, estadisticas
+ * mal calculadas). `page` recibe los indices [from, to] para pasar a .range()
  * y debe lanzar si la consulta devuelve error.
  */
 const PAGE_SIZE = 1000;

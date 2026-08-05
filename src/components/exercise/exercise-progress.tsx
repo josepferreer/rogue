@@ -2,11 +2,9 @@
 
 import { Calendar, TrendingUp } from "lucide-react";
 import { PastelCard } from "@/components/ui/pastel-card";
-import { RankBadge } from "@/components/ui/rank-badge";
 import { useRogue } from "@/lib/store/rogue-store";
-import { estimate1RM } from "@/lib/rank-engine";
-import { getDivisionLabel, getRankTier } from "@/lib/ranks";
-import { MUSCLE_LABELS, type Exercise } from "@/lib/exercises/types";
+import { estimate1RM } from "@/lib/workout/one-rm";
+import type { Exercise } from "@/lib/exercises/types";
 import { formatWeight } from "@/lib/units";
 
 type ExerciseSession = {
@@ -51,13 +49,9 @@ function formatSessionDate(dateISO: string): string {
 }
 
 export function ExerciseStatsPanel({ exercise }: { exercise: Exercise }) {
-  const { muscleRanks, preferences } = useRogue();
+  const { preferences } = useRogue();
   const unit = preferences.unit;
   const history = useExerciseHistory(exercise.id);
-
-  const primaryRanks = exercise.musculosPrimarios
-    .map((muscleId) => muscleRanks.find((m) => m.muscle === muscleId))
-    .filter((m): m is NonNullable<typeof m> => m !== undefined);
 
   let best1RM = 0;
   let bestWeighted: { w: number; r: number } | null = null;
@@ -93,32 +87,6 @@ export function ExerciseStatsPanel({ exercise }: { exercise: Exercise }) {
 
   return (
     <div className="flex flex-col gap-3">
-      {primaryRanks.map((rank) => (
-        <PastelCard
-          key={rank.muscle}
-          variant="lilac"
-          className="flex items-center gap-4"
-        >
-          {rank.ranked ? (
-            <RankBadge tier={rank.tier} division={rank.division} size="sm" />
-          ) : (
-            <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-black/10 dark:bg-white/10">
-              <TrendingUp className="size-5 opacity-60" />
-            </span>
-          )}
-          <div>
-            <p className="font-mono text-[10px] tracking-[0.2em] opacity-70">
-              TU RANGO EN {MUSCLE_LABELS[rank.muscle].toUpperCase()}
-            </p>
-            <p className="mt-0.5 text-sm font-semibold">
-              {rank.ranked
-                ? `${getRankTier(rank.tier).label} ${getDivisionLabel(getRankTier(rank.tier), rank.division)}`
-                : "Sin rango todavia"}
-            </p>
-          </div>
-        </PastelCard>
-      ))}
-
       <div className="grid grid-cols-2 gap-3">
         <PastelCard variant="neutral">
           <p className="text-xs text-muted-foreground">1RM estimado</p>

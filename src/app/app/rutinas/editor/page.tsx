@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -45,20 +45,28 @@ import {
   WEEKDAY_ORDER,
   type RoutineDay,
   type RoutineExercise,
+  type WeightUnit,
 } from "@/lib/workout/types";
 import type { Exercise } from "@/lib/exercises/types";
+import { fromKg, toKg } from "@/lib/units";
+import { useBackButton } from "@/lib/use-back-button";
 import { cn } from "@/lib/utils";
 
 // Mapa id → ejercicio completo para acceso O(1)
 const EX_MAP = new Map(DEMO_EXERCISES.map((e) => [e.id, e]));
 
+/** Id de dia nuevo. UUID de verdad (no un random de 6 caracteres) porque
+ *  save_routine solo conserva el id del cliente si es un UUID valido; asi un
+ *  dia mantiene su identidad entre guardados en vez de recrearse cada vez. */
 function genId() {
-  return Math.random().toString(36).slice(2, 8);
+  return typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export default function ConstructorPage() {
   const router = useRouter();
-  const { routineDays, saveRoutine } = useRogue();
+  const { routineDays, saveRoutine, preferences } = useRogue();
 
   // Deep clone para edicion local
   const [days, setDays] = useState<RoutineDay[]>(() =>
@@ -68,6 +76,32 @@ export default function ConstructorPage() {
   const [selectorForDay, setSelectorForDay] = useState<string | null>(null);
   // Dia pendiente de confirmacion antes de borrarlo.
   const [confirmRemoveDay, setConfirmRemoveDay] = useState<RoutineDay | null>(null);
+  // Confirmacion antes de salir con cambios sin guardar.
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+
+  // Instantanea de como estaba la rutina al entrar. Comparar contra ella (y no
+  // contra routineDays, que cambia al guardar) permite saber si hay cambios
+  // pendientes: antes salir del editor los descartaba en silencio y un usuario
+  // que hubiera configurado varios dias los perdia enteros por pulsar "atras".
+  const [initialSnapshot] = useState(() => JSON.stringify(routineDays));
+  const isDirty = JSON.stringify(days) !== initialSnapshot;
+
+  const leave = useCallback(() => router.push("/app/rutinas"), [router]);
+  const requestLeave = useCallback(() => {
+    if (isDirty) setConfirmDiscard(true);
+    else leave();
+  }, [isDirty, leave]);
+
+  // El boton/gesto "atras" de Android tambien pasa por la confirmacion.
+  useBackButton(isDirty, requestLeave);
+
+  // Y el cierre de pestana/recarga en web.
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
   // --- Reordenar días (arrastrar y soltar la tarjeta completa) ---
   const sensors = useSensors(
@@ -159,7 +193,7 @@ export default function ConstructorPage() {
 
   const handleSave = () => {
     saveRoutine(days);
-    router.push("/app/rutinas");
+    leave();
   };
 
   return (
@@ -167,7 +201,7 @@ export default function ConstructorPage() {
       {/* Cabecera */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => router.back()}
+          onClick={requestLeave}
           aria-label="Cancelar"
           className="flex size-10 items-center justify-center rounded-full bg-surface hover:bg-muted"
         >
@@ -200,6 +234,7 @@ export default function ConstructorPage() {
               <SortableDay
                 key={day.id}
                 day={day}
+                unit={preferences.unit}
                 isOpen={expandedDay === day.id}
                 canRemove={days.length > 1}
                 onToggle={() =>
@@ -245,6 +280,18 @@ export default function ConstructorPage() {
       />
 
       <ConfirmDialog
+        open={confirmDiscard}
+        title="¿Salir sin guardar?"
+        description="Se perderán los cambios que has hecho en la rutina."
+        confirmLabel="Salir sin guardar"
+        onConfirm={() => {
+          setConfirmDiscard(false);
+          leave();
+        }}
+        onCancel={() => setConfirmDiscard(false)}
+      />
+
+      <ConfirmDialog
         open={confirmRemoveDay !== null}
         title={`¿Eliminar "${confirmRemoveDay?.label}"?`}
         description={
@@ -266,6 +313,7 @@ export default function ConstructorPage() {
 // ── Día ordenable (tarjeta completa arrastrable) ─────────────────────────────
 function SortableDay({
   day,
+  unit,
   isOpen,
   canRemove,
   onToggle,
@@ -277,6 +325,7 @@ function SortableDay({
   onRemoveDay,
 }: {
   day: RoutineDay;
+  unit: WeightUnit;
   isOpen: boolean;
   canRemove: boolean;
   onToggle: () => void;
@@ -445,6 +494,7 @@ function SortableDay({
                     <ExerciseRow
                       key={ex.exerciseId}
                       ex={ex}
+                      unit={unit}
                       onChange={(patch) => onPatchExercise(ex.exerciseId, patch)}
                       onRemove={() => onRemoveExercise(ex.exerciseId)}
                     />
@@ -481,10 +531,12 @@ function SortableDay({
 // ── Fila de ejercicio ───────────────────────────────────────────────────────
 function ExerciseRow({
   ex,
+  unit,
   onChange,
   onRemove,
 }: {
   ex: RoutineExercise;
+  unit: WeightUnit;
   onChange: (patch: Partial<RoutineExercise>) => void;
   onRemove: () => void;
 }) {
@@ -588,21 +640,41 @@ function ExerciseRow({
         </div>
       )}
 
-      {/* Steppers */}
-      <div className="flex items-center gap-3 px-3 pb-3 pt-2">
+      {/* Steppers. Descanso y peso sugerido existian en el modelo y en la BD
+          pero no habia forma de tocarlos desde la UI: todo el mundo entrenaba
+          con 90 s fijos y con el peso sin prellenar. */}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-2 px-3 pb-3 pt-2">
         <Stepper
           label="Series"
           value={ex.sets}
           min={1}
-          max={10}
+          max={20}
           onChange={(v) => onChange({ sets: v })}
         />
         <Stepper
           label="Reps"
           value={ex.reps}
           min={1}
-          max={30}
+          max={100}
           onChange={(v) => onChange({ reps: v })}
+        />
+        <Stepper
+          label="Descanso"
+          value={ex.restSec}
+          min={0}
+          max={600}
+          step={15}
+          format={formatRest}
+          onChange={(v) => onChange({ restSec: v })}
+        />
+        <Stepper
+          label={`Peso (${unit})`}
+          value={Math.round(fromKg(ex.suggestedKg, unit) * 10) / 10}
+          min={0}
+          max={unit === "kg" ? 500 : 1100}
+          step={2.5}
+          format={(v) => (v === 0 ? "—" : String(v))}
+          onChange={(v) => onChange({ suggestedKg: toKg(v, unit) })}
         />
       </div>
     </div>
@@ -615,32 +687,57 @@ function Stepper({
   value,
   min,
   max,
+  step = 1,
+  format,
   onChange,
 }: {
   label: string;
   value: number;
   min: number;
   max: number;
+  /** Incremento por pulsacion. 1 para series/reps, 15 s para descanso, 2,5 para peso. */
+  step?: number;
+  /** Como se pinta el valor (p.ej. 90 -> "1:30"). Por defecto, el numero. */
+  format?: (v: number) => string;
   onChange: (v: number) => void;
 }) {
+  // Redondeo al multiplo del paso para que sumar/restar no arrastre decimales
+  // (0,1 + 0,2) ni deje valores fuera de la rejilla al venir de datos antiguos.
+  const clamp = (v: number) =>
+    Math.min(max, Math.max(min, Math.round(v / step) * step));
+
   return (
     <div className="flex flex-1 flex-col gap-1">
       <span className="font-mono text-[10px] text-muted-foreground">{label}</span>
       <div className="flex items-center gap-1">
         <button
-          onClick={() => onChange(Math.max(min, value - 1))}
-          className="flex size-10 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground active:scale-95"
+          type="button"
+          onClick={() => onChange(clamp(value - step))}
+          aria-label={`Reducir ${label.toLowerCase()}`}
+          className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground active:scale-95"
         >
           <Minus className="size-3.5" />
         </button>
-        <span className="w-8 text-center font-mono text-sm font-medium">{value}</span>
+        <span className="min-w-[3rem] flex-1 text-center font-mono text-sm font-medium tabular-nums">
+          {format ? format(value) : value}
+        </span>
         <button
-          onClick={() => onChange(Math.min(max, value + 1))}
-          className="flex size-10 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground active:scale-95"
+          type="button"
+          onClick={() => onChange(clamp(value + step))}
+          aria-label={`Aumentar ${label.toLowerCase()}`}
+          className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground active:scale-95"
         >
           <Plus className="size-3.5" />
         </button>
       </div>
     </div>
   );
+}
+
+/** 90 -> "1:30", 45 -> "45s". Descansos tipicos van de 30 s a 5 min. */
+function formatRest(sec: number): string {
+  if (sec < 60) return `${sec}s`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return s === 0 ? `${m}:00` : `${m}:${String(s).padStart(2, "0")}`;
 }

@@ -1,5 +1,3 @@
-import type { MuscleGroup } from "@/lib/ranks";
-
 /** Musculo concreto (granular), usado por el mapa muscular SVG. */
 export type MuscleId =
   | "pectoral"
@@ -40,33 +38,7 @@ export const MUSCLE_LABELS: Record<MuscleId, string> = {
   oblicuos: "Oblicuos",
 };
 
-/** A que region de rango pertenece cada musculo granular. */
-export const MUSCLE_TO_GROUP: Record<MuscleId, MuscleGroup> = {
-  pectoral: "Pecho",
-  dorsal: "Espalda",
-  "espalda-media": "Espalda",
-  lumbar: "Espalda",
-  trapecio: "Espalda",
-  deltoide: "Hombros",
-  biceps: "Brazo",
-  antebrazo: "Brazo",
-  triceps: "Brazo",
-  cuadriceps: "Pierna",
-  isquiotibiales: "Pierna",
-  gemelos: "Pierna",
-  aductores: "Pierna",
-  abductores: "Pierna",
-  gluteo: "Pierna",
-  abdominales: "Core",
-  oblicuos: "Core",
-};
-
-/**
- * Categoria propia del ejercicio (biblioteca/filtros): mas granular que la
- * region de rango (MuscleGroup) para no perder capacidad de busqueda -
- * "solo ejercicios de biceps" sigue siendo un filtro valido aunque el rango
- * de Biceps y Triceps ahora se fusionen en el rango de "Brazo".
- */
+/** Categoria propia del ejercicio, usada por la biblioteca y sus filtros. */
 export const EXERCISE_CATEGORIES = [
   "Pecho",
   "Espalda",
@@ -113,7 +85,7 @@ export type Exercise = {
   /** Slug propio en espanol, usado en la URL /biblioteca/[id]. */
   id: string;
   nombre: string;
-  /** Categoria muscular principal (para biblioteca/filtros, no para rangos). */
+  /** Categoria muscular principal (para biblioteca/filtros). */
   grupo: ExerciseCategory;
   equipo: EquipmentId;
   dificultad: DifficultyId;

@@ -14,10 +14,12 @@ import {
   useRogue,
   type LogResult,
 } from "@/lib/store/rogue-store";
-import { fromKg, toKg } from "@/lib/units";
+import { convertWeight, fromKg, toKg } from "@/lib/units";
 import {
   requestNotifyPermission,
-  fireRestEndNotification,
+  scheduleRestEndNotification,
+  cancelRestEndNotification,
+  notifyRestEndNow,
 } from "@/lib/notifications/rest-notifier";
 import type {
   ExerciseNoteFlag,
@@ -27,10 +29,12 @@ import type {
   WeightUnit,
 } from "@/lib/workout/types";
 
-/** weightKg guarda el numero tal como se muestra/edita, EN LA UNIDAD DE
- *  PREFERENCIA del usuario (a pesar del nombre). Solo se convierte a kg al
- *  entrar (buildRows, desde suggestedKg) y al salir (finish, hacia LoggedSet). */
-export type SetState = { weightKg: string; reps: string; done: boolean };
+/** `weight` guarda el numero tal como se muestra/edita, en la unidad ACTIVA DE
+ *  LA SESION (`unit` del contexto), no necesariamente la preferencia actual.
+ *  Se convierte a kg solo al entrar (buildRows) y al salir (finish). Si el
+ *  usuario cambia de unidad con la sesion abierta, las filas se reconvierten
+ *  para que el peso fisico no cambie. */
+export type SetState = { weight: string; reps: string; done: boolean };
 
 /** Borrador de nota por ejercicio mientras dura la sesion. */
 export type NoteDraft = { flag: ExerciseNoteFlag | null; text: string };
@@ -46,12 +50,21 @@ export type Reminder = {
 
 type Phase = "active" | "done";
 
+/** Resultado de finalizar. `sin-reps` = hay series marcadas pero ninguna con
+ *  repeticiones validas, asi que no hay nada que guardar. */
+export type FinishResult =
+  | { ok: true }
+  | { ok: false; reason: "sin-entreno" | "sin-reps" };
+
 type WorkoutSessionContextValue = {
   active: boolean;
   minimized: boolean;
   phase: Phase;
   day: RoutineDay | null;
   rows: Record<string, SetState[]>;
+  /** Unidad en la que estan escritos los pesos de `rows`. La UI debe rotular
+   *  los inputs con esta, no con preferences.unit. */
+  unit: WeightUnit;
   result: LogResult | null;
   restUntil: number | null;
   restRemaining: number;
@@ -86,7 +99,7 @@ type WorkoutSessionContextValue = {
   dismissReminders: () => void;
   skipRest: () => void;
   adjustRest: (deltaSec: number) => void;
-  finish: () => void;
+  finish: () => FinishResult;
 };
 
 const WorkoutSessionContext = createContext<WorkoutSessionContextValue | null>(
@@ -99,15 +112,28 @@ const DEFAULT_SETS = 3;
 const DEFAULT_REPS = 10;
 const DEFAULT_REST_SEC = 90;
 
-function buildRows(day: RoutineDay, unit: WeightUnit): Record<string, SetState[]> {
+/** Ultimo peso (kg) y reps registrados por ejercicio, del historial. */
+export type LastPerformance = Record<string, { weightKg: number; reps: number }>;
+
+/**
+ * Filas iniciales del entreno. El peso se prellena con lo que el usuario hizo
+ * la ultima vez en ese ejercicio y, si nunca lo ha hecho, con el peso sugerido
+ * de la rutina. Antes solo existia lo segundo (y por defecto era 0), asi que
+ * habia que teclear el peso desde cero en cada serie de cada entreno.
+ */
+function buildRows(
+  day: RoutineDay,
+  unit: WeightUnit,
+  last: LastPerformance,
+): Record<string, SetState[]> {
   const next: Record<string, SetState[]> = {};
   for (const ex of day.exercises) {
-    const suggestedDisplay = ex.suggestedKg
-      ? String(Math.round(fromKg(ex.suggestedKg, unit)))
-      : "";
+    const previous = last[ex.exerciseId];
+    const kg = previous?.weightKg ?? ex.suggestedKg;
+    const display = kg > 0 ? String(Math.round(fromKg(kg, unit) * 10) / 10) : "";
     next[ex.exerciseId] = Array.from({ length: ex.sets }, () => ({
-      weightKg: suggestedDisplay,
-      reps: String(ex.reps),
+      weight: display,
+      reps: String(previous?.reps ?? ex.reps),
       done: false,
     }));
   }
@@ -129,6 +155,9 @@ type WorkoutSnapshot = {
   restUntil: number | null;
   restTotal: number;
   minimized: boolean;
+  /** Unidad en la que estan escritos los pesos de `rows`. Sin esto, restaurar
+   *  un entreno despues de cambiar kg<->lb reinterpretaba los numeros. */
+  unit: WeightUnit;
 };
 
 function readWorkoutSnapshot(): WorkoutSnapshot | null {
@@ -164,8 +193,16 @@ export function WorkoutSessionProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const { logSession, preferences, exerciseNotes, acknowledgeReminders } =
+  const { logSession, preferences, exerciseNotes, acknowledgeReminders, sessions } =
     useRogue();
+
+  // Unidad con la que se escribieron los pesos que hay en `rows`. Se fija al
+  // empezar y solo cambia por el efecto de reconversion de mas abajo, nunca
+  // sola: finish debe interpretar los numeros con la misma unidad con la que
+  // se teclearon.
+  const [sessionUnit, setSessionUnit] = useState<WeightUnit>(preferences.unit);
+  const sessionUnitRef = useRef(sessionUnit);
+  sessionUnitRef.current = sessionUnit;
 
   const [active, setActive] = useState(false);
   const [minimized, setMinimized] = useState(false);
@@ -180,6 +217,27 @@ export function WorkoutSessionProvider({
   // debe recrearse cada vez que cambian las notas, para no invalidar callbacks).
   const notesRef = useRef(exerciseNotes);
   notesRef.current = exerciseNotes;
+
+  // Ultimo peso/reps por ejercicio, para prellenar las filas al empezar. Se
+  // recorre el historial una vez por cambio de sesiones, no en cada arranque.
+  const lastPerformance = useMemo(() => {
+    const map: LastPerformance = {};
+    for (const session of sessions) {
+      for (const set of session.sets) {
+        // sessions viene ordenado ascendente por fecha: el ultimo que se ve de
+        // cada ejercicio es el mas reciente.
+        map[set.exerciseId] = { weightKg: set.weightKg, reps: set.reps };
+      }
+    }
+    return map;
+  }, [sessions]);
+  const lastPerformanceRef = useRef(lastPerformance);
+  lastPerformanceRef.current = lastPerformance;
+
+  // Espejo de la preferencia de aviso: la leen callbacks que no deben
+  // recrearse (toggleDone, adjustRest) cada vez que el usuario la cambia.
+  const notifyRestEndRef = useRef(preferences.notifyRestEnd);
+  notifyRestEndRef.current = preferences.notifyRestEnd;
 
   // Espejo de `rows` para poder leer el estado actual de forma sincrona dentro
   // de los handlers (los updaters de setRows corren despues, no valen para
@@ -196,18 +254,20 @@ export function WorkoutSessionProvider({
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [finalDurationSec, setFinalDurationSec] = useState<number | null>(null);
 
-  // Avisa de que el descanso termino incluso si la pestana esta en 2.o plano
-  // o el movil bloqueado: vibracion siempre, notificacion solo si no se ve.
-  // Desactivable desde Perfil > Notificaciones.
+  // Vibracion + (en web) notificacion, en el instante en que el temporizador de
+  // la pagina detecta el fin. En nativo la notificacion ya la disparo el
+  // sistema desde armRest; aqui solo vibra.
   const notifyRestEnd = useCallback(() => {
-    if (!preferences.notifyRestEnd) return;
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-      navigator.vibrate([200, 100, 200]);
-    }
-    // Nativo: notificacion del sistema aunque la app este en 2.o plano/bloqueada.
-    // Web: solo si la pestana no esta visible (lo resuelve el helper).
-    fireRestEndNotification();
-  }, [preferences.notifyRestEnd]);
+    if (!notifyRestEndRef.current) return;
+    notifyRestEndNow();
+  }, []);
+
+  /** Arranca (o reprograma) el descanso y deja programado el aviso en el SO. */
+  const armRest = useCallback((until: number, totalSec: number) => {
+    setRestTotal(totalSec);
+    setRestUntil(until);
+    if (notifyRestEndRef.current) scheduleRestEndNotification(until);
+  }, []);
 
   // Cronometro del descanso (anclado a timestamp, se autocorrige en 2.º plano).
   useEffect(() => {
@@ -263,6 +323,14 @@ export function WorkoutSessionProvider({
     setRestUntil(snap.restUntil);
     setRestTotal(snap.restTotal);
     setMinimized(snap.minimized ?? true);
+    // Snapshots anteriores a la version con unidad: se asume kg, que era el
+    // valor por defecto y el unico con el que se podia haber escrito sin bug.
+    setSessionUnit(snap.unit ?? "kg");
+    // Si el descanso seguia vivo, se vuelve a programar el aviso: el que
+    // hubiera se perdio al morir el proceso.
+    if (snap.restUntil && snap.restUntil > Date.now()) {
+      scheduleRestEndNotification(snap.restUntil);
+    }
     setFinalDurationSec(null);
     setPhase("active");
     setNow(Date.now());
@@ -283,6 +351,7 @@ export function WorkoutSessionProvider({
       restUntil,
       restTotal,
       minimized,
+      unit: sessionUnit,
     });
   }, [
     active,
@@ -295,15 +364,43 @@ export function WorkoutSessionProvider({
     restUntil,
     restTotal,
     minimized,
+    sessionUnit,
   ]);
+
+  // El usuario cambio kg<->lb con un entreno abierto: se reconvierte lo ya
+  // escrito para que el peso fisico no cambie. Sin esto, un 100 tecleado en kg
+  // se guardaba como 100 lb (45,4 kg) al finalizar, en silencio y sin vuelta
+  // atras.
+  useEffect(() => {
+    if (!active || preferences.unit === sessionUnit) return;
+    const from = sessionUnit;
+    const to = preferences.unit;
+    setRows((prev) => {
+      const next: Record<string, SetState[]> = {};
+      for (const [exId, list] of Object.entries(prev)) {
+        next[exId] = list.map((s) => {
+          const value = Number(s.weight);
+          if (s.weight === "" || !Number.isFinite(value)) return s;
+          return {
+            ...s,
+            weight: String(Math.round(convertWeight(value, from, to) * 10) / 10),
+          };
+        });
+      }
+      return next;
+    });
+    setSessionUnit(to);
+  }, [active, preferences.unit, sessionUnit]);
 
   const start = useCallback((d: RoutineDay) => {
     // Pedimos permiso de notificacion aqui (gesto de usuario) para poder
     // avisar de fin de descanso aunque la app este en 2.o plano. En nativo usa
     // el plugin de Capacitor; en web, la Web Notification API.
     requestNotifyPermission();
+    cancelRestEndNotification();
     setDay(d);
-    setRows(buildRows(d, preferences.unit));
+    setSessionUnit(preferences.unit);
+    setRows(buildRows(d, preferences.unit, lastPerformanceRef.current));
     setPhase("active");
     setResult(null);
     setRestUntil(null);
@@ -343,6 +440,7 @@ export function WorkoutSessionProvider({
 
   const close = useCallback(() => {
     clearWorkoutSnapshot();
+    cancelRestEndNotification();
     setActive(false);
     setMinimized(false);
     setDay(null);
@@ -408,12 +506,9 @@ export function WorkoutSessionProvider({
         );
         return { ...prev, [exId]: list };
       });
-      if (willBeDone) {
-        setRestTotal(restSec);
-        setRestUntil(Date.now() + restSec * 1000);
-      }
+      if (willBeDone) armRest(Date.now() + restSec * 1000, restSec);
     },
-    [],
+    [armRest],
   );
 
   const addSet = useCallback((exId: string) => {
@@ -422,7 +517,7 @@ export function WorkoutSessionProvider({
       // La nueva serie hereda kg/reps de la ultima para agilizar el registro.
       const last = list[list.length - 1];
       const next: SetState = {
-        weightKg: last?.weightKg ?? "",
+        weight: last?.weight ?? "",
         reps: last?.reps ?? "",
         done: false,
       };
@@ -435,7 +530,9 @@ export function WorkoutSessionProvider({
    *  ejercicios sin tener que editar la rutina base. */
   const removeSet = useCallback(
     (exId: string, i: number) => {
-      const list = (rows[exId] ?? []).filter((_, idx) => idx !== i);
+      // rowsRef y no `rows`: si dependiera del estado, este callback se
+      // recrearia en cada pulsacion de tecla de cualquier input de la sesion.
+      const list = (rowsRef.current[exId] ?? []).filter((_, idx) => idx !== i);
       if (list.length > 0) {
         setRows((prev) => ({ ...prev, [exId]: list }));
         return;
@@ -460,7 +557,7 @@ export function WorkoutSessionProvider({
           : prev,
       );
     },
-    [rows],
+    [],
   );
 
   const replaceExercise = useCallback((oldExId: string, newExId: string) => {
@@ -487,6 +584,7 @@ export function WorkoutSessionProvider({
    *  guardada). Arranca con los mismos valores por defecto que la BD
    *  (3 series x 10 reps, 90 s de descanso) y sin peso sugerido. */
   const addExercise = useCallback((exerciseId: string) => {
+    const previous = lastPerformanceRef.current[exerciseId];
     setDay((prev) => {
       if (!prev) return prev;
       if (prev.exercises.some((e) => e.exerciseId === exerciseId)) return prev;
@@ -506,11 +604,18 @@ export function WorkoutSessionProvider({
     });
     setRows((prev) => {
       if (prev[exerciseId]) return prev;
+      // Mismo prellenado que buildRows: lo ultimo que se hizo en ese ejercicio.
+      const display =
+        previous && previous.weightKg > 0
+          ? String(
+              Math.round(fromKg(previous.weightKg, sessionUnitRef.current) * 10) / 10,
+            )
+          : "";
       return {
         ...prev,
         [exerciseId]: Array.from({ length: DEFAULT_SETS }, () => ({
-          weightKg: "",
-          reps: String(DEFAULT_REPS),
+          weight: display,
+          reps: String(previous?.reps ?? DEFAULT_REPS),
           done: false,
         })),
       };
@@ -537,21 +642,28 @@ export function WorkoutSessionProvider({
     [],
   );
 
-  const skipRest = useCallback(() => setRestUntil(null), []);
+  const skipRest = useCallback(() => {
+    setRestUntil(null);
+    cancelRestEndNotification();
+  }, []);
 
   // Ajusta el descanso en curso al vuelo (+/- segundos). Si al restar cae por
   // debajo de cero, el descanso termina ya. restTotal se mueve en paralelo para
-  // que la barra de progreso siga siendo coherente.
+  // que la barra de progreso siga siendo coherente, y el aviso programado en el
+  // SO se reprograma a la nueva hora (o se cancela si ya vencio).
   const adjustRest = useCallback((deltaSec: number) => {
     setRestUntil((prev) => {
       if (prev === null) return prev;
-      return Math.max(Date.now(), prev + deltaSec * 1000);
+      const next = Math.max(Date.now(), prev + deltaSec * 1000);
+      if (next <= Date.now()) cancelRestEndNotification();
+      else if (notifyRestEndRef.current) scheduleRestEndNotification(next);
+      return next;
     });
     setRestTotal((prev) => Math.max(0, prev + deltaSec));
   }, []);
 
-  const finish = useCallback(() => {
-    if (!day) return;
+  const finish = useCallback((): FinishResult => {
+    if (!day) return { ok: false, reason: "sin-entreno" };
     const sets: LoggedSet[] = [];
     // Peso mas alto (en kg) hecho en cada ejercicio, para el mensaje del
     // recordatorio ("la ultima vez: 80 kg").
@@ -562,7 +674,9 @@ export function WorkoutSessionProvider({
         if (!s.done) continue;
         const reps = Number(s.reps) || 0;
         if (reps <= 0) continue;
-        const weightKg = toKg(Number(s.weightKg) || 0, preferences.unit);
+        // sessionUnit, NO preferences.unit: los numeros de `rows` estan
+        // escritos en la unidad activa de la sesion.
+        const weightKg = toKg(Number(s.weight) || 0, sessionUnit);
         topWeightByEx[ex.exerciseId] = Math.max(
           topWeightByEx[ex.exerciseId] ?? 0,
           weightKg,
@@ -570,7 +684,10 @@ export function WorkoutSessionProvider({
         sets.push({ exerciseId: ex.exerciseId, grupo: info.grupo, weightKg, reps });
       }
     }
-    if (sets.length === 0) return;
+    // Antes esto era un `return` mudo: el boton estaba habilitado (hay series
+    // marcadas) pero ninguna tenia reps validas, asi que al pulsar no pasaba
+    // absolutamente nada y el usuario acababa descartando el entreno.
+    if (sets.length === 0) return { ok: false, reason: "sin-reps" };
 
     // Notas: solo las que tienen flag o texto. weightKg desde el mejor set hecho.
     const notes: ExerciseNoteInput[] = Object.entries(noteDrafts)
@@ -589,12 +706,14 @@ export function WorkoutSessionProvider({
     // El entreno ya queda registrado: se descarta el snapshot para que al
     // reabrir no reaparezca como sesion "en curso".
     clearWorkoutSnapshot();
+    cancelRestEndNotification();
     setFinalDurationSec(durationSec ?? null);
     setResult(logSession(day.label, sets, durationSec, notes));
     setRestUntil(null);
     setMinimized(false);
     setPhase("done");
-  }, [day, rows, logSession, preferences.unit, startedAt, noteDrafts]);
+    return { ok: true };
+  }, [day, rows, logSession, sessionUnit, startedAt, noteDrafts]);
 
   const { doneCount, totalCount } = useMemo(() => {
     const all = Object.values(rows).flat();
@@ -604,39 +723,82 @@ export function WorkoutSessionProvider({
     };
   }, [rows]);
 
-  const value: WorkoutSessionContextValue = {
-    active,
-    minimized,
-    phase,
-    day,
-    rows,
-    result,
-    restUntil,
-    restRemaining,
-    restTotal,
-    elapsedSec,
-    doneCount,
-    totalCount,
-    start,
-    minimize,
-    maximize,
-    close,
-    updateSet,
-    toggleDone,
-    addSet,
-    removeSet,
-    replaceExercise,
-    reorderExercises,
-    addExercise,
-    noteDrafts,
-    setExerciseFlag,
-    setExerciseNote,
-    reminders,
-    dismissReminders,
-    skipRest,
-    adjustRest,
-    finish,
-  };
+  // Memoizado (igual que RogueProvider): sin esto se creaba un objeto nuevo en
+  // CADA render del provider, y como `now` avanza cada 250 ms durante el
+  // descanso y cada segundo durante todo el entreno, se re-renderizaban todos
+  // los consumidores --incluido el modal completo con su arbol de dnd-kit-- de
+  // forma continua. Una hora de entreno eran ~4.000 renders del arbol mas
+  // pesado de la app, con el jank y el consumo de bateria que eso implica.
+  const value: WorkoutSessionContextValue = useMemo(
+    () => ({
+      active,
+      minimized,
+      phase,
+      day,
+      rows,
+      unit: sessionUnit,
+      result,
+      restUntil,
+      restRemaining,
+      restTotal,
+      elapsedSec,
+      doneCount,
+      totalCount,
+      start,
+      minimize,
+      maximize,
+      close,
+      updateSet,
+      toggleDone,
+      addSet,
+      removeSet,
+      replaceExercise,
+      reorderExercises,
+      addExercise,
+      noteDrafts,
+      setExerciseFlag,
+      setExerciseNote,
+      reminders,
+      dismissReminders,
+      skipRest,
+      adjustRest,
+      finish,
+    }),
+    [
+      active,
+      minimized,
+      phase,
+      day,
+      rows,
+      sessionUnit,
+      result,
+      restUntil,
+      restRemaining,
+      restTotal,
+      elapsedSec,
+      doneCount,
+      totalCount,
+      start,
+      minimize,
+      maximize,
+      close,
+      updateSet,
+      toggleDone,
+      addSet,
+      removeSet,
+      replaceExercise,
+      reorderExercises,
+      addExercise,
+      noteDrafts,
+      setExerciseFlag,
+      setExerciseNote,
+      reminders,
+      dismissReminders,
+      skipRest,
+      adjustRest,
+      finish,
+    ],
+  );
 
   return (
     <WorkoutSessionContext.Provider value={value}>

@@ -1,7 +1,7 @@
 -- Sistema de amistades (fase 1): enviar / aceptar / rechazar solicitudes.
 --
 -- Alcance deliberadamente minimo: SOLO la relacion entre usuarios. No expone
--- entrenos, rangos, cardio ni ningun otro dato todavia. Lo unico que un usuario
+-- entrenos, cardio ni ningun otro dato todavia. Lo unico que un usuario
 -- ve de otro es su USERNAME y su nombre visible; el email nunca sale.
 --
 -- Diseno de seguridad: la tabla lleva RLS estricta (solo ves filas donde
