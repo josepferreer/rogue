@@ -17,8 +17,22 @@ import type {
 
 const EXERCISES = exercisesData as Exercise[];
 
-/** Base de las imagenes de free-exercise-db (dominio publico). */
+/**
+ * Base de las imagenes de ejercicios.
+ *
+ * Por defecto apunta al repositorio original de free-exercise-db (dominio
+ * publico), pero raw.githubusercontent.com NO es un CDN: aplica limitacion de
+ * tasa, no garantiza disponibilidad y puede cortar trafico masivo. Con una beta
+ * publica real, el dia que GitHub limite se queda la biblioteca entera en
+ * blanco.
+ *
+ * Define NEXT_PUBLIC_EXERCISE_IMG_BASE apuntando a tu propio bucket (ver
+ * scripts/mirror-exercise-images.mjs, que copia los assets a Supabase Storage)
+ * para servirlas desde tu dominio. La estructura de rutas es la misma:
+ * {base}/{fuenteId}/0.jpg y {base}/{fuenteId}/1.jpg.
+ */
 export const EXERCISE_IMG_BASE =
+  process.env.NEXT_PUBLIC_EXERCISE_IMG_BASE ??
   "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";
 
 /** URLs de los 2 frames (inicio/fin del movimiento) de un ejercicio. */

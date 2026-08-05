@@ -6,9 +6,14 @@
 -- historial de entrenamientos, favoritos y ejercicios recientes,
 -- e historial de cardio con GPS.
 --
--- Mientras no haya credenciales de Supabase, la app sigue en modo demo
--- (localStorage + src/data/exercises.es.json). Ver src/lib/exercises/repo.ts
--- y scripts/seed-supabase.mjs.
+-- ⚠️ Este fichero es el punto de partida, NO el estado actual de produccion:
+-- el esquema real ha derivado (columnas anadidas desde el SQL Editor) y hay
+-- cambios posteriores en supabase/migrations/. Reconciliar ambos esta
+-- pendiente; hasta entonces, la referencia es produccion + las migraciones.
+--
+-- La app lee el catalogo de ejercicios del dataset local
+-- (src/data/exercises.es.json, ver src/lib/exercises/repo.ts) aunque la tabla
+-- `exercises` este sembrada; scripts/seed-supabase.mjs la mantiene al dia.
 
 -- ============================================================
 -- 1. Catalogo de ejercicios (publico, solo lectura salvo service role)
