@@ -6,6 +6,8 @@ import dynamic from "next/dynamic";
 import { ArrowLeft, MapPin, Activity, Clock, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { estimateKcal } from "@/lib/cardio/estimates";
+import { useRogue } from "@/lib/store/rogue-store";
 import {
   fetchCoordinates,
   useCardio,
@@ -37,6 +39,7 @@ export default function ActivityDetailsPage({
   const { id } = use(params);
   const router = useRouter();
   const { history } = useCardio();
+  const { profile } = useRogue();
 
   const session = useMemo(
     () => history.find((s) => s.id === id),
@@ -85,8 +88,9 @@ export default function ActivityDetailsPage({
   const paceDisplay =
     pace > 0 ? `${paceMin}'${paceSec.toString().padStart(2, "0")}"` : "--";
 
-  // Estimación muy básica de calorías para simular
-  const calories = Math.round(session.durationSec * 0.15); // ~9 kcal/min
+  // Misma estimación que el resumen de cardio: antes esta pantalla usaba una
+  // fórmula distinta (por tiempo) y la misma ruta mostraba dos cifras.
+  const calories = estimateKcal(session.distanceKm, profile.bodyweightKg);
 
   const dateFormatted = new Intl.DateTimeFormat("es-ES", {
     weekday: "long",
