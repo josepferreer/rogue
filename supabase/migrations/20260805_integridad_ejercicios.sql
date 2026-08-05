@@ -9,12 +9,55 @@
 -- "Core". Si algun dia cambia un slug del dataset, el historial de los usuarios
 -- se rompe en silencio.
 --
--- ⚠️ ESTE FICHERO NO SE APLICA A CIEGAS. Ejecutar primero el PASO 1 y revisar
--- que sale vacio. Si devuelve filas hay ids huerfanos: hay que decidir si se
--- corrigen o se siembra el catalogo que falte ANTES de crear las FK.
+-- ⚠️ NOT VALID solo exime a las filas que YA existen: los INSERT nuevos si se
+-- validan. Si se crean estas FK con el catalogo `exercises` vacio o
+-- desincronizado respecto al dataset local, la app deja de poder guardar
+-- entrenos al instante. Paso de verdad el 05/08/2026 al aplicar este fichero
+-- sin revisar antes el catalogo.
+--
+-- Por eso el PASO 0 aborta la migracion por su cuenta si el catalogo no esta
+-- listo: no depende de que nadie lea este comentario. Si falla, ejecuta
+-- `node scripts/seed-supabase.mjs` y vuelve a intentarlo.
 
 -- ============================================================
--- PASO 1 — Auditoria de ids huerfanos (debe devolver 0 filas)
+-- PASO 0 — Guarda de seguridad (aborta si el catalogo no esta listo)
+-- ============================================================
+do $$
+declare
+  v_catalogo int;
+  v_huerfanos int;
+begin
+  select count(*) into v_catalogo from exercises;
+  if v_catalogo = 0 then
+    raise exception
+      'La tabla exercises esta VACIA. Crear las FK dejaria la app sin poder guardar entrenos. Ejecuta antes: node scripts/seed-supabase.mjs';
+  end if;
+
+  select count(*) into v_huerfanos from (
+    select exercise_id from routine_exercises re
+     where not exists (select 1 from exercises e where e.id = re.exercise_id)
+    union all
+    select exercise_id from workout_sets ws
+     where not exists (select 1 from exercises e where e.id = ws.exercise_id)
+    union all
+    select exercise_id from exercise_notes en
+     where not exists (select 1 from exercises e where e.id = en.exercise_id)
+    union all
+    select exercise_id from exercise_favorites ef
+     where not exists (select 1 from exercises e where e.id = ef.exercise_id)
+  ) t;
+
+  if v_huerfanos > 0 then
+    raise exception
+      'Hay % filas con exercise_id que no existe en exercises. Revisa el PASO 1 y resuelvelas (o resiembra el catalogo) antes de crear las FK.',
+      v_huerfanos;
+  end if;
+
+  raise notice 'Catalogo con % ejercicios y 0 huerfanos: se pueden crear las FK.', v_catalogo;
+end $$;
+
+-- ============================================================
+-- PASO 1 — Auditoria detallada (para saber QUE falta si el PASO 0 aborta)
 -- ============================================================
 --   select 'routine_exercises' as tabla, exercise_id, count(*) as filas
 --     from routine_exercises re
