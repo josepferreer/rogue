@@ -141,18 +141,19 @@ grant execute on function save_routine(uuid, text, jsonb) to authenticated;
 -- era siempre NULL. Se pierde ademas la trazabilidad entreno -> rutina, base de
 -- cualquier analitica de adherencia.
 --
--- El parametro va AL FINAL y con default para no romper llamadas existentes
--- (Postgres identifica la funcion por su firma; anadirlo en medio crearia una
--- sobrecarga distinta y el cliente antiguo seguiria llamando a la vieja).
+-- p_routine_id va al final y SIN valor por defecto, a proposito: la firma de 6
+-- parametros se mantiene viva (ver mas abajo) y, si este parametro tuviera
+-- default, una llamada con 6 argumentos encajaria en ambas sobrecargas y
+-- Postgres la rechazaria por ambigua ("function is not unique").
 
 create or replace function log_workout(
   p_session_id   uuid,
   p_day_label    text,
   p_date         timestamptz,
   p_duration_sec int,
-  p_sets         jsonb default '[]'::jsonb,
-  p_notes        jsonb default '[]'::jsonb,
-  p_routine_id   uuid  default null
+  p_sets         jsonb,
+  p_notes        jsonb,
+  p_routine_id   uuid
 ) returns void
 language plpgsql
 security invoker
@@ -208,6 +209,34 @@ $$;
 grant execute on function log_workout(uuid, text, timestamptz, int, jsonb, jsonb, uuid)
   to authenticated;
 
--- La firma de 6 parametros queda huerfana una vez el cliente pasa a la de 7.
--- Se elimina para no dejar dos versiones vivas de la misma funcion.
-drop function if exists log_workout(uuid, text, timestamptz, int, jsonb, jsonb);
+-- La firma de 6 parametros SE MANTIENE VIVA, delegando en la de 7.
+--
+-- Es tentador borrarla por limpieza, pero seria un fallo de despliegue: cliente
+-- y base de datos no se actualizan a la vez. Sin este puente hay dos ventanas
+-- en las que se pierden entrenos de usuarios reales:
+--   1. Si el codigo nuevo llega antes que la migracion, llama a la firma de 7,
+--      que aun no existe -> "No se pudo guardar el entreno".
+--   2. Si la migracion llega antes, cualquier cliente viejo todavia en uso
+--      --una PWA cacheada, o el APK apuntando al deploy anterior, que no se
+--      puede forzar a actualizar-- llama a la de 6 y se queda sin ella.
+-- Con las dos firmas vivas el orden de despliegue deja de importar. Se puede
+-- retirar la de 6 cuando no queden clientes antiguos en circulacion.
+
+create or replace function log_workout(
+  p_session_id   uuid,
+  p_day_label    text,
+  p_date         timestamptz,
+  p_duration_sec int,
+  p_sets         jsonb default '[]'::jsonb,
+  p_notes        jsonb default '[]'::jsonb
+) returns void
+language sql
+security invoker
+set search_path = public
+as $$
+  select log_workout(p_session_id, p_day_label, p_date, p_duration_sec,
+                     p_sets, p_notes, null::uuid);
+$$;
+
+grant execute on function log_workout(uuid, text, timestamptz, int, jsonb, jsonb)
+  to authenticated;
