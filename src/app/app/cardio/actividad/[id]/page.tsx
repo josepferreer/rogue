@@ -117,9 +117,11 @@ export default function ActivityDetailsPage({
         </div>
       </div>
 
-      {/* Map container */}
-      <div className="relative h-[300px] w-full overflow-hidden rounded-3xl border border-border shadow-sm">
-        <MapView coordinates={coordinates} snapToRoads />
+      {/* Map container. Altura relativa a la pantalla (debajo sobraba hueco en
+          moviles altos), con topes para que no se coma la vista en pantallas
+          bajas ni se estire de mas en desktop. */}
+      <div className="relative h-[46dvh] min-h-[300px] max-h-[520px] w-full overflow-hidden rounded-3xl border border-border shadow-sm">
+        <MapView coordinates={coordinates} cleanOutliers />
       </div>
 
       {/* Stats Grid */}

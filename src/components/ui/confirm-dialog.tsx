@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { createPortal } from "react-dom";
+import { useAppShellPortal } from "@/lib/use-app-shell-portal";
+import { useEscapeToClose } from "@/lib/use-escape-to-close";
 
 type Props = {
   open: boolean;
@@ -23,9 +24,8 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: Props) {
-  const [portalTarget] = useState<Element | null>(() =>
-    typeof document !== "undefined" ? document.getElementById("app-shell") : null,
-  );
+  const portalTarget = useAppShellPortal();
+  useEscapeToClose(open, onCancel);
 
   if (!open) return null;
 

@@ -16,7 +16,7 @@ import { estimate1RM } from "@/lib/workout/one-rm";
 import { DEMO_ROUTINE } from "@/data/routine.demo";
 import { createClient } from "@/lib/supabase/client";
 import { fetchAllPages } from "@/lib/supabase/fetch-all";
-import { syncWrite } from "@/lib/supabase/sync";
+import { syncWrite, type SyncOp } from "@/lib/supabase/sync";
 import { Button } from "@/components/ui/button";
 import type {
   ExerciseNote,
@@ -480,31 +480,39 @@ async function fetchSessions(
  * Devuelve el id de la rutina (la crea si el usuario aun no tenia ninguna) para
  * que routineIdRef quede fijado. Es idempotente: un reintento no duplica.
  */
-async function saveRoutineToDb(
-  supabase: SupabaseClient,
+/**
+ * Operacion de guardado de rutina para la cola de sync.
+ *
+ * `save_routine` con `p_routine_id = null` resuelve sola la rutina del usuario
+ * (coge la primera y solo crea una si no hay ninguna), asi que es idempotente
+ * y no hace falta recuperar el id devuelto para el siguiente guardado.
+ */
+function routineRpc(
   routineId: string | null,
   name: string,
   days: RoutineDay[],
-): Promise<string> {
-  const { data, error } = await supabase.rpc("save_routine", {
-    p_routine_id: routineId,
-    p_name: name,
-    p_days: days.map((day) => ({
-      id: day.id,
-      label: day.label,
-      focus: day.focus,
-      weekdays: day.weekdays ?? [],
-      exercises: day.exercises.map((ex) => ({
-        exerciseId: ex.exerciseId,
-        sets: ex.sets,
-        reps: ex.reps,
-        restSec: ex.restSec,
-        suggestedKg: ex.suggestedKg,
+): SyncOp {
+  return {
+    kind: "rpc",
+    fn: "save_routine",
+    args: {
+      p_routine_id: routineId,
+      p_name: name,
+      p_days: days.map((day) => ({
+        id: day.id,
+        label: day.label,
+        focus: day.focus,
+        weekdays: day.weekdays ?? [],
+        exercises: day.exercises.map((ex) => ({
+          exerciseId: ex.exerciseId,
+          sets: ex.sets,
+          reps: ex.reps,
+          restSec: ex.restSec,
+          suggestedKg: ex.suggestedKg,
+        })),
       })),
-    })),
-  });
-  if (error) throw error;
-  return (data as { routine_id: string }).routine_id;
+    },
+  };
 }
 
 /**
@@ -518,13 +526,15 @@ async function saveRoutineToDb(
  *
  * El user_id lo pone la funcion desde auth.uid(), no viaja como parametro.
  */
-async function saveWorkout(
-  supabase: SupabaseClient,
+function workoutRpc(
   session: WorkoutSession,
   notes: ExerciseNote[],
   routineId: string | null,
-) {
-  const { error } = await supabase.rpc("log_workout", {
+): SyncOp {
+  return {
+    kind: "rpc",
+    fn: "log_workout",
+    args: {
     p_session_id: session.id,
     p_day_label: session.dayLabel,
     p_date: session.dateISO,
@@ -549,8 +559,8 @@ async function saveWorkout(
       acknowledged: n.acknowledged,
       created_at: n.dateISO,
     })),
-  });
-  if (error) throw error;
+    },
+  };
 }
 
 type ExerciseNoteRow = {
@@ -729,22 +739,17 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
 
       const userId = userIdRef.current;
       if (!userId) return;
-      syncWrite("el perfil", async () => {
-        const { error } = await supabase
-          .from("profiles")
-          .update(toProfileRowPatch(profile))
-          .eq("user_id", userId);
-        if (error) throw error;
-
-        routineIdRef.current = await saveRoutineToDb(
-          supabase,
-          routineIdRef.current,
-          DEMO_ROUTINE.name,
-          DEMO_ROUTINE.days,
-        );
-      });
+      syncWrite("el perfil", [
+        {
+          kind: "update",
+          table: "profiles",
+          values: toProfileRowPatch(profile),
+          match: { user_id: userId },
+        },
+        routineRpc(routineIdRef.current, DEMO_ROUTINE.name, DEMO_ROUTINE.days),
+      ]);
     },
-    [supabase, state.profile],
+    [state.profile],
   );
 
   const updateProfile = useCallback(
@@ -752,15 +757,14 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
       setState((prev) => ({ ...prev, profile: { ...prev.profile, ...patch } }));
       const userId = userIdRef.current;
       if (!userId) return;
-      syncWrite("el perfil", async () => {
-        const { error } = await supabase
-          .from("profiles")
-          .update(toProfileRowPatch(patch))
-          .eq("user_id", userId);
-        if (error) throw error;
+      syncWrite("el perfil", {
+        kind: "update",
+        table: "profiles",
+        values: toProfileRowPatch(patch),
+        match: { user_id: userId },
       });
     },
-    [supabase],
+    [],
   );
 
   const updatePreferences = useCallback(
@@ -768,15 +772,14 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
       setState((prev) => ({ ...prev, preferences: { ...prev.preferences, ...patch } }));
       const userId = userIdRef.current;
       if (!userId) return;
-      syncWrite("las preferencias", async () => {
-        const { error } = await supabase
-          .from("profiles")
-          .update(toProfileRowPatch(patch))
-          .eq("user_id", userId);
-        if (error) throw error;
+      syncWrite("las preferencias", {
+        kind: "update",
+        table: "profiles",
+        values: toProfileRowPatch(patch),
+        match: { user_id: userId },
       });
     },
-    [supabase],
+    [],
   );
 
   const updateUsername = useCallback(
@@ -866,15 +869,12 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
 
       const userId = userIdRef.current;
       if (userId) {
-        const routineId = routineIdRef.current;
-        syncWrite("el entreno", () =>
-          saveWorkout(supabase, session, noteRows, routineId),
-        );
+        syncWrite("el entreno", workoutRpc(session, noteRows, routineIdRef.current));
       }
 
       return { session, prs };
     },
-    [state.sessions, supabase],
+    [state.sessions],
   );
 
   const deleteSession = useCallback(
@@ -907,19 +907,16 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
 
       const userId = userIdRef.current;
       if (userId) {
-        syncWrite("el borrado del entreno", async () => {
-          // El ON DELETE CASCADE de workout_sets y exercise_notes arrastra las
-          // filas hijas al borrar la sesion.
-          const { error } = await supabase
-            .from("workout_sessions")
-            .delete()
-            .eq("id", id)
-            .eq("user_id", userId);
-          if (error) throw error;
+        // El ON DELETE CASCADE de workout_sets y exercise_notes arrastra las
+        // filas hijas al borrar la sesion.
+        syncWrite("el borrado del entreno", {
+          kind: "delete",
+          table: "workout_sessions",
+          match: { id, user_id: userId },
         });
       }
     },
-    [supabase],
+    [],
   );
 
   // Marca como vistos los recordatorios pendientes de estos ejercicios para que
@@ -944,19 +941,20 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
 
       const userId = userIdRef.current;
       if (userId) {
-        syncWrite("los recordatorios", async () => {
-          const { error } = await supabase
-            .from("exercise_notes")
-            .update({ acknowledged: true })
-            .in(
-              "id",
-              affected.map((n) => n.id),
-            );
-          if (error) throw error;
-        });
+        // Una op por nota (suelen ser una o dos): la cola describe las
+        // escrituras por clave para poder serializarlas, y no cubre `.in()`.
+        syncWrite(
+          "los recordatorios",
+          affected.map((n) => ({
+            kind: "update" as const,
+            table: "exercise_notes",
+            values: { acknowledged: true },
+            match: { id: n.id },
+          })),
+        );
       }
     },
-    [state.exerciseNotes, supabase],
+    [state.exerciseNotes],
   );
 
   const saveRoutine = useCallback(
@@ -965,16 +963,9 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
 
       const userId = userIdRef.current;
       if (!userId) return;
-      syncWrite("la rutina", async () => {
-        routineIdRef.current = await saveRoutineToDb(
-          supabase,
-          routineIdRef.current,
-          "Mi rutina",
-          days,
-        );
-      });
+      syncWrite("la rutina", routineRpc(routineIdRef.current, "Mi rutina", days));
     },
-    [supabase],
+    [],
   );
 
   const resetAll = useCallback(() => {
@@ -987,26 +978,21 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
     const userId = userIdRef.current;
     const routineId = routineIdRef.current;
     if (!userId) return;
-    syncWrite("el reinicio de datos", async () => {
-      const { error: sessionsError } = await supabase
-        .from("workout_sessions")
-        .delete()
-        .eq("user_id", userId);
-      if (sessionsError) throw sessionsError;
-      if (routineId) {
-        const { error: daysError } = await supabase
-          .from("routine_days")
-          .delete()
-          .eq("routine_id", routineId);
-        if (daysError) throw daysError;
-      }
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update(toProfileRowPatch({ ...DEFAULT_PROFILE, ...DEFAULT_PREFERENCES }))
-        .eq("user_id", userId);
-      if (profileError) throw profileError;
-    });
-  }, [supabase, state.profile.username]);
+    syncWrite("el reinicio de datos", [
+      { kind: "delete", table: "workout_sessions", match: { user_id: userId } },
+      ...(routineId
+        ? ([
+            { kind: "delete", table: "routine_days", match: { routine_id: routineId } },
+          ] as const)
+        : []),
+      {
+        kind: "update",
+        table: "profiles",
+        values: toProfileRowPatch({ ...DEFAULT_PROFILE, ...DEFAULT_PREFERENCES }),
+        match: { user_id: userId },
+      },
+    ]);
+  }, [state.profile.username]);
 
   const todayDays = useMemo(() => {
     const weekday = new Date().getDay(); // 0=domingo..6=sabado

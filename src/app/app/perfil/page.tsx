@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { signOut } from "@/lib/supabase/actions";
+import { APP_VERSION } from "@/lib/version";
 import {
   SwitchRow,
   UnitToggle,
@@ -30,6 +31,7 @@ import { useFriends } from "@/lib/store/friends-store";
 import { formatWeight } from "@/lib/units";
 import { getDisplayName, type Sex } from "@/lib/workout/types";
 import { cn } from "@/lib/utils";
+import { useAppShellPortal } from "@/lib/use-app-shell-portal";
 
 const GOALS = ["Hipertrofia", "Fuerza", "Perder grasa", "Mantenerme"];
 
@@ -153,9 +155,7 @@ function EditIdentityModal({
   }, [open, profile.name, profile.username, preferences.displayNameSource]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const [portalTarget] = useState<Element | null>(() =>
-    typeof document !== "undefined" ? document.getElementById("app-shell") : null,
-  );
+  const portalTarget = useAppShellPortal();
 
   if (!open) return null;
 
@@ -291,9 +291,7 @@ function EditPhysicalModal({
   }, [open, profile]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const [portalTarget] = useState<Element | null>(() =>
-    typeof document !== "undefined" ? document.getElementById("app-shell") : null,
-  );
+  const portalTarget = useAppShellPortal();
 
   if (!open) return null;
 
@@ -586,6 +584,10 @@ export default function PerfilPage({
           <RotateCcw className="size-4" />
           Reiniciar datos de demo
         </Button>
+        {/* Para poder saber que build ejecutaba el usuario cuando reporte algo. */}
+        <p className="pt-2 text-center font-mono text-[11px] text-muted-foreground/70">
+          Rogue {APP_VERSION}
+        </p>
       </div>
         </>
       )}

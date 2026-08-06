@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 /**
  * Proteccion de las rutas /api que actuan como proxy hacia servicios externos
- * (Open Food Facts, OSRM). Sin esto son proxies ABIERTOS: cualquiera puede
+ * (hoy solo Open Food Facts). Sin esto son proxies ABIERTOS: cualquiera puede
  * pegarles desde fuera, consumir la cuota de Vercel y hablar con esos servicios
  * bajo nuestra identidad (el User-Agent lleva un email de contacto).
  *

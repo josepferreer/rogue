@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { CloudOff, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,10 @@ import { cn } from "@/lib/utils";
 import {
   dismissFailedWrites,
   getFailedWrites,
+  resumeStoredWrites,
   retryFailedWrites,
   subscribeSyncFailures,
 } from "@/lib/supabase/sync";
-
-const subscribeNever = () => () => {};
 
 /** Aviso persistente cuando alguna escritura a Supabase ha fallado tras los
  *  reintentos automaticos: lo que se ve en pantalla NO esta guardado. Se
@@ -27,17 +26,33 @@ export function SyncErrorToast() {
   );
   // false durante SSR/hidratacion, true tras montar: no hay #app-shell hasta
   // que existe el DOM.
-  const mounted = useSyncExternalStore(
-    subscribeNever,
-    () => true,
-    () => false,
-  );
-
-  if (failed.length === 0 || !mounted) return null;
   // Contenedor compartido con el resto de avisos (ver notification-stack.tsx):
   // se apilan sobre la barra de navegacion en vez de solaparse.
-  const portalTarget = document.getElementById("notification-stack");
-  if (!portalTarget) return null;
+  //
+  // Se busca con reintentos por frame, no una sola vez durante el render: este
+  // componente vive FUERA de HydrationGate, asi que al montar todavia se esta
+  // pintando el splash y `#notification-stack` no existe. Mirandolo una sola
+  // vez quedaba en null para siempre y el aviso no llegaba a aparecer nunca.
+  const [portalTarget, setPortalTarget] = useState<Element | null>(null);
+  useEffect(() => {
+    let raf = 0;
+    const find = () => {
+      const el = document.getElementById("notification-stack");
+      if (el) setPortalTarget(el);
+      else raf = requestAnimationFrame(find);
+    };
+    find();
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // Reanuda lo que quedara a medias en una sesion anterior (la cola vive en
+  // localStorage). Se hace aqui porque este componente ya esta montado en toda
+  // la zona autenticada y es quien muestra el resultado si vuelve a fallar.
+  useEffect(() => {
+    void resumeStoredWrites();
+  }, []);
+
+  if (failed.length === 0 || !portalTarget) return null;
 
   const labels = [...new Set(failed.map((f) => f.label))].join(", ");
 

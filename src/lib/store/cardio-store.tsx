@@ -35,7 +35,7 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 }
 
 // Rechazo de outliers para el calculo de distancia (mismos umbrales que el map
-// matching de /api/match). Un tramo que implica una velocidad imposible a pie
+// limpieza de lib/cardio/clean-trace). Un tramo que implica una velocidad imposible a pie
 // (>28.8 km/h) es un salto del sensor, no movimiento real: sin esto, la deriva
 // del GPS inflaba los km guardados. Un salto tras un apagon largo (dt grande)
 // da velocidad baja y SI cuenta, que es lo correcto (desplazamiento real).
@@ -162,19 +162,6 @@ async function pushCardioProgress(
   });
   if (error) throw error;
   return Number(data ?? storedLen + newPoints.length);
-}
-
-async function deleteCardioSession(
-  supabase: SupabaseClient,
-  userId: string,
-  id: string,
-) {
-  const { error } = await supabase
-    .from("cardio_sessions")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", userId);
-  if (error) throw error;
 }
 
 // --- Sesion en curso: snapshot para sobrevivir a que el SO mate la PWA ---
@@ -329,7 +316,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
   const distanceKmRef = useRef(0);
   // Ultimo punto ACEPTADO para la distancia (no el ultimo crudo): al rechazar un
   // salto no se actualiza, para que el siguiente punto se compare con el ultimo
-  // bueno y la traza se auto-corrija (igual que cleanTrace en /api/match).
+  // bueno y la traza se auto-corrija (igual que cleanTrace al dibujar).
   const lastAcceptedRef = useRef<Coordinate | null>(null);
 
   // Cronometro por timestamps: aunque el navegador congele los timers en
@@ -423,7 +410,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
                   : distKm * 1000 > MAX_JUMP_M;
               // Solo cuenta (y avanza el punto de referencia) si no es un salto
               // imposible. Un outlier se guarda igual en coordinatesRef para el
-              // mapa (que re-limpia con /api/match), pero no infla la distancia.
+              // mapa (que re-limpia al dibujar), pero no infla la distancia.
               if (!isOutlier) {
                 distanceKmRef.current += distKm;
                 lastAcceptedRef.current = newCoord;
@@ -601,29 +588,32 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
         // Volcado final por la cola de sync (reintentos + aviso si falla).
         // Solo viajan los puntos que aun no estuviesen confirmados, y el RPC es
         // idempotente, asi que un reintento no duplica la traza.
-        syncWrite("la ruta de cardio", async () => {
-          await pushCardioProgress(
-            supabase,
-            id,
-            dateISO,
-            finalDistance,
-            finalDuration,
-            storedLen,
-            finalCoordinates.slice(storedLen),
-          );
+        syncWrite("la ruta de cardio", {
+          kind: "rpc",
+          fn: "upsert_cardio_progress",
+          args: {
+            p_id: id,
+            p_date: dateISO,
+            p_distance_km: finalDistance,
+            p_duration_sec: finalDuration,
+            p_stored_len: storedLen,
+            p_new_points: finalCoordinates.slice(storedLen),
+          },
         });
       }
     } else if (id && userIdRef.current && storedLen > 0) {
       // Ruta descartada por insignificante pero con volcados ya en servidor:
       // hay que borrar la fila o quedaria una ruta fantasma en el historial.
       const userId = userIdRef.current;
-      syncWrite("el descarte de la ruta", () =>
-        deleteCardioSession(supabase, userId, id),
-      );
+      syncWrite("el descarte de la ruta", {
+        kind: "delete",
+        table: "cardio_sessions",
+        match: { id, user_id: userId },
+      });
     }
     // coordinates/distanceKm se quedan como estan para la pantalla de
     // resumen; startTracking los resetea.
-  }, [clearGPS, supabase, computeDuration, releaseWakeLock]);
+  }, [clearGPS, computeDuration, releaseWakeLock]);
 
   // Recuperacion: al arrancar, si quedo una sesion a medias (la PWA se cerro
   // sin pasar por stopTracking), se REANUDA en pausa en vez de finalizarla. Asi
@@ -694,12 +684,14 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
       setHistory((prev) => prev.filter((s) => s.id !== id));
       const userId = userIdRef.current;
       if (userId) {
-        syncWrite("el borrado de la ruta", () =>
-          deleteCardioSession(supabase, userId, id),
-        );
+        syncWrite("el borrado de la ruta", {
+          kind: "delete",
+          table: "cardio_sessions",
+          match: { id, user_id: userId },
+        });
       }
     },
-    [supabase],
+    [],
   );
 
   // Memoizado: sin esto se creaba un objeto nuevo en CADA render del provider,

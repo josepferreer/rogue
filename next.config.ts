@@ -25,6 +25,13 @@ const custom = exerciseImagePattern();
 const nextConfig: NextConfig = {
   // Permite probar el dev server desde el movil por IP local (LAN).
   allowedDevOrigins: ["192.168.1.59", "192.168.88.128"],
+  env: {
+    // Identifica el build que ejecuta el usuario (ver lib/version.ts). En
+    // Vercel viene del commit; en otro proveedor, define NEXT_PUBLIC_BUILD_ID.
+    NEXT_PUBLIC_BUILD_ID:
+      process.env.NEXT_PUBLIC_BUILD_ID ?? process.env.VERCEL_GIT_COMMIT_SHA ?? "",
+    NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version ?? "0.1.0",
+  },
   images: {
     remotePatterns: [
       {

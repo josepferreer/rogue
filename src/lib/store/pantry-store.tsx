@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -12,8 +13,9 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { fetchAllPages } from "@/lib/supabase/fetch-all";
 import { syncWrite } from "@/lib/supabase/sync";
+import type { HealthScore } from "@/lib/food/health-score";
 
-export type HealthScore = "green" | "yellow" | "orange" | "red";
+export type { HealthScore };
 
 /** Ingrediente de un producto listo: nombre y, si OFF declaraba su porcentaje,
  *  gramos estimados dentro de la racion (si no, queda en blanco). */
@@ -85,12 +87,73 @@ export function isReadyPlato(p: Plato): boolean {
   return p.foods.length === 0;
 }
 
+export type PlatoMacros = {
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  /** Peso total en g (0 en platos listos, que van por 100 g). */
+  weightG: number;
+  /** Ingredientes que ya no estan en la despensa. */
+  missing: number;
+};
+
+/**
+ * Macros de un plato calculadas AHORA contra la despensa.
+ *
+ * En los platos manuales, `p.kcal` es una copia congelada al guardarlo: si
+ * luego se editan las macros de un ingrediente, esa copia miente. Al añadirlo
+ * al diario siempre se recalculaba, asi que el mismo plato mostraba dos cifras
+ * distintas segun la pantalla. Para PINTAR se usa siempre esta funcion.
+ *
+ * Ojo con la asimetria (viene del modelo): en un plato listo las cifras son
+ * POR 100 G; en uno manual son el TOTAL del plato.
+ */
+export function platoMacros(p: Plato, alimentos: Alimento[]): PlatoMacros {
+  if (isReadyPlato(p)) {
+    return {
+      kcal: p.kcal,
+      protein: p.protein ?? 0,
+      carbs: p.carbs ?? 0,
+      fat: p.fat ?? 0,
+      weightG: 0,
+      missing: 0,
+    };
+  }
+  const out: PlatoMacros = { kcal: 0, protein: 0, carbs: 0, fat: 0, weightG: 0, missing: 0 };
+  for (const f of p.foods) {
+    const a = alimentos.find((x) => x.id === f.alimentoId);
+    if (!a) {
+      out.missing++;
+      continue;
+    }
+    const factor = f.quantityG / 100;
+    out.kcal += a.kcal * factor;
+    out.protein += a.protein * factor;
+    out.carbs += a.carbs * factor;
+    out.fat += a.fat * factor;
+    out.weightG += f.quantityG;
+  }
+  return out;
+}
+
 type PantryContextType = {
+  /** false mientras se lee la despensa del usuario (evita pintar "vacia"). */
+  hydrated: boolean;
+  /** La lectura fallo: la despensa que se ve NO es la del usuario (esta
+   *  vacia). La UI debe decirlo y ofrecer reintentar, nunca fingir. */
+  loadError: boolean;
+  reload: () => void;
   alimentos: Alimento[];
   platos: Plato[];
   addAlimento: (a: Omit<Alimento, "id" | "isFavorite">) => void;
   updateAlimento: (id: string, data: Partial<Alimento>) => void;
+  /** Borra el alimento Y lo quita de los platos que lo usaban (un plato que se
+   *  quede sin ingredientes se borra tambien). Sin esto quedaban referencias
+   *  colgadas que el diario contaba como 0 kcal en silencio. */
   deleteAlimento: (id: string) => void;
+  /** Platos que usan este alimento, para poder avisar antes de borrarlo. */
+  platosUsando: (alimentoId: string) => Plato[];
   addPlato: (p: Omit<Plato, "id" | "isFavorite">) => void;
   updatePlato: (id: string, data: Partial<Plato>) => void;
   deletePlato: (id: string) => void;
@@ -98,8 +161,10 @@ type PantryContextType = {
   toggleFavoritePlato: (id: string) => void;
 };
 
-// Despensa de partida para usuarios nuevos (se siembra en Supabase la primera
-// vez) y para el modo sin sesion. Los ids demo se remapean a uuids al sembrar.
+// Despensa de partida para usuarios nuevos: se siembra en Supabase UNA sola
+// vez (marca `profiles.pantry_seeded`) y nunca se muestra sin persistir, para
+// que nadie vea como suya una despensa que no lo es. Los ids demo se remapean
+// a uuids al sembrar.
 const DEMO_ALIMENTOS: Alimento[] = [
   { id: "1", name: "Pechuga de pollo", kcal: 165, protein: 31, carbs: 0, fat: 3.6, isFavorite: false, healthScore: "green" },
   { id: "2", name: "Arroz blanco", kcal: 130, protein: 2.7, carbs: 28, fat: 0.3, isFavorite: false, healthScore: "yellow" },
@@ -265,6 +330,31 @@ async function fetchPantry(
   return { alimentos: foodRows.map(rowToAlimento), platos: dishRows.map(rowToPlato) };
 }
 
+/** ¿Ya se le sembro la despensa demo a este usuario? null = la columna aun no
+ *  existe (migracion sin aplicar): se cae al criterio antiguo, sembrar cuando
+ *  la despensa esta vacia. */
+async function fetchSeeded(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<boolean | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("pantry_seeded")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) {
+    // 42703 = columna inexistente.
+    if (error.code === "42703") {
+      console.warn(
+        "profiles.pantry_seeded no existe todavia: aplica 20260805_nutricion_pilar3.sql.",
+      );
+      return null;
+    }
+    throw error;
+  }
+  return data?.pantry_seeded ?? false;
+}
+
 function newId(): string {
   return typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
@@ -292,76 +382,116 @@ const PantryContext = createContext<PantryContextType | null>(null);
 
 export function PantryProvider({ children }: { children: ReactNode }) {
   const [supabase] = useState(() => createClient());
-  const [alimentos, setAlimentos] = useState<Alimento[]>(DEMO_ALIMENTOS);
-  const [platos, setPlatos] = useState<Plato[]>(DEMO_PLATOS);
+  // Se arranca vacia, nunca con la demo: hasta ahora un fallo de lectura
+  // dejaba en pantalla los alimentos de ejemplo como si fueran del usuario, y
+  // todo lo que editaba encima se perdia sin un solo aviso.
+  const [alimentos, setAlimentos] = useState<Alimento[]>([]);
+  const [platos, setPlatos] = useState<Plato[]>([]);
+  const [hydrated, setHydrated] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const userIdRef = useRef<string | null>(null);
 
-  // Hidrata la despensa del usuario desde Supabase. Si esta vacia (primera
-  // vez), se siembra la demo para que tenga una base editable que persiste.
-  // Sin sesion (o si la lectura falla) se queda la demo en memoria.
+  const reload = useCallback(() => setReloadKey((k) => k + 1), []);
+
+  // Hidrata la despensa del usuario desde Supabase. Si esta vacia y nunca se
+  // le sembro (profiles.pantry_seeded), se siembra la demo como base editable;
+  // vaciarla a mano despues ya no la repuebla.
   useEffect(() => {
     let active = true;
     (async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!active || !user) return;
+      if (!active) return;
+      if (!user) {
+        setHydrated(true);
+        return;
+      }
 
       let pantry: { alimentos: Alimento[]; platos: Plato[] };
+      let seeded: boolean | null;
       try {
-        pantry = await fetchPantry(supabase, user.id);
+        [pantry, seeded] = await Promise.all([
+          fetchPantry(supabase, user.id),
+          fetchSeeded(supabase, user.id),
+        ]);
       } catch (err) {
         console.error("No se pudo cargar la despensa:", err);
+        if (active) {
+          setAlimentos([]);
+          setPlatos([]);
+          setLoadError(true);
+          setHydrated(true);
+        }
         return;
       }
       if (!active) return;
 
-      if (pantry.alimentos.length === 0 && pantry.platos.length === 0) {
+      const empty = pantry.alimentos.length === 0 && pantry.platos.length === 0;
+      if (empty && seeded !== true) {
         pantry = buildSeedPantry();
         const userId = user.id;
-        syncWrite("la despensa", async () => {
-          const { error: foodsError } = await supabase
-            .from("pantry_foods")
-            .upsert(pantry.alimentos.map((a) => alimentoToRow(userId, a)));
-          if (foodsError) throw foodsError;
-          const { error: dishesError } = await supabase
-            .from("pantry_dishes")
-            .upsert(pantry.platos.map((p) => platoToRow(userId, p)));
-          if (dishesError) throw dishesError;
-        });
+        const markSeeded = seeded !== null;
+        syncWrite("la despensa", [
+          {
+            kind: "upsert",
+            table: "pantry_foods",
+            rows: pantry.alimentos.map((a) => alimentoToRow(userId, a)),
+          },
+          {
+            kind: "upsert",
+            table: "pantry_dishes",
+            rows: pantry.platos.map((p) => platoToRow(userId, p)),
+          },
+          ...(markSeeded
+            ? ([
+                {
+                  kind: "update",
+                  table: "profiles",
+                  values: { pantry_seeded: true },
+                  match: { user_id: userId },
+                },
+              ] as const)
+            : []),
+        ]);
       }
 
       userIdRef.current = user.id;
       setAlimentos(pantry.alimentos);
       setPlatos(pantry.platos);
+      setLoadError(false);
+      setHydrated(true);
     })();
     return () => {
       active = false;
     };
-  }, [supabase]);
+  }, [supabase, reloadKey]);
 
   const persistAlimento = useCallback(
     (a: Alimento) => {
       const userId = userIdRef.current;
       if (!userId) return;
-      syncWrite("el alimento", async () => {
-        const { error } = await supabase.from("pantry_foods").upsert(alimentoToRow(userId, a));
-        if (error) throw error;
+      syncWrite("el alimento", {
+        kind: "upsert",
+        table: "pantry_foods",
+        rows: alimentoToRow(userId, a),
       });
     },
-    [supabase],
+    [],
   );
 
   const persistPlato = useCallback(
     (p: Plato) => {
       const userId = userIdRef.current;
       if (!userId) return;
-      syncWrite("el plato", async () => {
-        const { error } = await supabase.from("pantry_dishes").upsert(platoToRow(userId, p));
-        if (error) throw error;
+      syncWrite("el plato", {
+        kind: "upsert",
+        table: "pantry_dishes",
+        rows: platoToRow(userId, p),
       });
     },
-    [supabase],
+    [],
   );
 
   const addAlimento = useCallback(
@@ -379,23 +509,78 @@ export function PantryProvider({ children }: { children: ReactNode }) {
       const base = alimentos.find((a) => a.id === id);
       if (!base) return;
       const next = { ...base, ...data };
-      setAlimentos((prev) => prev.map((a) => (a.id === id ? next : a)));
+      const nextAlimentos = alimentos.map((a) => (a.id === id ? next : a));
+      setAlimentos(nextAlimentos);
       persistAlimento(next);
+
+      // Los platos guardan una copia de sus kcal totales. Si cambian las macros
+      // del ingrediente hay que rehacerla, o la fila de BD se queda mintiendo.
+      const macrosCambian =
+        next.kcal !== base.kcal ||
+        next.protein !== base.protein ||
+        next.carbs !== base.carbs ||
+        next.fat !== base.fat;
+      if (!macrosCambian) return;
+
+      const afectados = platos.filter((p) => p.foods.some((f) => f.alimentoId === id));
+      if (afectados.length === 0) return;
+      const rehechos = new Map(
+        afectados.map((p) => [
+          p.id,
+          { ...p, kcal: Math.round(platoMacros(p, nextAlimentos).kcal) },
+        ]),
+      );
+      setPlatos((prev) => prev.map((p) => rehechos.get(p.id) ?? p));
+      for (const p of rehechos.values()) persistPlato(p);
     },
-    [alimentos, persistAlimento],
+    [alimentos, platos, persistAlimento, persistPlato],
+  );
+
+  const platosUsando = useCallback(
+    (alimentoId: string) =>
+      platos.filter((p) => p.foods.some((f) => f.alimentoId === alimentoId)),
+    [platos],
   );
 
   const deleteAlimento = useCallback(
     (id: string) => {
-      setAlimentos((prev) => prev.filter((a) => a.id !== id));
+      const nextAlimentos = alimentos.filter((a) => a.id !== id);
+      setAlimentos(nextAlimentos);
+
+      // Un plato al que se le quita su unico ingrediente no puede quedarse con
+      // foods vacio: isReadyPlato lo tomaria por un producto escaneado y
+      // interpretaria sus kcal como "por 100 g". Se borra.
+      const afectados = platos.filter((p) => p.foods.some((f) => f.alimentoId === id));
+      const vaciados = new Set<string>();
+      const recortados = new Map<string, Plato>();
+      for (const p of afectados) {
+        const foods = p.foods.filter((f) => f.alimentoId !== id);
+        if (foods.length === 0) {
+          vaciados.add(p.id);
+          continue;
+        }
+        const recortado = { ...p, foods };
+        recortados.set(p.id, { ...recortado, kcal: Math.round(platoMacros(recortado, nextAlimentos).kcal) });
+      }
+      if (vaciados.size > 0 || recortados.size > 0) {
+        setPlatos((prev) =>
+          prev.filter((p) => !vaciados.has(p.id)).map((p) => recortados.get(p.id) ?? p),
+        );
+      }
+
       const userId = userIdRef.current;
       if (!userId) return;
-      syncWrite("el alimento", async () => {
-        const { error } = await supabase.from("pantry_foods").delete().eq("id", id);
-        if (error) throw error;
-      });
+      syncWrite("el alimento", { kind: "delete", table: "pantry_foods", match: { id } });
+      for (const p of recortados.values()) persistPlato(p);
+      for (const platoId of vaciados) {
+        syncWrite("el plato", {
+          kind: "delete",
+          table: "pantry_dishes",
+          match: { id: platoId },
+        });
+      }
     },
-    [supabase],
+    [alimentos, platos, persistPlato],
   );
 
   const addPlato = useCallback(
@@ -423,12 +608,9 @@ export function PantryProvider({ children }: { children: ReactNode }) {
       setPlatos((prev) => prev.filter((p) => p.id !== id));
       const userId = userIdRef.current;
       if (!userId) return;
-      syncWrite("el plato", async () => {
-        const { error } = await supabase.from("pantry_dishes").delete().eq("id", id);
-        if (error) throw error;
-      });
+      syncWrite("el plato", { kind: "delete", table: "pantry_dishes", match: { id } });
     },
-    [supabase],
+    [],
   );
 
   const toggleFavoriteAlimento = useCallback(
@@ -453,15 +635,18 @@ export function PantryProvider({ children }: { children: ReactNode }) {
     [platos, persistPlato],
   );
 
-  return (
-    <PantryContext.Provider
-      value={{
-        alimentos, platos, addAlimento, updateAlimento, deleteAlimento, addPlato, updatePlato, deletePlato, toggleFavoriteAlimento, toggleFavoritePlato,
-      }}
-    >
-      {children}
-    </PantryContext.Provider>
+  const value = useMemo<PantryContextType>(
+    () => ({
+      hydrated, loadError, reload, platosUsando,
+      alimentos, platos, addAlimento, updateAlimento, deleteAlimento, addPlato, updatePlato, deletePlato, toggleFavoriteAlimento, toggleFavoritePlato,
+    }),
+    [
+      hydrated, loadError, reload, platosUsando,
+      alimentos, platos, addAlimento, updateAlimento, deleteAlimento, addPlato, updatePlato, deletePlato, toggleFavoriteAlimento, toggleFavoritePlato,
+    ],
   );
+
+  return <PantryContext.Provider value={value}>{children}</PantryContext.Provider>;
 }
 
 export function usePantry() {

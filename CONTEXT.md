@@ -11,7 +11,14 @@ React 19, TypeScript y Tailwind v4. Está en `C:\Users\Grupo Hogares\Desktop\rog
   móvil, simulando un frame de app nativa. Navegación inferior fija en
   `src/components/layout/bottom-nav.tsx`.
 - Modales se renderizan vía `createPortal` dentro de `#app-shell` para que el
-  ancho case con el contenido (patrón usado en varios `*-modal.tsx`).
+  ancho case con el contenido (patrón usado en varios `*-modal.tsx`). El nodo
+  destino se obtiene **siempre** con `useAppShellPortal()`
+  (`src/lib/use-app-shell-portal.ts`); nunca con
+  `useState(() => document.getElementById("app-shell"))`, que se resuelve
+  durante el render — cuando `HydrationGate` deja pasar, `AppShell` y la página
+  se montan en el mismo commit y el nodo aún no está en el DOM, así que el
+  destino quedaba a null para siempre y el modal no abría en carga directa de
+  la ruta (entrando por un link sí, y por eso pasaba desapercibido).
 - Theming con variables CSS en `src/app/globals.css` (`--background`, `--surface`,
   `--muted`, `--border`, con variantes light/dark). `bg-surface` es blanco puro:
   solo contrasta sobre `bg-background` (gris), nunca lo uses relleno sobre
@@ -24,6 +31,10 @@ React 19, TypeScript y Tailwind v4. Está en `C:\Users\Grupo Hogares\Desktop\rog
 - Drag-and-drop con `@dnd-kit/*` (core, sortable, modifiers, utilities) para
   reordenar tarjetas con soporte táctil real (usado en el editor de rutinas).
 - Mapa de cardio con `leaflet` / `react-leaflet` (`src/components/cardio/map-view.tsx`).
+  Teselas de CARTO (`basemaps.cartocdn.com`): es el único tercero que ve algo
+  de las rutas (la zona que miras), y debe salir en la política de privacidad.
+  **Pendiente: falta la atribución de OpenStreetMap/CARTO** — el mapa se pinta
+  con `attributionControl={false}` y la licencia ODbL la exige.
 - Estado global vía **React Context** (no Zustand, no librería externa):
   - `src/lib/store/rogue-store.tsx` — perfil, historial de sesiones
     (`WorkoutSession[]`), rutina (`routineDays`), `todayDay` calculado.
@@ -77,20 +88,99 @@ Auditoría crítica módulo a módulo. Tres pilares: **Entrenamientos**, **Cardi
   durante la ruta (`upsert_cardio_progress`, envía solo puntos nuevos y es
   idempotente), listado sin la polilínea (se carga al abrir el detalle),
   contexto memoizado, snapshot con throttle.
+  **Se eliminó el map matching (06/08/2026).** `/api/match` y
+  `lib/cardio/map-matching.ts` ya no existen: mandaban la traza GPS del usuario
+  (que empieza y acaba en su casa) al servidor de demostración público de OSRM,
+  sin contrato de encargo de tratamiento, y en cada apertura del detalle. La
+  política de OSRM además excluye productos detrás de un login. La limpieza de
+  outliers —que es lo que de verdad quitaba las rectas cruzando manzanas— vive
+  ahora en `lib/cardio/clean-trace.ts` y se aplica en cliente al dibujar
+  (`<MapView cleanOutliers />`), sin red. **No reintroduzcas una llamada a un
+  router externo sin resolver antes el encargo de tratamiento.**
   **Pendiente, decisión de producto:** tipo de actividad + elevación (sin tipo,
   el filtro de outliers a 28,8 km/h descarta la bici entera) y pasos/kcal, hoy
   estimados pero mostrados como cifras exactas.
-- **Pilar 3 — Nutrición: SIN EMPEZAR.**
+- **Pilar 3 — Nutrición: PARCIAL.** ~3,0 → ~5,5. Hecho: el escáner pasa por
+  `/api/food/[barcode]` (sesión + límite + `fields=` + fallback kJ→kcal); antes
+  cada pantalla llamaba a Open Food Facts directa y el proxy era código muerto.
+  Criterio `eaten` unificado en las 4 pantallas (resumen, tarjetas, hoja de
+  comida, planificador): la cifra es lo comido y lo planificado va aparte.
+  Desglose de platos en `meal_entries.breakdown` (ya no serializado dentro de
+  `barcode`) y no se puede guardar un plato a 0 g. La despensa demo se siembra
+  una sola vez (`profiles.pantry_seeded`) y un fallo de lectura ya no la
+  disfraza de despensa del usuario: avisa y ofrece reintentar. Contextos de
+  comidas y despensa memoizados. Además, un fallo pre-existente y transversal:
+  8 modales (hoja de comida, planificador, despensa, perfil ×2, selector de
+  ejercicios, diálogo de confirmación) resolvían el destino del portal durante
+  el render y no abrían nunca en carga directa de su ruta — crítico para la
+  PWA/APK, que arranca en una URL concreta. Ver `useAppShellPortal()` arriba.
+  Ventana de 90 días en el diario (antes se traía el histórico entero en cada
+  arranque) con carga bajo demanda al navegar más atrás (`ensureLoadedFrom`,
+  tramos contiguos sin solape) e índice por día en el store: el planificador
+  llamaba a `entriesForDay` 28 veces por render y cada una recorría el diario
+  completo.
+  Integridad despensa↔platos: las kcal de un plato manual se calculan siempre
+  contra la despensa actual (`platoMacros`, la copia de `Plato.kcal` sólo se
+  persiste, nunca se pinta), editar un alimento rehace la copia de sus platos,
+  y borrarlo pide confirmación diciendo a cuántos platos afecta, lo quita de
+  ellos y borra los que se queden sin ingredientes. Un ingrediente ausente ya
+  no entra como "Desconocido" a 0 kcal: se avisa y no se cuenta. UI: selector
+  de día y tarjetas de comida son `<button>` (`PastelCard as="button"`), y
+  guardia contra doble pulsación al añadir al diario.
+  **Pendiente:** **no hay agregado en Postgres** para
+  nutrición y de momento no hace falta: nada en la UI necesita el histórico
+  completo, sólo los días que se pintan. Si algún día hay pantalla de
+  estadísticas de nutrición, ahí sí.
+  **Decisiones de producto, ya cerradas (06/08/2026):**
+  - El semáforo de color es **siempre Nutri-Score** de OFF. Se eliminó
+    `estimateHealthScore` (umbrales inventados de kcal/grasa que se pintaban
+    con el mismo punto que el dato oficial). En alimentos creados a mano el
+    color se elige a mano o se deja vacío. Los colores ya guardados de antes
+    siguen ahí; ahora cuentan como elección manual.
+  - Los objetivos **no** llevan historial: cambiarlos reescribe el pasado y así
+    se queda. No volver a proponerlo.
+  - "Plato listo" se decide por las **categorías canónicas de OFF**
+    (`MEAL_TAGS` en `lib/food/ingredients.ts`), con veto de materia prima
+    (`RAW_TAGS`). Antes bastaba `nova === 4` o 4+ ingredientes, y eso marcaba
+    la Nutella o una bolsa de rúcula como plato listo. Verificado contra 13
+    productos reales de supermercado español (ensaladas de pasta Hacendado /
+    Carretilla / Florette vs atún Hacendado / Calvo, pasta seca, Nutella,
+    Coca-Cola): 13/13. Al tocar esa heurística, repetir ese test.
+
+## Transversal (06/08/2026)
+
+- **La cola de escrituras sobrevive a una recarga.** `sync.ts` guardaba
+  closures en un array de módulo y se perdía todo lo pendiente al recargar o
+  cuando Android mataba el WebView. Ahora una escritura se describe con datos
+  (`SyncOp`: `upsert` | `update` | `delete` | `rpc`), el ejecutor arma la
+  llamada, y la cola se persiste en `localStorage`
+  (`rogue.syncQueue.v1`). `resumeStoredWrites()` la reanuda al montar
+  `SyncErrorToast`, solo para el usuario de la sesión actual. **Al añadir una
+  escritura nueva: descríbela como `SyncOp`, no como función, y asegúrate de
+  que es idempotente.**
+- `global-error.tsx` (errores del layout raíz, con estilos en línea porque
+  reemplaza el documento entero) y `not-found.tsx` dentro del diseño.
+- Versión de cliente en `lib/version.ts`, visible en Perfil > Ajustes y en la
+  pantalla de error fatal. Sale de `NEXT_PUBLIC_BUILD_ID` (en Vercel,
+  `VERCEL_GIT_COMMIT_SHA`); en local, "dev".
+- Escape cierra los modales (`lib/use-escape-to-close.ts`). Lleva una **pila**
+  porque se anidan (planificador → hoja de comida, despensa → confirmación) y
+  un listener por modal los cerraría todos de golpe.
 
 ### Lista de dependencias de C1 (el APK es un WebView a una URL remota)
 Sin conexión la app **no abre**. Además Apple rechaza envoltorios web (guía 4.2).
 Acumular aquí todo lo que dependa de resolverlo:
+0. El diario de comidas es online-only: sin cobertura `/app/comidas` abre
+   vacío y lo registrado se pierde al recargar. El escáner depende de
+   `BarcodeDetector` + permiso de cámara: en el WebView sin declararlo cae
+   siempre a entrada manual.
 1. Offline de registro de entrenos.
-2. La cola de escrituras fallidas (`sync.ts`) vive en memoria: se pierde al recargar.
-3. Carga bajo demanda del calendario más allá de la ventana de 1 año.
-4. Versionado de cliente (hoy no se sabe qué versión ejecuta un usuario).
-5. `public/sw.js` usa un nombre de caché constante: nunca se purga nada.
-6. Sin cobertura, el WebView no puede recargarse y una ruta a medias es irrecuperable.
+2. Carga bajo demanda del calendario más allá de la ventana de 1 año.
+3. Sin cobertura, el WebView no puede recargarse y una ruta a medias es irrecuperable.
+
+Resueltos: la cola de escrituras ya persiste, y el versionado de cliente ya
+existe (ver "Transversal"). Descartado: `sw.js` **sí** versiona la caché
+(`rogue-v4`) y purga las antiguas al activar — ese punto de la lista era falso.
 
 ### Migraciones — aplicar SIEMPRE antes de desplegar el código
 Las funciones nuevas degradan solas si aún no existen (avisan por consola en vez

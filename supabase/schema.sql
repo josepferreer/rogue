@@ -82,6 +82,9 @@ create table if not exists profiles (
   notify_reminders boolean not null default true,
   notify_rest_end boolean not null default true,
   notify_weekly_summary boolean not null default false,
+  -- La despensa demo se siembra UNA vez: sin esta marca, vaciarla a mano la
+  -- repoblaba sola en la siguiente carga.
+  pantry_seeded boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -359,6 +362,10 @@ create table if not exists meal_entries (
   fat_100 numeric,
   carbs_100 numeric,
   eaten boolean not null default false,
+  -- Desglose por ingrediente cuando la entrada es un plato de la despensa
+  -- ({id, name, quantityG, kcal100, p100, c100, f100}[]); null en alimentos
+  -- sueltos. Antes viajaba serializado dentro de `barcode`.
+  breakdown jsonb check (breakdown is null or jsonb_typeof(breakdown) = 'array'),
   created_at timestamptz not null default now()
 );
 
