@@ -8,6 +8,7 @@ import { FriendsProvider } from "@/lib/store/friends-store";
 import { OnboardingGate } from "@/components/onboarding-gate";
 import { SyncErrorToast } from "@/components/sync-error-toast";
 import { ToastProvider } from "@/components/ui/toast";
+import { Noa } from "@/components/noa/noa";
 
 /**
  * Layout de la aplicacion autenticada (`/app/*`). Aqui viven todos los stores
@@ -31,6 +32,7 @@ export default function AppLayout({
                 </HydrationGate>
                 <OnboardingGate />
                 <SyncErrorToast />
+                <Noa />
               </ToastProvider>
             </FriendsProvider>
           </CardioProvider>

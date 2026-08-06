@@ -26,6 +26,7 @@ import {
   SwitchRow,
   UnitToggle,
 } from "@/components/profile/preference-controls";
+import { NoaKeyCard } from "@/components/noa/noa-key-card";
 import { useRogue } from "@/lib/store/rogue-store";
 import { useFriends } from "@/lib/store/friends-store";
 import { formatWeight } from "@/lib/units";
@@ -551,6 +552,10 @@ export default function PerfilPage({
 
       <Section title="UNIDADES">
         <UnitToggle />
+      </Section>
+
+      <Section title="NOA">
+        <NoaKeyCard />
       </Section>
 
       <Section title="NOTIFICACIONES">

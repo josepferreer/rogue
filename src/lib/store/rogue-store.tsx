@@ -151,6 +151,10 @@ type RogueContextValue = {
    *  que no vuelvan a saltar. */
   acknowledgeReminders: (exerciseIds: string[]) => void;
   saveRoutine: (days: RoutineDay[]) => void;
+  /** Re-lee la rutina desde Supabase y actualiza el estado. La usa NOA tras
+   *  escribir la rutina server-side (canal de refetch), para que la UI se
+   *  refresque sin recargar la app. */
+  reloadRoutine: () => Promise<void>;
   resetAll: () => void;
 };
 
