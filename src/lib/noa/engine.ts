@@ -11,6 +11,7 @@ import { ALL_MODULES } from "@/lib/noa/modules";
 import { analyzeIntent } from "@/lib/noa/intent/analyzer";
 import { buildContext, renderContextBlock } from "@/lib/noa/context/builder";
 import { getUserGeminiKey } from "@/lib/noa/keys";
+import { getUserPersonality, renderPersonalityBlock } from "@/lib/noa/personality";
 import { runGeminiLoop } from "@/lib/noa/gemini/loop";
 import { runTool } from "@/lib/noa/executor";
 import type { GeminiContent } from "@/lib/noa/gemini/client";
@@ -83,7 +84,17 @@ export async function runNoa(input: RunNoaInput): Promise<NoaResponse> {
   // 3. Context Builder: snapshot compacto de los módulos en scope.
   const snapshot = await buildContext(registry, intent.modules, ctx);
   const contextBlock = renderContextBlock(snapshot);
-  const system = contextBlock ? `${SYSTEM_BASE}\n\n${contextBlock}` : SYSTEM_BASE;
+
+  // 3b. Personalidad: SOLO forma (tono, cercanía, longitud). Se inserta entre
+  // las reglas base y el contexto, y su último párrafo vuelve a fijar que no
+  // puede saltarse una herramienta ni tocar un dato. Si falla la lectura, se
+  // usan los valores por defecto: nunca bloquea la conversación.
+  const { personality, profileName } = await getUserPersonality(supabase, input.userId);
+  const personalityBlock = renderPersonalityBlock(personality, profileName);
+
+  const system = [SYSTEM_BASE, personalityBlock, contextBlock]
+    .filter(Boolean)
+    .join("\n\n");
 
   // 4. Conversación en formato Gemini (historial + turno actual).
   const contents: GeminiContent[] = [

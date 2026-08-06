@@ -972,6 +972,24 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  /**
+   * Re-lee la rutina desde Supabase. La usa NOA tras escribirla en servidor:
+   * el cambio no pasa por `saveRoutine`, asi que sin esto la UI seguiria
+   * mostrando la rutina anterior hasta recargar la app.
+   */
+  const reloadRoutine = useCallback(async () => {
+    const userId = userIdRef.current;
+    if (!userId) return;
+    try {
+      const routine = await fetchRoutine(supabase, userId);
+      routineIdRef.current = routine?.routineId ?? null;
+      setState((prev) => ({ ...prev, routineDays: routine?.days ?? prev.routineDays }));
+    } catch (err) {
+      console.error("No se pudo recargar la rutina:", err);
+    }
+  }, [supabase],
+  );
+
   const resetAll = useCallback(() => {
     // El username no se toca: sigue siendo la cuenta del mismo usuario.
     setState({
@@ -1029,6 +1047,7 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
       exerciseNotes: state.exerciseNotes,
       acknowledgeReminders,
       saveRoutine,
+      reloadRoutine,
       resetAll,
     }),
     [
@@ -1050,6 +1069,7 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
       deleteSession,
       acknowledgeReminders,
       saveRoutine,
+      reloadRoutine,
       resetAll,
     ],
   );

@@ -2,6 +2,12 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getUserGeminiKey, maskKey } from "@/lib/noa/keys";
+import {
+  DEFAULT_PERSONALITY,
+  NICKNAME_MAX,
+  getUserPersonality,
+  type NoaPersonality,
+} from "@/lib/noa/personality";
 
 /**
  * Server actions de la clave BYOK de NOA. Todo pasa por el servidor bajo la RLS
@@ -48,6 +54,60 @@ export async function saveNoaKey(rawKey: string): Promise<SaveKeyResult> {
 
   if (error) return { ok: false, error: error.message };
   return { ok: true, masked: maskKey(key) };
+}
+
+// —— Personalidad ——————————————————————————————————————————————
+// Solo estilo: estas preferencias acaban en el system prompt y en ningún otro
+// sitio. Ver lib/noa/personality.ts.
+
+/** Personalidad guardada (o los valores por defecto). */
+export async function getNoaPersonality(): Promise<NoaPersonality> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return DEFAULT_PERSONALITY;
+
+  const { personality } = await getUserPersonality(supabase, user.id);
+  return personality;
+}
+
+export type SavePersonalityResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Guarda un cambio parcial. La UI guarda sola en cada cambio, así que llega un
+ * campo cada vez. Los valores se validan contra el propio tipo antes de
+ * escribir; la BD además los reafirma con CHECKs.
+ */
+export async function saveNoaPersonality(
+  patch: Partial<NoaPersonality>,
+): Promise<SavePersonalityResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Sesión no válida." };
+
+  const row: Record<string, string | null> = {};
+  if (patch.nickname !== undefined) {
+    const nickname = patch.nickname.trim().slice(0, NICKNAME_MAX);
+    row.noa_nickname = nickname.length > 0 ? nickname : null;
+  }
+  if (patch.tone !== undefined) row.noa_tone = patch.tone;
+  if (patch.persona !== undefined) row.noa_persona = patch.persona;
+  if (patch.length !== undefined) row.noa_length = patch.length;
+  if (Object.keys(row).length === 0) return { ok: true };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update(row)
+    .eq("user_id", user.id);
+
+  if (error) {
+    // Lo más probable: la migración 20260806_noa_personality.sql sin aplicar.
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
 }
 
 /** Borra la clave (desactiva NOA para el usuario). */

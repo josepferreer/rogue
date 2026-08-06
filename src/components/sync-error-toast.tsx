@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import { usePortalTarget } from "@/lib/use-app-shell-portal";
 import { createPortal } from "react-dom";
 import { CloudOff, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,23 +28,10 @@ export function SyncErrorToast() {
   // false durante SSR/hidratacion, true tras montar: no hay #app-shell hasta
   // que existe el DOM.
   // Contenedor compartido con el resto de avisos (ver notification-stack.tsx):
-  // se apilan sobre la barra de navegacion en vez de solaparse.
-  //
-  // Se busca con reintentos por frame, no una sola vez durante el render: este
-  // componente vive FUERA de HydrationGate, asi que al montar todavia se esta
-  // pintando el splash y `#notification-stack` no existe. Mirandolo una sola
-  // vez quedaba en null para siempre y el aviso no llegaba a aparecer nunca.
-  const [portalTarget, setPortalTarget] = useState<Element | null>(null);
-  useEffect(() => {
-    let raf = 0;
-    const find = () => {
-      const el = document.getElementById("notification-stack");
-      if (el) setPortalTarget(el);
-      else raf = requestAnimationFrame(find);
-    };
-    find();
-    return () => cancelAnimationFrame(raf);
-  }, []);
+  // se apilan sobre la barra de navegacion en vez de solaparse. El hook
+  // reintenta hasta que el nodo existe: este componente cuelga del layout
+  // FUERA de HydrationGate y al montar todavia se pinta el splash.
+  const portalTarget = usePortalTarget("notification-stack");
 
   // Reanuda lo que quedara a medias en una sesion anterior (la cola vive en
   // localStorage). Se hace aqui porque este componente ya esta montado en toda

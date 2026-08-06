@@ -89,7 +89,16 @@ function NoaSheet({ onClose }: { onClose: () => void }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ message, history }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // El engine ya devuelve 200 con un `reply` explicativo cuando algo falla
+      // por dentro. Lo que llega aqui como no-OK es el guard de la route, y
+      // cada caso merece su mensaje en vez de un "intentalo de nuevo" a secas.
+      if (!res.ok) {
+        setTurns((t) => [
+          ...t,
+          { role: "assistant", content: httpErrorMessage(res.status) },
+        ]);
+        return;
+      }
       const data = (await res.json()) as NoaResponse;
 
       setTurns((t) => [
@@ -125,7 +134,13 @@ function NoaSheet({ onClose }: { onClose: () => void }) {
           confirm: { toolName: proposal.toolName, args: proposal.args },
         }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        setTurns((t) => [
+          ...t,
+          { role: "assistant", content: httpErrorMessage(res.status) },
+        ]);
+        return;
+      }
       const data = (await res.json()) as NoaResponse;
       if (data.reply) {
         setTurns((t) => [...t, { role: "assistant", content: data.reply }]);
@@ -224,4 +239,12 @@ function cnBubble(role: NoaTurn["role"]): string {
   return role === "user"
     ? "max-w-[80%] self-end rounded-2xl bg-foreground px-4 py-2.5 text-sm text-background"
     : "max-w-[80%] self-start rounded-2xl bg-muted px-4 py-2.5 text-sm";
+}
+
+/** Mensaje para los fallos que corta el guard de la route, antes del engine. */
+function httpErrorMessage(status: number): string {
+  if (status === 401) return "Tu sesión ha caducado. Vuelve a entrar y seguimos.";
+  if (status === 429)
+    return "Vas muy rápido para mí: espera unos segundos y lo intentamos otra vez.";
+  return "No he podido responder ahora mismo. Inténtalo de nuevo.";
 }

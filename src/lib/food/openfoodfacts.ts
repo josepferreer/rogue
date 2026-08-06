@@ -75,6 +75,54 @@ function normalize(barcode: string, p: Record<string, unknown>): FoodProduct {
 }
 
 /**
+ * Busca productos por texto en Open Food Facts.
+ *
+ * La usa NOA para resolver un alimento del que el usuario habla ("dos huevos",
+ * "arroz basmati") con macros REALES antes de escribir nada en el diario. Sin
+ * esto, el modelo tendría que inventarse las kcal, que es justo lo que la
+ * arquitectura Tool-First evita.
+ *
+ * Devuelve lista vacía ante cualquier fallo: es una ayuda, no un camino crítico.
+ */
+export async function searchOffProducts(
+  query: string,
+  limit = 6,
+): Promise<FoodProduct[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+
+  const url =
+    `https://world.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process&json=1` +
+    `&search_terms=${encodeURIComponent(q)}` +
+    `&page_size=${Math.min(Math.max(limit, 1), 20)}` +
+    `&fields=code,${OFF_FIELDS}`;
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+  } catch {
+    return [];
+  }
+  if (!res.ok) return [];
+
+  let data: { products?: Record<string, unknown>[] };
+  try {
+    data = await res.json();
+  } catch {
+    return [];
+  }
+
+  return (data.products ?? [])
+    .map((p) => normalize(String(p.code ?? ""), p))
+    // Sin kcal no sirve para registrar nada: se descarta antes de que el
+    // modelo lo vea y se vea tentado de rellenar el hueco.
+    .filter((p) => p.barcode.length > 0 && p.kcal100 != null);
+}
+
+/**
  * Resultado de consultar OFF. `not_found` y `unavailable` son cosas MUY
  * distintas para el usuario: antes todo fallo (timeout, 5xx, rate limit de
  * OFF) se convertia en null y la app decia "producto no encontrado", asi que

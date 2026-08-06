@@ -19,7 +19,10 @@ const GEMINI_MODEL = "gemini-3.5-flash-lite";
 const ENDPOINT = (model: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
-const TIMEOUT_MS = 20_000;
+// Un turno que arma un plan semanal (decenas de entradas en una sola
+// function call) tarda bastante más que una respuesta corta. Con 20 s se
+// cortaban justo esos, que son los más caros de rehacer.
+const TIMEOUT_MS = 45_000;
 
 /** Rol de un turno en el formato de la API de Gemini. */
 export type GeminiRole = "user" | "model";
@@ -110,6 +113,17 @@ export async function callGemini(opts: CallGeminiOptions): Promise<GeminiTurn> {
       body: JSON.stringify(body),
       signal: controller.signal,
     });
+  } catch (err) {
+    // Sin esto, un timeout o un corte de red escapaban como AbortError/TypeError
+    // crudo: la route devolvia 500 y el chat solo decia "no he podido
+    // responder", sin forma de saber que habia pasado.
+    const aborted = err instanceof Error && err.name === "AbortError";
+    throw new GeminiError(
+      aborted
+        ? `Gemini no respondió en ${TIMEOUT_MS / 1000}s`
+        : `No se pudo contactar con Gemini: ${err instanceof Error ? err.message : String(err)}`,
+      aborted ? 504 : 503,
+    );
   } finally {
     clearTimeout(timer);
   }
