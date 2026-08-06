@@ -32,11 +32,6 @@ Rogue es una PWA de seguimiento de entrenamiento y nutrición construida con [Ne
 - Igual que el entreno de fuerza, la sesión de cardio es **minimizable** a un mini-player.
 - Historial de actividades con detalle por sesión.
 
-### 🏆 Sistema de rangos (gamificación)
-- Rangos por músculo (Principiante → Intermedio → Avanzado → Experto → Maestro) basados en fuerza relativa (1RM estimado / peso corporal) y volumen efectivo.
-- Mapa muscular interactivo (heatmap) con el rango de cada zona, y vista alternable entre media global y detalle por músculo.
-- Modal explicativo de cómo se calcula la puntuación (fuerza vs. volumen).
-
 ### 📅 Rutinas
 - Gestor de rutinas con los días de entrenamiento, su enfoque y ejercicios planeados.
 - Editor con reordenación de ejercicios por arrastre (drag & drop, con soporte táctil completo).
