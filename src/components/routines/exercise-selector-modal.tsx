@@ -21,6 +21,8 @@ import {
   type Exercise,
 } from "@/lib/exercises/types";
 import { cn } from "@/lib/utils";
+import { useAppShellPortal } from "@/lib/use-app-shell-portal";
+import { useEscapeToClose } from "@/lib/use-escape-to-close";
 
 type Props = {
   open: boolean;
@@ -168,9 +170,8 @@ export function ExerciseSelectorModal({
     [query, filters],
   );
 
-  const [portalTarget] = useState<Element | null>(() =>
-    typeof document !== "undefined" ? document.getElementById("app-shell") : null,
-  );
+  const portalTarget = useAppShellPortal();
+  useEscapeToClose(open, onClose);
 
   if (!open) return null;
 

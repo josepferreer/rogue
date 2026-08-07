@@ -1,26 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from "react-leaflet";
 import { useTheme } from "next-themes";
 import "leaflet/dist/leaflet.css";
-import L from "leaflet";
 import type { Coordinate } from "@/lib/store/cardio-store";
-import { matchToRoads } from "@/lib/cardio/map-matching";
+import { cleanTrace } from "@/lib/cardio/clean-trace";
 
-// Fix para los iconos por defecto de Leaflet en Next.js
-delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-});
+// (Aqui habia un "fix" de los iconos por defecto de Leaflet apuntando a
+// cdnjs.cloudflare.com. Era codigo muerto: este mapa solo usa Polyline y
+// CircleMarker, nunca Marker, asi que L.Icon.Default no llega a instanciarse.)
 
 interface MapViewProps {
   coordinates: Coordinate[];
-  /** Encaja la traza sobre las calles reales (map matching). Pensado para
-   *  rutas ya terminadas, no para el seguimiento en vivo. */
-  snapToRoads?: boolean;
+  /** Descarta los saltos imposibles del GPS antes de dibujar. Para rutas ya
+   *  terminadas; en el seguimiento en vivo se pinta la traza tal cual llega. */
+  cleanOutliers?: boolean;
 }
 
 function MapUpdater({ coordinates }: { coordinates: Coordinate[] }) {
@@ -46,28 +41,17 @@ function MapUpdater({ coordinates }: { coordinates: Coordinate[] }) {
   return null;
 }
 
-export default function MapView({ coordinates, snapToRoads = false }: MapViewProps) {
+export default function MapView({ coordinates, cleanOutliers = false }: MapViewProps) {
   const { resolvedTheme } = useTheme();
   const [mounted] = useState(() => typeof document !== "undefined");
-  // Traza encajada a las calles (null hasta que llega / si falla el matching).
-  const [matchedPath, setMatchedPath] = useState<[number, number][] | null>(null);
 
-  // Map matching: se ejecuta una vez por traza cuando snapToRoads esta activo.
-  // Si falla o no encaja, matchedPath se queda null y se dibuja la traza cruda.
-  useEffect(() => {
-    if (!snapToRoads || coordinates.length < 2) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setMatchedPath(null);
-      return;
-    }
-    let alive = true;
-    matchToRoads(coordinates).then((path) => {
-      if (alive) setMatchedPath(path);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [snapToRoads, coordinates]);
+  // Se calcula aqui mismo, sin red: es un recorrido O(n) sobre unos cientos de
+  // puntos. Antes esto era un POST a /api/match que ademas salia a un servidor
+  // de terceros, y se repetia cada vez que abrias el detalle de la ruta.
+  const drawn = useMemo(
+    () => (cleanOutliers && coordinates.length >= 2 ? cleanTrace(coordinates) : coordinates),
+    [cleanOutliers, coordinates],
+  );
 
   if (!mounted) return null;
 
@@ -80,9 +64,10 @@ export default function MapView({ coordinates, snapToRoads = false }: MapViewPro
     ? [coordinates[0].lat, coordinates[0].lng] 
     : [40.4168, -3.7038]; // Madrid por defecto
 
+  // El punto final (circulo) sale de la traza real, no de la limpiada, para que
+  // marque donde acabaste de verdad.
   const positions: [number, number][] = coordinates.map((c) => [c.lat, c.lng]);
-  // Linea a dibujar: la encajada a calles si esta disponible, si no la cruda.
-  const linePositions = matchedPath ?? positions;
+  const linePositions: [number, number][] = drawn.map((c) => [c.lat, c.lng]);
 
   return (
     <div className="h-full w-full bg-muted">

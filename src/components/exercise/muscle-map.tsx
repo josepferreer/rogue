@@ -13,14 +13,7 @@ type MuscleMapProps = {
   primary?: MuscleId[];
   /** Musculos secundarios (acento suave). */
   secondary?: MuscleId[];
-  /**
-   * Colores por musculo (p.ej. para pintar el mapa segun rangos).
-   * Tiene prioridad sobre primary/secondary.
-   */
-  colors?: Partial<Record<MuscleId, string>>;
   className?: string;
-  /** Muestra la leyenda Primario/Secundario. */
-  showLegend?: boolean;
 };
 
 const PRIMARY_COLOR = "var(--accent)";
@@ -36,25 +29,13 @@ const BODY_COLOR = "color-mix(in oklab, var(--muted-foreground) 16%, var(--muted
 function buildModel(
   primary: MuscleId[],
   secondary: MuscleId[],
-  colors?: Partial<Record<MuscleId, string>>,
 ): { data: IExerciseData[]; highlightedColors: string[] } {
   const groups: { muscles: Muscle[]; color: string }[] = [];
 
-  if (colors) {
-    const byColor = new Map<string, Muscle[]>();
-    for (const [id, color] of Object.entries(colors)) {
-      if (!color) continue;
-      const list = byColor.get(color) ?? [];
-      list.push(...toSvgMuscles([id as MuscleId]));
-      byColor.set(color, list);
-    }
-    for (const [color, muscles] of byColor) groups.push({ muscles, color });
-  } else {
-    if (secondary.length > 0)
-      groups.push({ muscles: toSvgMuscles(secondary), color: SECONDARY_COLOR });
-    if (primary.length > 0)
-      groups.push({ muscles: toSvgMuscles(primary), color: PRIMARY_COLOR });
-  }
+  if (secondary.length > 0)
+    groups.push({ muscles: toSvgMuscles(secondary), color: SECONDARY_COLOR });
+  if (primary.length > 0)
+    groups.push({ muscles: toSvgMuscles(primary), color: PRIMARY_COLOR });
 
   const data: IExerciseData[] = groups.map((group, index) => ({
     name: `g${index}`,
@@ -98,11 +79,9 @@ function BodyView({
 export function MuscleMap({
   primary = [],
   secondary = [],
-  colors,
   className,
-  showLegend = true,
 }: MuscleMapProps) {
-  const { data, highlightedColors } = buildModel(primary, secondary, colors);
+  const { data, highlightedColors } = buildModel(primary, secondary);
   const highlighted = [...primary, ...secondary];
 
   return (
@@ -122,7 +101,7 @@ export function MuscleMap({
         />
       </div>
 
-      {showLegend && !colors && highlighted.length > 0 && (
+      {highlighted.length > 0 && (
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5">
           {primary.length > 0 && (
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">

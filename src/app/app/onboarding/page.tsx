@@ -175,7 +175,7 @@ export default function OnboardingPage() {
                 ))}
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Se usa para calcular tus rangos con los estandares correctos.
+                Forma parte de tu perfil de entrenamiento.
               </p>
             </div>
           </div>

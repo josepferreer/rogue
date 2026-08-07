@@ -1,23 +1,16 @@
--- Perfil de amigo (fase 2): al pulsar sobre un amigo se abre su perfil con
--- rangos + contadores. Sigue el mismo criterio de la fase 1: `profiles` NO
--- afloja su RLS ("solo tu propia fila"); todo lo que mira el perfil de OTRO
--- pasa por una funcion security definer con proyeccion explicita de columnas.
+-- Perfil de amigo (fase 2): al pulsar sobre un amigo se abre su perfil con sus
+-- contadores. Sigue el mismo criterio de la fase 1: `profiles` NO afloja su RLS
+-- ("solo tu propia fila"); todo lo que mira el perfil de OTRO pasa por una
+-- funcion security definer con proyeccion explicita de columnas.
 --
 -- Que NO sale nunca de aqui: email, peso corporal, altura, objetivo, cargas en
--- kilos absolutos, comidas, trazas GPS. Las series se devuelven NORMALIZADAS
--- (peso / peso corporal), que es exactamente lo que consume el motor de rangos
--- (`src/lib/rank-engine.ts`: rel = 1RM estimado / peso corporal). Asi el
--- cliente puede calcular los rangos del amigo con el MISMO motor sin conocer
--- ni su peso corporal ni cuanto levanta en kg.
+-- kilos absolutos, comidas, trazas GPS.
 
 -- ============================================================
 -- 1. Preferencias de privacidad
 -- ============================================================
--- Por defecto en true: los rangos son la moneda social de la app y el amigo ya
--- ha aceptado explicitamente la amistad. Nada de esto es visible para quien no
--- sea amigo aceptado.
-alter table profiles
-  add column if not exists share_ranks boolean not null default true;
+-- Por defecto en true: el amigo ya ha aceptado explicitamente la amistad. Nada
+-- de esto es visible para quien no sea amigo aceptado.
 alter table profiles
   add column if not exists share_stats boolean not null default true;
 
@@ -64,7 +57,6 @@ declare
   v_anchor date;
   v_streak int := 0;
   v_stats jsonb := '{}'::jsonb;
-  v_sets jsonb := '[]'::jsonb;
 begin
   if v_me is null then
     return jsonb_build_object('ok', false, 'code', 'not_authenticated');
@@ -138,31 +130,6 @@ begin
      where c.user_id = v_p.user_id;
   end if;
 
-  -- ---------- Series normalizadas para el motor de rangos ----------
-  -- `w` = peso / peso corporal. El cliente llama a computeMuscleRanks con
-  -- bodyweightKg = 1, porque estimate1RM es lineal en el peso:
-  --   estimate1RM(w/bw, reps) / 1 == estimate1RM(w, reps) / bw
-  -- Tope de 5000 series (las mas recientes): cubre de sobra la ventana de
-  -- volumen de 6 semanas y evita respuestas gigantes en cuentas muy veteranas.
-  if v_p.share_ranks and v_p.bodyweight_kg > 0 then
-    select coalesce(jsonb_agg(x order by x->>'d' desc), '[]'::jsonb)
-      into v_sets
-      from (
-        select jsonb_build_object(
-                 's', s.id,
-                 'd', s.date,
-                 'e', ws.exercise_id,
-                 'w', round(ws.weight_kg / v_p.bodyweight_kg, 4),
-                 'r', ws.reps
-               ) as x
-          from workout_sets ws
-          join workout_sessions s on s.id = ws.session_id
-         where s.user_id = v_p.user_id
-         order by s.date desc
-         limit 5000
-      ) t;
-  end if;
-
   return jsonb_build_object(
     'ok', true,
     'code', 'ok',
@@ -171,10 +138,8 @@ begin
     'display_name', public_display_name(v_p),
     'sex', v_p.sex,
     'friends_since', v_since,
-    'share_ranks', v_p.share_ranks,
     'share_stats', v_p.share_stats,
-    'stats', v_stats,
-    'sets', v_sets
+    'stats', v_stats
   );
 end;
 $$;

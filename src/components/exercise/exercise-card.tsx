@@ -30,7 +30,7 @@ export function ExerciseCard({
           className={cn(
             "absolute right-2.5 top-2.5 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
             badge === "favorito"
-              ? "bg-rank-maestro/15 text-rank-maestro"
+              ? "bg-accent-red/15 text-accent-red"
               : "bg-muted text-muted-foreground",
           )}
         >

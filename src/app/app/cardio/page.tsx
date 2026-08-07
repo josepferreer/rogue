@@ -19,12 +19,12 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { useCardio } from "@/lib/store/cardio-store";
+import { estimateKcal, estimateSteps } from "@/lib/cardio/estimates";
 import { useRogue } from "@/lib/store/rogue-store";
 
 /** Zancada media (m) para estimar pasos desde la distancia recorrida.
  *  La web no tiene acceso al podometro del telefono, asi que los pasos se
  *  estiman a partir de las rutas registradas. */
-const STRIDE_M = 0.75;
 
 const STEP_GOAL_KEY = "rogue.stepGoal.v1";
 const DEFAULT_STEP_GOAL = 10000;
@@ -131,10 +131,10 @@ export default function CardioPage() {
     return { distanceKm, durationSec };
   }, [history, isTracking, liveDistanceKm, liveDurationSec]);
 
-  // Pasos estimados desde la distancia (sin podometro en la web).
-  const steps = Math.round((today.distanceKm * 1000) / STRIDE_M);
-  // Correr/caminar ~1 kcal por kg de peso y km recorrido.
-  const kcal = Math.round(today.distanceKm * profile.bodyweightKg);
+  // Estimaciones (no medidas): ver lib/cardio/estimates.ts. Misma fuente que
+  // el detalle de cada ruta, que antes usaba otra formula distinta.
+  const steps = estimateSteps(today.distanceKm);
+  const kcal = estimateKcal(today.distanceKm, profile.bodyweightKg);
   const activeMin = Math.floor(today.durationSec / 60);
   const goalPct = Math.min(100, (steps / stepGoal) * 100);
 
@@ -221,7 +221,7 @@ export default function CardioPage() {
           <Flame className="size-4 text-blue-600/70" />
           <div>
             <p className="text-2xl font-semibold leading-none">{kcal}</p>
-            <p className="mt-1 text-xs text-muted-foreground">kcal quemadas</p>
+            <p className="mt-1 text-xs text-muted-foreground">kcal aprox.</p>
           </div>
         </PastelCard>
 

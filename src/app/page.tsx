@@ -410,7 +410,7 @@ export default function LandingPage() {
 
       <Container>
         <footer className="border-t border-border py-8 text-center text-xs text-muted-foreground">
-          Rogue · Entrena con rango
+          Rogue · Entrena y progresa
         </footer>
       </Container>
     </div>

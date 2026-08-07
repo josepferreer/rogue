@@ -37,15 +37,14 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { RankBadge } from "@/components/ui/rank-badge";
 import { PastelCard } from "@/components/ui/pastel-card";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
 import { ExerciseSelectorModal } from "@/components/routines/exercise-selector-modal";
 import { getExerciseInfo, useRogue } from "@/lib/store/rogue-store";
 import { useWorkoutSession } from "@/lib/store/workout-session-store";
 import { useBackButton } from "@/lib/use-back-button";
-import { getDivisionLabel, getRankTier } from "@/lib/ranks";
 import { formatWeight } from "@/lib/units";
 import { cn, formatDuration } from "@/lib/utils";
 
@@ -116,6 +115,7 @@ export function WorkoutSessionModal() {
     phase,
     day,
     rows,
+    unit,
     result,
     restUntil,
     restRemaining,
@@ -148,6 +148,19 @@ export function WorkoutSessionModal() {
   const [addingExercise, setAddingExercise] = useState(false);
   // Confirmacion antes de descartar la sesion activa.
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const { notify } = useToast();
+
+  // Finalizar puede rechazar (series marcadas pero sin repeticiones validas).
+  // Antes no ocurria nada al pulsar y el usuario acababa descartando el entreno.
+  const handleFinish = () => {
+    const outcome = finish();
+    if (!outcome.ok && outcome.reason === "sin-reps") {
+      notify(
+        "Ninguna serie completada tiene repeticiones. Rellenalas antes de finalizar.",
+        "error",
+      );
+    }
+  };
 
   // Mismo umbral de 6px que el editor de rutinas: evita que un toque en un
   // input o en el check de serie se interprete como arrastre.
@@ -190,39 +203,6 @@ export function WorkoutSessionModal() {
             )}
           </div>
 
-          {result.rankChanges.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
-                RANGO SUBE
-              </p>
-              {result.rankChanges.map((c) => {
-                const after = c.after;
-                if (!after.ranked) return null;
-                const tier = getRankTier(after.tier);
-                return (
-                  <PastelCard
-                    key={c.muscle}
-                    variant="lilac"
-                    className="flex items-center gap-3"
-                  >
-                    <RankBadge
-                      tier={after.tier}
-                      division={after.division}
-                      size="sm"
-                    />
-                    <div>
-                      <p className="text-sm font-semibold">{c.muscle}</p>
-                      <p className="font-mono text-xs opacity-80">
-                        {c.newlyRanked ? "Primer rango · " : "Sube a "}
-                        {tier.label} {getDivisionLabel(tier, after.division)}
-                      </p>
-                    </div>
-                  </PastelCard>
-                );
-              })}
-            </div>
-          )}
-
           {result.prs.length > 0 && (
             <div className="flex flex-col gap-2">
               <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
@@ -243,9 +223,9 @@ export function WorkoutSessionModal() {
             </div>
           )}
 
-          {result.rankChanges.length === 0 && result.prs.length === 0 && (
+          {result.prs.length === 0 && (
             <p className="text-center text-sm text-muted-foreground">
-              Sesion guardada. Sigue asi para subir de rango.
+              Sesion guardada. Sigue asi.
             </p>
           )}
         </div>
@@ -389,16 +369,14 @@ export function WorkoutSessionModal() {
                       <input
                         type="number"
                         inputMode="decimal"
-                        value={s.weightKg}
+                        value={s.weight}
                         onChange={(e) =>
-                          updateSet(ex.exerciseId, i, { weightKg: e.target.value })
+                          updateSet(ex.exerciseId, i, { weight: e.target.value })
                         }
                         placeholder="0"
                         className="w-full bg-transparent text-sm outline-none"
                       />
-                      <span className="text-xs text-muted-foreground">
-                        {preferences.unit}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{unit}</span>
                     </label>
                     <label className="flex flex-1 items-center gap-1 rounded-xl bg-muted/60 px-3 py-2">
                       <input
@@ -543,7 +521,7 @@ export function WorkoutSessionModal() {
         <Button
           fullWidth
           disabled={doneCount === 0}
-          onClick={finish}
+          onClick={handleFinish}
           className="pointer-events-auto mx-auto max-w-sm py-4"
         >
           Finalizar entreno

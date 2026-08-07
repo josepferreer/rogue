@@ -52,7 +52,7 @@ export function FavoriteButton({ exerciseId }: { exerciseId: string }) {
       <Heart
         className={cn(
           "size-5 transition-colors",
-          favorite ? "fill-rank-maestro text-rank-maestro" : "text-muted-foreground",
+          favorite ? "fill-accent-red text-accent-red" : "text-muted-foreground",
         )}
       />
     </button>

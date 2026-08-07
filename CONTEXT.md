@@ -4,17 +4,21 @@ Rogue es una PWA de fitness tracking hecha con Next.js 16 (App Router, Turbopack
 React 19, TypeScript y Tailwind v4. Está en `C:\Users\Grupo Hogares\Desktop\rogue`.
 
 ## Stack y convenciones
-- App Router. La app autenticada cuelga de `/app`: `/app` (home), `/app/onboarding`,
-  `/app/rutinas` (+ `/app/rutinas/editor`), `/app/biblioteca` (+ `/app/biblioteca/[id]`),
-  `/app/cardio` (+ `/app/cardio/actividad/[id]`), `/app/comidas`, `/app/perfil`,
-  `/app/amigos` (+ `/app/amigos/[username]`). Fuera de `/app`: landing `/` y `/login`.
-  `/app/rangos` es solo un redirect a `/app/perfil?tab=rangos`.
+- App Router con rutas: `/`, `/onboarding`, `/rutinas` (+ `/rutinas/editor`), `/biblioteca`
+  (+ `/biblioteca/[id]`), `/cardio` (+ `/cardio/actividad/[id]`), `/perfil`.
 - Diseño mobile-first: un "shell" único (`src/components/layout/app-shell.tsx`)
   centra el contenido en `max-w-[440px]` en desktop y ocupa el ancho completo en
   móvil, simulando un frame de app nativa. Navegación inferior fija en
   `src/components/layout/bottom-nav.tsx`.
 - Modales se renderizan vía `createPortal` dentro de `#app-shell` para que el
-  ancho case con el contenido (patrón usado en varios `*-modal.tsx`).
+  ancho case con el contenido (patrón usado en varios `*-modal.tsx`). El nodo
+  destino se obtiene **siempre** con `useAppShellPortal()`
+  (`src/lib/use-app-shell-portal.ts`); nunca con
+  `useState(() => document.getElementById("app-shell"))`, que se resuelve
+  durante el render — cuando `HydrationGate` deja pasar, `AppShell` y la página
+  se montan en el mismo commit y el nodo aún no está en el DOM, así que el
+  destino quedaba a null para siempre y el modal no abría en carga directa de
+  la ruta (entrando por un link sí, y por eso pasaba desapercibido).
 - Theming con variables CSS en `src/app/globals.css` (`--background`, `--surface`,
   `--muted`, `--border`, con variantes light/dark). `bg-surface` es blanco puro:
   solo contrasta sobre `bg-background` (gris), nunca lo uses relleno sobre
@@ -27,6 +31,10 @@ React 19, TypeScript y Tailwind v4. Está en `C:\Users\Grupo Hogares\Desktop\rog
 - Drag-and-drop con `@dnd-kit/*` (core, sortable, modifiers, utilities) para
   reordenar tarjetas con soporte táctil real (usado en el editor de rutinas).
 - Mapa de cardio con `leaflet` / `react-leaflet` (`src/components/cardio/map-view.tsx`).
+  Teselas de CARTO (`basemaps.cartocdn.com`): es el único tercero que ve algo
+  de las rutas (la zona que miras), y debe salir en la política de privacidad.
+  **Pendiente: falta la atribución de OpenStreetMap/CARTO** — el mapa se pinta
+  con `attributionControl={false}` y la licencia ODbL la exige.
 - Estado global vía **React Context** (no Zustand, no librería externa):
   - `src/lib/store/rogue-store.tsx` — perfil, historial de sesiones
     (`WorkoutSession[]`), rutina (`routineDays`), `todayDay` calculado.
@@ -35,34 +43,13 @@ React 19, TypeScript y Tailwind v4. Está en `C:\Users\Grupo Hogares\Desktop\rog
   - `src/lib/store/workout-session-store.tsx` — sesión de entreno activa,
     minimizable igual que cardio (mini-player global), con acciones como
     addSet/removeSet/toggleDone/replaceExercise/finish.
-  - `src/lib/store/friends-store.tsx` — amistades (aceptadas / recibidas /
-    enviadas), rangos cacheados de los amigos y perfil de un amigo. Se
-    resuscribe por Realtime a la tabla `friendships`.
-- Rangos (`/rangos`): sistema de tiers Principiante/Intermedio/Avanzado/
-  Experto/Maestro (antes Bronce/Plata/Oro/Esmeralda/Maestro), calculados en
-  `src/lib/rank-engine.ts` y `src/lib/ranks.ts`, con vista de mapa corporal y
-  toggle "media vs. por músculo".
+- **No existe sistema de rangos musculares.** Se eliminó por completo el
+  05/08/2026 (motor, UI, assets y columnas de BD). En una fase posterior se
+  construirá un sistema de análisis muscular por Heatmaps, que todavía NO está
+  implementado: no reintroduzcas tiers, divisiones ni `MUSCLE_TO_GROUP`.
 - Tipos de dominio clave en `src/lib/workout/types.ts`:
   `WorkoutSession { id, dateISO, dayLabel, sets: LoggedSet[] }`,
   `LoggedSet { exerciseId, grupo, weightKg, reps }`, `RoutineDay`, `Routine`.
-- Amistades: tabla `friendships` con RLS estricta (solo ves filas donde
-  participas). Todo lo que mira el perfil de OTRO usuario pasa por funciones
-  `security definer` con proyección explícita de columnas, para no aflojar la
-  RLS de `profiles` (que es "solo tu propia fila"). RPC disponibles:
-  `search_users`, `my_friendships`, `send_friend_request`,
-  `respond_friend_request`, `is_friend_of`, `friend_profile`, `friends_ranks`.
-  El email nunca sale de la base de datos.
-  - `friend_profile(username)` devuelve el perfil del amigo en una sola llamada.
-    Las series van NORMALIZADAS (`weight_kg / bodyweight_kg`), así que el
-    cliente calcula sus rangos con el mismo `rank-engine.ts` llamando con
-    `bodyweightKg = 1` — sin conocer ni su peso ni sus cargas reales.
-  - `profiles.rank_tier` / `rank_division` son una CACHÉ del rango medio que
-    escribe el propio cliente, solo para pintar el punto de color de la tira de
-    amigos de la home sin bajarse el historial de cada uno. Es un dato
-    auto-declarado: vale de adorno, no como fuente de verdad.
-  - Privacidad: `profiles.share_ranks` y `share_stats` (por defecto `true`),
-    editables en `/app/perfil?tab=ajustes`. Peso corporal, cargas en kilos,
-    comidas y trazas GPS no se comparten en ningún caso.
 - Ejercicios: catálogo y helpers en `src/lib/exercises/` (repo, types,
   filtros); selector reutilizable en
   `src/components/routines/exercise-selector-modal.tsx` (se usa tanto para
@@ -71,10 +58,9 @@ React 19, TypeScript y Tailwind v4. Está en `C:\Users\Grupo Hogares\Desktop\rog
 
 ## Estructura relevante
 ```
-src/app/          rutas (page.tsx por carpeta, App Router); la app va bajo src/app/app/
-src/components/   cardio/, exercise/, food/, friends/, layout/, profile/, routines/, ui/, workout/
-src/lib/          store/ (contexts), exercises/, food/, supabase/, workout/, rank-engine.ts, ranks.ts, utils.ts
-supabase/         schema.sql + migrations/ (se aplican a mano en el SQL editor)
+src/app/          rutas (page.tsx por carpeta, App Router)
+src/components/   cardio/, exercise/, layout/, profile/, routines/, ui/, workout/
+src/lib/          store/ (contexts), exercises/, workout/ (types.ts, one-rm.ts), mock-data.ts, utils.ts
 ```
 
 ## Cosas a tener en cuenta al trabajar aquí
@@ -86,35 +72,141 @@ supabase/         schema.sql + migrations/ (se aplican a mano en el SQL editor)
 - Preferencia de estilo: mobile-first, tarjetas redondeadas (`rounded-2xl`/`3xl`),
   bottom sheets para modales, tipografía mono para datos numéricos/labels
   tipo "HOY · TIRON".
-- Espaciado SIEMPRE con `gap-*` en el contenedor padre, nunca `mt-*` en el hijo
-  (un margen dentro de un padre con `gap` suma dos espaciados). Una sección con
-  cabecera mono + contenido va en un `flex flex-col gap-2`. Si hace falta otra
-  distancia, se agrupa en un sub-envoltorio con su propio `gap-*`.
-- Las migraciones de `supabase/migrations/` NO se aplican solas: hay que
-  pegarlas en el SQL editor de Supabase. Un `{}` vacío como error de
-  supabase-js suele significar que falta aplicar una.
 
-## Estado actual (última sesión de trabajo)
-Fase 2 de amistades: al pulsar sobre un amigo se abre su perfil en
-`/app/amigos/[username]` con su rango medio, el mapa corporal por rango
-(reutilizando `BodyRankSummary` de `ranks-panel.tsx`) y contadores de entrenos,
-racha en semanas y km de cardio. En la home se añadió `FriendsStrip`
-(`src/components/friends/friends-strip.tsx`), una tira horizontal de avatares
-con el punto de color del rango de cada amigo. Migraciones nuevas:
-`20260724_friend_profile.sql` y `20260724_friends_ranks.sql`.
+## Auditoría para beta pública (en curso, rama `auditoria/pilar-1-entrenamientos`)
 
-Antes de eso se rediseñó la home (`src/app/app/page.tsx`): la tarjeta "hoy" es
-un carrusel de scroll nativo (scroll-snap, no drag manual) de 3 páginas — "Hoy"
-(entreno del día), "Volumen semanal" y "Calendario" (últimos 7 días / mes
-completo desplegable con `ResizeObserver` ajustando la altura del contenedor
-dinámicamente). El calendario mensual distingue días entrenados (círculo
-negro), hoy sin entrenar (anillo), pasado sin entrenar (gris) y futuro (muy
-atenuado), y al tocar un día entrenado muestra un panel con detalle de esa
-sesión (grupo muscular, series, volumen).
+Auditoría crítica módulo a módulo. Tres pilares: **Entrenamientos**, **Cardio**,
+**Nutrición**. El APK (C1) se toca **al final**, cuando los tres estén hechos.
 
-### Pendiente / ideas siguientes
-- Comparativa "tú vs. él" en el perfil del amigo (mapa corporal superpuesto,
-  PRs lado a lado en ejercicios comunes).
-- Copiar la rutina de un amigo a la tuya.
-- Ranking semanal de amigos en la home (necesita una RPC de agregados nueva).
-- Retos entre amigos y feed de actividad (requiere tabla de eventos).
+- **Pilar 1 — Entrenamientos: CERRADO.** Preparación para producción 4,0 → 7,5.
+  Hecho: guardado atómico de rutinas (`save_routine`), aviso de descanso
+  programado en el SO, unidades ancladas a la sesión, contextos memoizados,
+  pila del botón atrás, descanso y peso editables + prellenado con la última
+  sesión, guard de cambios sin guardar, agregados en Postgres
+  (`workout_stats`) y ventana de historial de 1 año, timeout de carga.
+- **Pilar 2 — Cardio: PARCIAL.** ~3,5 → ~6,5. Hecho: persistencia incremental
+  durante la ruta (`upsert_cardio_progress`, envía solo puntos nuevos y es
+  idempotente), listado sin la polilínea (se carga al abrir el detalle),
+  contexto memoizado, snapshot con throttle.
+  **Se eliminó el map matching (06/08/2026).** `/api/match` y
+  `lib/cardio/map-matching.ts` ya no existen: mandaban la traza GPS del usuario
+  (que empieza y acaba en su casa) al servidor de demostración público de OSRM,
+  sin contrato de encargo de tratamiento, y en cada apertura del detalle. La
+  política de OSRM además excluye productos detrás de un login. La limpieza de
+  outliers —que es lo que de verdad quitaba las rectas cruzando manzanas— vive
+  ahora en `lib/cardio/clean-trace.ts` y se aplica en cliente al dibujar
+  (`<MapView cleanOutliers />`), sin red. **No reintroduzcas una llamada a un
+  router externo sin resolver antes el encargo de tratamiento.**
+  **Pendiente, decisión de producto:** tipo de actividad + elevación (sin tipo,
+  el filtro de outliers a 28,8 km/h descarta la bici entera) y pasos/kcal, hoy
+  estimados pero mostrados como cifras exactas.
+- **Pilar 3 — Nutrición: PARCIAL.** ~3,0 → ~5,5. Hecho: el escáner pasa por
+  `/api/food/[barcode]` (sesión + límite + `fields=` + fallback kJ→kcal); antes
+  cada pantalla llamaba a Open Food Facts directa y el proxy era código muerto.
+  Criterio `eaten` unificado en las 4 pantallas (resumen, tarjetas, hoja de
+  comida, planificador): la cifra es lo comido y lo planificado va aparte.
+  Desglose de platos en `meal_entries.breakdown` (ya no serializado dentro de
+  `barcode`) y no se puede guardar un plato a 0 g. La despensa demo se siembra
+  una sola vez (`profiles.pantry_seeded`) y un fallo de lectura ya no la
+  disfraza de despensa del usuario: avisa y ofrece reintentar. Contextos de
+  comidas y despensa memoizados. Además, un fallo pre-existente y transversal:
+  8 modales (hoja de comida, planificador, despensa, perfil ×2, selector de
+  ejercicios, diálogo de confirmación) resolvían el destino del portal durante
+  el render y no abrían nunca en carga directa de su ruta — crítico para la
+  PWA/APK, que arranca en una URL concreta. Ver `useAppShellPortal()` arriba.
+  Ventana de 90 días en el diario (antes se traía el histórico entero en cada
+  arranque) con carga bajo demanda al navegar más atrás (`ensureLoadedFrom`,
+  tramos contiguos sin solape) e índice por día en el store: el planificador
+  llamaba a `entriesForDay` 28 veces por render y cada una recorría el diario
+  completo.
+  Integridad despensa↔platos: las kcal de un plato manual se calculan siempre
+  contra la despensa actual (`platoMacros`, la copia de `Plato.kcal` sólo se
+  persiste, nunca se pinta), editar un alimento rehace la copia de sus platos,
+  y borrarlo pide confirmación diciendo a cuántos platos afecta, lo quita de
+  ellos y borra los que se queden sin ingredientes. Un ingrediente ausente ya
+  no entra como "Desconocido" a 0 kcal: se avisa y no se cuenta. UI: selector
+  de día y tarjetas de comida son `<button>` (`PastelCard as="button"`), y
+  guardia contra doble pulsación al añadir al diario.
+  **Pendiente:** **no hay agregado en Postgres** para
+  nutrición y de momento no hace falta: nada en la UI necesita el histórico
+  completo, sólo los días que se pintan. Si algún día hay pantalla de
+  estadísticas de nutrición, ahí sí.
+  **Decisiones de producto, ya cerradas (06/08/2026):**
+  - El semáforo de color es **siempre Nutri-Score** de OFF. Se eliminó
+    `estimateHealthScore` (umbrales inventados de kcal/grasa que se pintaban
+    con el mismo punto que el dato oficial). En alimentos creados a mano el
+    color se elige a mano o se deja vacío. Los colores ya guardados de antes
+    siguen ahí; ahora cuentan como elección manual.
+  - Los objetivos **no** llevan historial: cambiarlos reescribe el pasado y así
+    se queda. No volver a proponerlo.
+  - "Plato listo" se decide por las **categorías canónicas de OFF**
+    (`MEAL_TAGS` en `lib/food/ingredients.ts`), con veto de materia prima
+    (`RAW_TAGS`). Antes bastaba `nova === 4` o 4+ ingredientes, y eso marcaba
+    la Nutella o una bolsa de rúcula como plato listo. Verificado contra 13
+    productos reales de supermercado español (ensaladas de pasta Hacendado /
+    Carretilla / Florette vs atún Hacendado / Calvo, pasta seca, Nutella,
+    Coca-Cola): 13/13. Al tocar esa heurística, repetir ese test.
+
+## Transversal (06/08/2026)
+
+- **La cola de escrituras sobrevive a una recarga.** `sync.ts` guardaba
+  closures en un array de módulo y se perdía todo lo pendiente al recargar o
+  cuando Android mataba el WebView. Ahora una escritura se describe con datos
+  (`SyncOp`: `upsert` | `update` | `delete` | `rpc`), el ejecutor arma la
+  llamada, y la cola se persiste en `localStorage`
+  (`rogue.syncQueue.v1`). `resumeStoredWrites()` la reanuda al montar
+  `SyncErrorToast`, solo para el usuario de la sesión actual. **Al añadir una
+  escritura nueva: descríbela como `SyncOp`, no como función, y asegúrate de
+  que es idempotente.**
+- `global-error.tsx` (errores del layout raíz, con estilos en línea porque
+  reemplaza el documento entero) y `not-found.tsx` dentro del diseño.
+- Versión de cliente en `lib/version.ts`, visible en Perfil > Ajustes y en la
+  pantalla de error fatal. Sale de `NEXT_PUBLIC_BUILD_ID` (en Vercel,
+  `VERCEL_GIT_COMMIT_SHA`); en local, "dev".
+- Escape cierra los modales (`lib/use-escape-to-close.ts`). Lleva una **pila**
+  porque se anidan (planificador → hoja de comida, despensa → confirmación) y
+  un listener por modal los cerraría todos de golpe.
+
+### Lista de dependencias de C1 (el APK es un WebView a una URL remota)
+Sin conexión la app **no abre**. Además Apple rechaza envoltorios web (guía 4.2).
+Acumular aquí todo lo que dependa de resolverlo:
+0. El diario de comidas es online-only: sin cobertura `/app/comidas` abre
+   vacío y lo registrado se pierde al recargar. El escáner depende de
+   `BarcodeDetector` + permiso de cámara: en el WebView sin declararlo cae
+   siempre a entrada manual.
+1. Offline de registro de entrenos.
+2. Carga bajo demanda del calendario más allá de la ventana de 1 año.
+3. Sin cobertura, el WebView no puede recargarse y una ruta a medias es irrecuperable.
+
+Resueltos: la cola de escrituras ya persiste, y el versionado de cliente ya
+existe (ver "Transversal"). Descartado: `sw.js` **sí** versiona la caché
+(`rogue-v4`) y purga las antiguas al activar — ese punto de la lista era falso.
+
+### Migraciones — aplicar SIEMPRE antes de desplegar el código
+Las funciones nuevas degradan solas si aún no existen (avisan por consola en vez
+de tumbar la app), pero el orden correcto es BD primero. **Las FK de
+`exercise_id` están desactivadas a propósito**: se aplicaron con el catálogo
+`exercises` sin sembrar y bloquearon toda escritura de entrenos. Para reponerlas
+hay que ejecutar antes `node scripts/seed-supabase.mjs`; la migración ya aborta
+sola si el catálogo no está listo.
+
+## Estado anterior
+**Desinstalación completa del módulo de Rangos Musculares (05/08/2026).** Se
+borraron `lib/ranks.ts`, `lib/rank-engine.ts`, `components/profile/ranks-panel.tsx`,
+`components/ui/rank-badge.tsx`, la ruta `/app/rangos` y `public/ranks/` (16 SVG).
+`estimate1RM` sobrevivió en `lib/workout/one-rm.ts` porque lo usan las marcas
+personales y la ficha de ejercicio. El perfil pasó de 3 pestañas a 2
+(General/Ajustes). Los tokens `--rank-*` de `globals.css` se renombraron a
+`--accent-green` / `--accent-red` (los otros tres se borraron). En Supabase se
+eliminaron 4 columnas huérfanas de `profiles` (`share_ranks`, `rank_tier`,
+`rank_division`, `rank_updated_at`) — ver
+`supabase/migrations/20260805_remove_ranks.sql`.
+
+Antes de eso se rediseñó la home (`src/app/page.tsx`): la tarjeta "hoy" es ahora un
+carrusel de scroll nativo (scroll-snap, no drag manual) de 2 páginas — "Hoy"
+(entreno del día) y "Calendario" (últimos 7 días / mes completo desplegable
+con `ResizeObserver` ajustando la altura del contenedor dinámicamente). El
+calendario mensual distingue días entrenados (círculo negro), hoy sin
+entrenar (anillo), pasado sin entrenar (gris) y futuro (muy atenuado), y al
+tocar un día entrenado muestra un panel con detalle de esa sesión (grupo
+muscular, series, volumen).

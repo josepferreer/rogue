@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -34,7 +35,7 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 }
 
 // Rechazo de outliers para el calculo de distancia (mismos umbrales que el map
-// matching de /api/match). Un tramo que implica una velocidad imposible a pie
+// limpieza de lib/cardio/clean-trace). Un tramo que implica una velocidad imposible a pie
 // (>28.8 km/h) es un salto del sensor, no movimiento real: sin esto, la deriva
 // del GPS inflaba los km guardados. Un salto tras un apagon largo (dt grande)
 // da velocidad baja y SI cuenta, que es lo correcto (desplazamiento real).
@@ -46,10 +47,16 @@ const MAX_JUMP_M = 80;
 
 export type Coordinate = { lat: number; lng: number; timestamp: number };
 
+/**
+ * Ruta del historial. `coordinates` es OPCIONAL a proposito: el listado no las
+ * trae (son ~130 KB por ruta y solo hacen falta para pintar el mapa), se cargan
+ * bajo demanda al abrir el detalle. undefined = "aun no cargadas", [] = "ruta
+ * sin puntos".
+ */
 export type CardioSession = {
   id: string;
   dateISO: string;
-  coordinates: Coordinate[];
+  coordinates?: Coordinate[];
   distanceKm: number;
   durationSec: number;
 };
@@ -75,6 +82,9 @@ export type CardioContextValue = {
   openLocationSettings: () => void;
   /** Borra una ruta del historial (optimista + delete en Supabase). */
   deleteSession: (id: string) => void;
+  /** Re-lee el historial desde Supabase. La usa NOA tras borrar una ruta
+   *  server-side (canal de refetch), para refrescar la lista sin recargar. */
+  reloadHistory: () => Promise<void>;
 };
 
 type CardioRow = {
@@ -82,14 +92,12 @@ type CardioRow = {
   date: string;
   distance_km: number;
   duration_sec: number;
-  coordinates: Coordinate[];
 };
 
 function rowToSession(row: CardioRow): CardioSession {
   return {
     id: row.id,
     dateISO: row.date,
-    coordinates: row.coordinates,
     distanceKm: Number(row.distance_km),
     durationSec: row.duration_sec,
   };
@@ -106,7 +114,9 @@ async function fetchHistory(
   const rows = await fetchAllPages<CardioRow>(async (from, to) => {
     const { data, error } = await supabase
       .from("cardio_sessions")
-      .select("id, date, distance_km, duration_sec, coordinates")
+      // SIN `coordinates`: son ~130 KB por ruta y el listado no las pinta.
+      // Se cargan por id al abrir el detalle (fetchCoordinates).
+      .select("id, date, distance_km, duration_sec")
       .eq("user_id", userId)
       .order("date", { ascending: false })
       .order("id", { ascending: true })
@@ -117,34 +127,44 @@ async function fetchHistory(
   return rows.map(rowToSession);
 }
 
-/** Upsert por el id generado en cliente: reintentable sin duplicar. */
-async function insertCardioSession(
+/** Trae la polilinea de una ruta concreta (solo al abrir su detalle). */
+export async function fetchCoordinates(
   supabase: SupabaseClient,
-  userId: string,
-  session: CardioSession,
-) {
-  const { error } = await supabase.from("cardio_sessions").upsert({
-    id: session.id,
-    user_id: userId,
-    date: session.dateISO,
-    distance_km: session.distanceKm,
-    duration_sec: session.durationSec,
-    coordinates: session.coordinates,
-  });
+  id: string,
+): Promise<Coordinate[]> {
+  const { data, error } = await supabase
+    .from("cardio_sessions")
+    .select("coordinates")
+    .eq("id", id)
+    .maybeSingle();
   if (error) throw error;
+  return ((data?.coordinates as Coordinate[] | null) ?? []) as Coordinate[];
 }
 
-async function deleteCardioSession(
+/**
+ * Vuelca el progreso de la ruta EN CURSO. Manda solo los puntos nuevos desde el
+ * ultimo volcado; el servidor los concatena (ver upsert_cardio_progress).
+ * Devuelve cuantos puntos han quedado guardados, para saber por donde seguir.
+ */
+async function pushCardioProgress(
   supabase: SupabaseClient,
-  userId: string,
   id: string,
-) {
-  const { error } = await supabase
-    .from("cardio_sessions")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", userId);
+  dateISO: string,
+  distanceKm: number,
+  durationSec: number,
+  storedLen: number,
+  newPoints: Coordinate[],
+): Promise<number> {
+  const { data, error } = await supabase.rpc("upsert_cardio_progress", {
+    p_id: id,
+    p_date: dateISO,
+    p_distance_km: distanceKm,
+    p_duration_sec: durationSec,
+    p_stored_len: storedLen,
+    p_new_points: newPoints,
+  });
   if (error) throw error;
+  return Number(data ?? storedLen + newPoints.length);
 }
 
 // --- Sesion en curso: snapshot para sobrevivir a que el SO mate la PWA ---
@@ -158,7 +178,18 @@ type ActiveSnapshot = {
   accumulatedSec: number;
   /** Timestamp (ms) de la ultima reanudacion; null si esta en pausa. */
   runningSince: number | null;
+  /** Id de la fila que ya se esta escribiendo en servidor, para que al
+   *  recuperar se siga volcando sobre la misma ruta en vez de crear otra. */
+  sessionId?: string;
+  dateISO?: string;
+  /** Puntos ya confirmados en servidor. */
+  storedLen?: number;
 };
+
+/** Cada cuanto se vuelca el progreso de la ruta a Supabase. */
+const FLUSH_INTERVAL_MS = 30_000;
+/** Cada cuanto, como maximo, se reescribe el snapshot local. */
+const SNAPSHOT_THROTTLE_MS = 10_000;
 
 function readSnapshot(): ActiveSnapshot | null {
   try {
@@ -288,13 +319,21 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
   const distanceKmRef = useRef(0);
   // Ultimo punto ACEPTADO para la distancia (no el ultimo crudo): al rechazar un
   // salto no se actualiza, para que el siguiente punto se compare con el ultimo
-  // bueno y la traza se auto-corrija (igual que cleanTrace en /api/match).
+  // bueno y la traza se auto-corrija (igual que cleanTrace al dibujar).
   const lastAcceptedRef = useRef<Coordinate | null>(null);
 
   // Cronometro por timestamps: aunque el navegador congele los timers en
   // segundo plano, al volver el tiempo mostrado se recalcula y es correcto.
   const accumulatedSecRef = useRef(0);
   const runningSinceRef = useRef<number | null>(null);
+
+  // Identidad de la ruta en curso: se crea al empezar, no al finalizar, porque
+  // ahora la fila existe en servidor desde el primer volcado.
+  const activeIdRef = useRef<string | null>(null);
+  const activeDateRef = useRef<string | null>(null);
+  /** Puntos ya confirmados en servidor, para mandar solo los nuevos. */
+  const storedLenRef = useRef(0);
+  const flushingRef = useRef(false);
 
   const computeDuration = useCallback(() => {
     const running =
@@ -374,7 +413,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
                   : distKm * 1000 > MAX_JUMP_M;
               // Solo cuenta (y avanza el punto de referencia) si no es un salto
               // imposible. Un outlier se guarda igual en coordinatesRef para el
-              // mapa (que re-limpia con /api/match), pero no infla la distancia.
+              // mapa (que re-limpia al dibujar), pero no infla la distancia.
               if (!isOutlier) {
                 distanceKmRef.current += distKm;
                 lastAcceptedRef.current = newCoord;
@@ -407,15 +446,69 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     stopWatchRef.current = null;
   }, []);
 
+  /**
+   * Vuelca a Supabase lo grabado desde el ultimo volcado. Sin esto la ruta solo
+   * existia en memoria hasta pulsar "Finalizar", y una hora de carrera se
+   * perdia entera si la app moria por el camino.
+   */
+  const flushProgress = useCallback(async () => {
+    const id = activeIdRef.current;
+    const userId = userIdRef.current;
+    if (!id || !userId || flushingRef.current) return;
+
+    const all = coordinatesRef.current;
+    const nuevos = all.slice(storedLenRef.current);
+    if (nuevos.length === 0) return;
+
+    flushingRef.current = true;
+    try {
+      storedLenRef.current = await pushCardioProgress(
+        supabase,
+        id,
+        activeDateRef.current ?? new Date().toISOString(),
+        distanceKmRef.current,
+        computeDuration(),
+        storedLenRef.current,
+        nuevos,
+      );
+    } catch (err) {
+      // Sin ruido en la UI: es un volcado intermedio y el siguiente reintenta
+      // con los mismos puntos (storedLenRef no avanza). Lo que no puede fallar
+      // en silencio es el volcado final, que va por syncWrite.
+      console.warn("No se pudo volcar el progreso de la ruta:", err);
+    } finally {
+      flushingRef.current = false;
+    }
+  }, [supabase, computeDuration]);
+
+  useEffect(() => {
+    if (!isTracking || isPaused) return;
+    const id = setInterval(flushProgress, FLUSH_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [isTracking, isPaused, flushProgress]);
+
   // Snapshot de la sesion en curso: si el SO mata la PWA a mitad de ruta,
   // al reabrir se recupera lo grabado en vez de perderlo todo.
+  //
+  // Con throttle: antes se reescribia en CADA punto GPS (~cada 5 m), lo que al
+  // final de una carrera larga significaba serializar y escribir ~130 KB de
+  // forma sincrona en el hilo principal cada pocos segundos. localStorage
+  // bloquea, y eso se notaba como tirones en el mapa.
+  const lastSnapshotAtRef = useRef(0);
   useEffect(() => {
     if (!isTracking) return;
+    const now = Date.now();
+    const forzar = isPaused || coordinates.length === 0;
+    if (!forzar && now - lastSnapshotAtRef.current < SNAPSHOT_THROTTLE_MS) return;
+    lastSnapshotAtRef.current = now;
     writeSnapshot({
       coordinates,
       distanceKm,
       accumulatedSec: accumulatedSecRef.current,
       runningSince: runningSinceRef.current,
+      sessionId: activeIdRef.current ?? undefined,
+      dateISO: activeDateRef.current ?? undefined,
+      storedLen: storedLenRef.current,
     });
   }, [isTracking, coordinates, distanceKm, isPaused]);
 
@@ -433,6 +526,11 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     setGpsNeedsSettings(false);
     accumulatedSecRef.current = 0;
     runningSinceRef.current = Date.now();
+    // La ruta tiene identidad desde el principio: la fila en servidor se crea
+    // en el primer volcado, no al finalizar.
+    activeIdRef.current = crypto.randomUUID();
+    activeDateRef.current = new Date().toISOString();
+    storedLenRef.current = 0;
     acquireWakeLock();
     watchGPS();
   }, [watchGPS, acquireWakeLock]);
@@ -444,7 +542,10 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     setIsPaused(true);
     releaseWakeLock();
     clearGPS();
-  }, [clearGPS, computeDuration, releaseWakeLock]);
+    // Pausar es un buen momento para asegurar lo grabado: puede pasar mucho
+    // rato hasta que se reanude, o no reanudarse nunca.
+    flushProgress();
+  }, [clearGPS, computeDuration, releaseWakeLock, flushProgress]);
 
   const resumeTracking = useCallback(() => {
     runningSinceRef.current = Date.now();
@@ -469,10 +570,17 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     clearSnapshot();
     setDurationSec(finalDuration);
 
-    if (finalDistance > 0 || finalDuration > 10) {
+    const id = activeIdRef.current;
+    const dateISO = activeDateRef.current ?? new Date().toISOString();
+    const storedLen = storedLenRef.current;
+    activeIdRef.current = null;
+    activeDateRef.current = null;
+    storedLenRef.current = 0;
+
+    if (id && (finalDistance > 0 || finalDuration > 10)) {
       const newSession: CardioSession = {
-        id: crypto.randomUUID(),
-        dateISO: new Date().toISOString(),
+        id,
+        dateISO,
         coordinates: finalCoordinates,
         distanceKm: finalDistance,
         durationSec: finalDuration,
@@ -480,14 +588,35 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
       setHistory((prev) => [newSession, ...prev]);
       const userId = userIdRef.current;
       if (userId) {
-        syncWrite("la ruta de cardio", () =>
-          insertCardioSession(supabase, userId, newSession),
-        );
+        // Volcado final por la cola de sync (reintentos + aviso si falla).
+        // Solo viajan los puntos que aun no estuviesen confirmados, y el RPC es
+        // idempotente, asi que un reintento no duplica la traza.
+        syncWrite("la ruta de cardio", {
+          kind: "rpc",
+          fn: "upsert_cardio_progress",
+          args: {
+            p_id: id,
+            p_date: dateISO,
+            p_distance_km: finalDistance,
+            p_duration_sec: finalDuration,
+            p_stored_len: storedLen,
+            p_new_points: finalCoordinates.slice(storedLen),
+          },
+        });
       }
+    } else if (id && userIdRef.current && storedLen > 0) {
+      // Ruta descartada por insignificante pero con volcados ya en servidor:
+      // hay que borrar la fila o quedaria una ruta fantasma en el historial.
+      const userId = userIdRef.current;
+      syncWrite("el descarte de la ruta", {
+        kind: "delete",
+        table: "cardio_sessions",
+        match: { id, user_id: userId },
+      });
     }
     // coordinates/distanceKm se quedan como estan para la pantalla de
     // resumen; startTracking los resetea.
-  }, [clearGPS, supabase, computeDuration, releaseWakeLock]);
+  }, [clearGPS, computeDuration, releaseWakeLock]);
 
   // Recuperacion: al arrancar, si quedo una sesion a medias (la PWA se cerro
   // sin pasar por stopTracking), se REANUDA en pausa en vez de finalizarla. Asi
@@ -529,6 +658,12 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     lastAcceptedRef.current = snap.coordinates[snap.coordinates.length - 1] ?? null;
     accumulatedSecRef.current = duration;
     runningSinceRef.current = null;
+    // Se reengancha a la MISMA fila que ya se estaba escribiendo: si no, al
+    // finalizar se crearia una ruta nueva y la anterior quedaria huerfana en el
+    // historial con la traza a medias.
+    activeIdRef.current = snap.sessionId ?? crypto.randomUUID();
+    activeDateRef.current = snap.dateISO ?? new Date().toISOString();
+    storedLenRef.current = snap.storedLen ?? 0;
     // Hidratacion unica desde localStorage tras el montaje (protegida por
     // recoveredRef). Va en efecto a proposito: en el initializer romperia la
     // hidratacion SSR al no existir localStorage en servidor.
@@ -552,39 +687,78 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
       setHistory((prev) => prev.filter((s) => s.id !== id));
       const userId = userIdRef.current;
       if (userId) {
-        syncWrite("el borrado de la ruta", () =>
-          deleteCardioSession(supabase, userId, id),
-        );
+        syncWrite("el borrado de la ruta", {
+          kind: "delete",
+          table: "cardio_sessions",
+          match: { id, user_id: userId },
+        });
       }
     },
-    [supabase],
+    [],
+  );
+
+  const reloadHistory = useCallback(async () => {
+    const userId = userIdRef.current;
+    if (!userId) return;
+    try {
+      const sessions = await fetchHistory(supabase, userId);
+      setHistory(sessions);
+    } catch (err) {
+      console.error("No se pudo recargar el historial de cardio:", err);
+    }
+  }, [supabase]);
+
+  // Memoizado: sin esto se creaba un objeto nuevo en CADA render del provider,
+  // y durante una carrera el reloj avanza cada segundo y las coordenadas en
+  // cada punto GPS. Eso re-renderizaba a todos los consumidores --incluido el
+  // mapa de Leaflet-- de forma continua durante toda la actividad, con el coste
+  // de bateria que eso supone en una app de running.
+  const value = useMemo<CardioContextValue>(
+    () => ({
+      hydrated,
+      isTracking,
+      isPaused,
+      isMinimized,
+      coordinates,
+      distanceKm,
+      durationSec,
+      history,
+      gpsError,
+      gpsNeedsSettings,
+      startTracking,
+      pauseTracking,
+      resumeTracking,
+      stopTracking,
+      minimize,
+      maximize,
+      openLocationSettings,
+      deleteSession,
+      reloadHistory,
+    }),
+    [
+      hydrated,
+      isTracking,
+      isPaused,
+      isMinimized,
+      coordinates,
+      distanceKm,
+      durationSec,
+      history,
+      gpsError,
+      gpsNeedsSettings,
+      startTracking,
+      pauseTracking,
+      resumeTracking,
+      stopTracking,
+      minimize,
+      maximize,
+      deleteSession,
+      reloadHistory,
+    ],
   );
 
   return (
-    <CardioContext.Provider
-      value={{
-        hydrated,
-        isTracking,
-        isPaused,
-        isMinimized,
-        coordinates,
-        distanceKm,
-        durationSec,
-        history,
-        gpsError,
-        gpsNeedsSettings,
-        startTracking,
-        pauseTracking,
-        resumeTracking,
-        stopTracking,
-        minimize,
-        maximize,
-        openLocationSettings,
-        deleteSession,
-      }}
-    >
-      {children}
-    </CardioContext.Provider>
+    <CardioContext.Provider value={value}>{children}</CardioContext.Provider>
   );
 }
 

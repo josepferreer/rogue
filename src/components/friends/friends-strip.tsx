@@ -3,19 +3,16 @@
 import Link from "next/link";
 import { ArrowRight, UserPlus } from "lucide-react";
 import { useFriends } from "@/lib/store/friends-store";
-import { getRankTier } from "@/lib/ranks";
 
 function initials(name: string) {
   return name.trim().slice(0, 2).toUpperCase();
 }
 
 /**
- * Tira horizontal de amigos para la home. Cada avatar lleva un punto con el
- * color de su rango medio (cacheado en `profiles`, ver la RPC friends_ranks);
- * quien no comparte rangos o aun no tiene sale sin punto.
+ * Tira horizontal de amigos para la home.
  */
 export function FriendsStrip() {
-  const { hydrated, friends, ranks, pendingCount } = useFriends();
+  const { hydrated, friends, pendingCount } = useFriends();
 
   // Antes de hidratar no se pinta nada: un esqueleto aqui solo haria saltar el
   // layout de la home un instante.
@@ -58,37 +55,23 @@ export function FriendsStrip() {
           </p>
         </Link>
 
-        {friends.map((f) => {
-          const rank = ranks[f.otherId];
-          const tier = rank?.tier ? getRankTier(rank.tier) : null;
-
-          return (
-            <Link
-              key={f.id}
-              href={`/app/amigos/${encodeURIComponent(f.otherUsername)}`}
-              className="flex min-w-[60px] flex-col items-center gap-1.5"
-              title={
-                tier ? `${f.otherDisplayName} · ${tier.label}` : f.otherDisplayName
-              }
-            >
-              <span className="relative">
-                <span className="flex size-14 items-center justify-center rounded-full bg-muted font-mono text-sm font-semibold text-muted-foreground">
-                  {initials(f.otherDisplayName)}
-                </span>
-                {rank?.tier && (
-                  <span
-                    aria-hidden
-                    className="absolute bottom-0 right-0 size-4 rounded-full ring-2 ring-background"
-                    style={{ background: `var(--rank-${rank.tier})` }}
-                  />
-                )}
+        {friends.map((f) => (
+          <Link
+            key={f.id}
+            href={`/app/amigos/${encodeURIComponent(f.otherUsername)}`}
+            className="flex min-w-[60px] flex-col items-center gap-1.5"
+            title={f.otherDisplayName}
+          >
+            <span className="relative">
+              <span className="flex size-14 items-center justify-center rounded-full bg-muted font-mono text-sm font-semibold text-muted-foreground">
+                {initials(f.otherDisplayName)}
               </span>
-              <p className="max-w-[60px] truncate text-[11px] font-medium">
-                {f.otherUsername}
-              </p>
-            </Link>
-          );
-        })}
+            </span>
+            <p className="max-w-[60px] truncate text-[11px] font-medium">
+              {f.otherUsername}
+            </p>
+          </Link>
+        ))}
       </div>
     </div>
   );

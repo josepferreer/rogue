@@ -4,7 +4,9 @@ import { useEffect, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useMeals, type MealType, MEAL_TYPES, dayKey, sumMacros } from "@/lib/store/meals-store";
+import { useAppShellPortal } from "@/lib/use-app-shell-portal";
+import { useEscapeToClose } from "@/lib/use-escape-to-close";
+import { useMeals, type MealType, MEAL_TYPES, dayKey, splitMacros } from "@/lib/store/meals-store";
 import { MealSheet } from "@/components/food/meal-sheet";
 
 const WEEKDAY_SHORT = ["L", "M", "X", "J", "V", "S", "D"];
@@ -34,10 +36,9 @@ type Props = {
 };
 
 export function WeekPlannerModal({ open, onClose, initialDate }: Props) {
-  const { entriesForDay } = useMeals();
-  const [portalTarget] = useState<Element | null>(() =>
-    typeof document !== "undefined" ? document.getElementById("app-shell") : null,
-  );
+  const { entriesForDay, ensureLoadedFrom, loadingOlder } = useMeals();
+  const portalTarget = useAppShellPortal();
+  useEscapeToClose(open, onClose);
   const [monday, setMonday] = useState<Date>(() => getMondayOf(initialDate));
   const [sheetTarget, setSheetTarget] = useState<{ date: string; mealType: MealType; mealLabel: string } | null>(null);
 
@@ -47,6 +48,11 @@ export function WeekPlannerModal({ open, onClose, initialDate }: Props) {
   }, [open, initialDate]);
 
   const days = useMemo(() => buildWeekDays(monday), [monday]);
+
+  // Navegar semanas atras puede salirse de la ventana cargada del diario.
+  useEffect(() => {
+    if (open) ensureLoadedFrom(days[0].key);
+  }, [open, days, ensureLoadedFrom]);
 
   const prevWeek = () => { const d = new Date(monday); d.setDate(monday.getDate() - 7); setMonday(d); };
   const nextWeek = () => { const d = new Date(monday); d.setDate(monday.getDate() + 7); setMonday(d); };
@@ -73,6 +79,13 @@ export function WeekPlannerModal({ open, onClose, initialDate }: Props) {
               <div className="flex items-center gap-3">
                 <p className="font-semibold">Planificador Semanal</p>
                 <span className="font-mono text-xs text-muted-foreground">{rangeLabel}</span>
+                {/* Sin esto, una semana antigua aun sin traer se veria vacia
+                    y parecia que no habias comido nada. */}
+                {loadingOlder && (
+                  <span className="font-mono text-xs text-muted-foreground/70 animate-pulse">
+                    cargando…
+                  </span>
+                )}
               </div>
               <button
                 type="button"
@@ -111,7 +124,11 @@ export function WeekPlannerModal({ open, onClose, initialDate }: Props) {
                     <div className="grid grid-cols-7 gap-1">
                       {days.map(d => {
                         const dayItems = entriesForDay(d.key).filter(e => e.mealType === type);
-                        const kcal = Math.round(sumMacros(dayItems).kcal);
+                        // Mismo criterio que el resto de la app: la cifra es lo
+                        // comido; lo planificado va debajo, en gris.
+                        const split = splitMacros(dayItems);
+                        const kcal = Math.round(split.eaten.kcal);
+                        const plannedKcal = Math.round(split.planned.kcal);
                         const hasItems = dayItems.length > 0;
                         return (
                           <button
@@ -127,7 +144,9 @@ export function WeekPlannerModal({ open, onClose, initialDate }: Props) {
                               <>
                                 <span className="text-[10px] font-semibold leading-tight">{kcal}</span>
                                 <span className="text-[9px] text-muted-foreground">kcal</span>
-                                <span className="text-[9px] text-muted-foreground">{dayItems.length}×</span>
+                                <span className="text-[9px] text-muted-foreground">
+                                  {plannedKcal >= 1 ? `+${plannedKcal}` : `${dayItems.length}×`}
+                                </span>
                               </>
                             ) : (
                               <Plus className="size-3.5 text-muted-foreground/50" />

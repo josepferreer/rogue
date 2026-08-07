@@ -1,30 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Search, X, Heart, Pencil, Trash2, Plus, Check, Barcode } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAppShellPortal } from "@/lib/use-app-shell-portal";
+import { useEscapeToClose } from "@/lib/use-escape-to-close";
 import { Button } from "@/components/ui/button";
-import { usePantry, Alimento, Plato, PlatoFood, isReadyPlato } from "@/lib/store/pantry-store";
+import { usePantry, platoMacros, Alimento, Plato, PlatoFood, isReadyPlato } from "@/lib/store/pantry-store";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { BarcodeScanner } from "@/components/food/barcode-scanner";
 import { useToast } from "@/components/ui/toast";
-
-function estimateHealthScore(kcal: number, p: number, c: number, f: number): "green" | "yellow" | "orange" | "red" {
-  let points = 0;
-  if (kcal > 350) points += 2;
-  else if (kcal > 250) points += 1;
-  if (f > 20) points += 2;
-  else if (f > 10) points += 1;
-  if (c > 50) points += 1;
-  
-  if (p > 15) points -= 2;
-  if (kcal < 100) points -= 1;
-
-  if (points <= 0) return "green";
-  if (points === 1) return "yellow";
-  if (points === 2) return "orange";
-  return "red";
-}
+import { lookupBarcode, lookupErrorMessage } from "@/lib/food/lookup";
+import { HEALTH_LABEL, type HealthScore } from "@/lib/food/health-score";
 
 type Props = {
   open: boolean;
@@ -46,23 +34,12 @@ function AlimentoForm({
   const [protein, setProtein] = useState(initialData?.protein.toString() || "");
   const [carbs, setCarbs] = useState(initialData?.carbs.toString() || "");
   const [fat, setFat] = useState(initialData?.fat.toString() || "");
-  const [healthScore, setHealthScore] = useState<"green" | "yellow" | "orange" | "red" | undefined>(initialData?.healthScore);
-  const [isManualScore, setIsManualScore] = useState(!!initialData?.healthScore);
+  // El color ya no se deduce de las macros: o viene del Nutri-Score del
+  // escaneo, o lo pone el usuario, o se queda en blanco.
+  const [healthScore, setHealthScore] = useState<HealthScore | undefined>(initialData?.healthScore);
   const [scanning, setScanning] = useState(false);
   const [loadingCode, setLoadingCode] = useState(false);
   const { notify } = useToast();
-
-  useEffect(() => {
-    if (isManualScore || scanning) return;
-    const k = Number(kcal) || 0;
-    const p = Number(protein) || 0;
-    const car = Number(carbs) || 0;
-    const fa = Number(fat) || 0;
-    if (k > 0 || p > 0 || car > 0 || fa > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setHealthScore(estimateHealthScore(k, p, car, fa));
-    }
-  }, [kcal, protein, carbs, fat, isManualScore, scanning]);
 
   const handleSave = () => {
     if (!name.trim()) return;
@@ -76,36 +53,25 @@ function AlimentoForm({
     });
   };
 
+  // Via `/api/food/[barcode]`: el cliente nunca habla con Open Food Facts.
   const handleBarcodeDetect = async (barcode: string) => {
     setScanning(false);
     setLoadingCode(true);
-    try {
-      const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json`);
-      const data = await res.json();
-      if (data.status === 1 && data.product) {
-        const p = data.product;
-        if (p.product_name) setName(p.product_name);
-        if (p.nutriments) {
-          if (p.nutriments["energy-kcal_100g"] != null) setKcal(p.nutriments["energy-kcal_100g"].toString());
-          if (p.nutriments["proteins_100g"] != null) setProtein(p.nutriments["proteins_100g"].toString());
-          if (p.nutriments["carbohydrates_100g"] != null) setCarbs(p.nutriments["carbohydrates_100g"].toString());
-          if (p.nutriments["fat_100g"] != null) setFat(p.nutriments["fat_100g"].toString());
-        }
-        if (p.nutriscore_grade) {
-          const n = p.nutriscore_grade.toLowerCase();
-          if (n === 'a' || n === 'b') setHealthScore("green");
-          else if (n === 'c') setHealthScore("yellow");
-          else if (n === 'd') setHealthScore("orange");
-          else if (n === 'e') setHealthScore("red");
-          setIsManualScore(true); // Don't let auto-calc override scanned score
-        }
-      } else {
-        notify("Producto no encontrado en la base de datos.", "error");
-      }
-    } catch {
-      notify("Error al buscar el código de barras.", "error");
-    } finally {
-      setLoadingCode(false);
+    const result = await lookupBarcode(barcode);
+    setLoadingCode(false);
+    if (!result.ok) {
+      notify(lookupErrorMessage(result.reason), "error");
+      return;
+    }
+    const p = result.product;
+    setName(p.name);
+    if (p.kcal100 != null) setKcal(p.kcal100.toString());
+    if (p.protein100 != null) setProtein(p.protein100.toString());
+    if (p.carbs100 != null) setCarbs(p.carbs100.toString());
+    if (p.fat100 != null) setFat(p.fat100.toString());
+    if (p.healthScore) setHealthScore(p.healthScore);
+    if (p.kcal100 == null) {
+      notify("Open Food Facts no da las calorías de este producto: complétalas.", "info");
     }
   };
 
@@ -114,29 +80,32 @@ function AlimentoForm({
       {scanning && (
         <BarcodeScanner onDetect={handleBarcodeDetect} onClose={() => setScanning(false)} />
       )}
-      <div className="flex gap-2">
-        <input 
-          type="text" 
-          value={name} 
-          onChange={e => setName(e.target.value)} 
-          placeholder="Nombre del alimento" 
-          className="flex-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none"
-          disabled={loadingCode}
-        />
-        {!initialData && (
-          <button 
-            onClick={() => setScanning(true)} 
-            className="flex items-center justify-center rounded-xl border border-border bg-surface px-3 text-muted-foreground hover:text-foreground transition-colors"
-            title="Escanear código de barras"
-            disabled={loadingCode}
-          >
-            <Barcode className={cn("size-5", loadingCode && "animate-pulse")} />
-          </button>
-        )}
-      </div>
+      {/* Un solo campo de nombre: antes habia dos inputs identicos atados al
+          mismo estado, uno con el boton de escaner y otro con su label. */}
       <label className="flex flex-col">
         <span className="text-sm font-medium">Nombre</span>
-        <input type="text" value={name} onChange={e => setName(e.target.value)} className="mt-1 rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none" autoFocus />
+        <div className="mt-1 flex gap-2">
+          <input
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Nombre del alimento"
+            className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none"
+            disabled={loadingCode}
+            autoFocus
+          />
+          {!initialData && (
+            <button
+              type="button"
+              onClick={() => setScanning(true)}
+              className="flex shrink-0 items-center justify-center rounded-xl border border-border bg-surface px-3 text-muted-foreground hover:text-foreground transition-colors"
+              title="Escanear código de barras"
+              disabled={loadingCode}
+            >
+              <Barcode className={cn("size-5", loadingCode && "animate-pulse")} />
+            </button>
+          )}
+        </div>
       </label>
       <div className="grid grid-cols-2 gap-4">
         <label className="flex flex-col">
@@ -156,16 +125,34 @@ function AlimentoForm({
           <input type="number" value={fat} onChange={e => setFat(e.target.value)} className="mt-1 rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none" />
         </label>
       </div>
-      <div className="flex items-center justify-between">
+      <div className="mt-4 flex flex-col gap-1.5">
+        <span className="text-xs text-muted-foreground">
+          Nutri-Score (lo rellena el escáner; a mano es opcional)
+        </span>
         <div className="flex items-center gap-2">
-          <button type="button" aria-label="Verde" onClick={() => { setHealthScore("green"); setIsManualScore(true); }} className={cn("size-8 rounded-full bg-green-500", healthScore === "green" ? "ring-2 ring-foreground ring-offset-1 ring-offset-background" : "opacity-30")} />
-          <button type="button" aria-label="Amarillo" onClick={() => { setHealthScore("yellow"); setIsManualScore(true); }} className={cn("size-8 rounded-full bg-yellow-400", healthScore === "yellow" ? "ring-2 ring-foreground ring-offset-1 ring-offset-background" : "opacity-30")} />
-          <button type="button" aria-label="Naranja" onClick={() => { setHealthScore("orange"); setIsManualScore(true); }} className={cn("size-8 rounded-full bg-orange-500", healthScore === "orange" ? "ring-2 ring-foreground ring-offset-1 ring-offset-background" : "opacity-30")} />
-          <button type="button" aria-label="Rojo" onClick={() => { setHealthScore("red"); setIsManualScore(true); }} className={cn("size-8 rounded-full bg-red-500", healthScore === "red" ? "ring-2 ring-foreground ring-offset-1 ring-offset-background" : "opacity-30")} />
-          {healthScore && <button type="button" onClick={() => { setHealthScore(undefined); setIsManualScore(true); }} className="ml-2 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted">Quitar</button>}
+          {(["green", "yellow", "orange", "red"] as const).map((c) => (
+            <button
+              key={c}
+              type="button"
+              aria-label={HEALTH_LABEL[c]}
+              title={HEALTH_LABEL[c]}
+              aria-pressed={healthScore === c}
+              onClick={() => setHealthScore(c)}
+              className={cn(
+                "size-8 rounded-full",
+                { green: "bg-green-500", yellow: "bg-yellow-400", orange: "bg-orange-500", red: "bg-red-500" }[c],
+                healthScore === c ? "ring-2 ring-foreground ring-offset-1 ring-offset-background" : "opacity-30",
+              )}
+            />
+          ))}
+          {healthScore && (
+            <button type="button" onClick={() => setHealthScore(undefined)} className="ml-2 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted">
+              Quitar
+            </button>
+          )}
         </div>
       </div>
-      <div className="flex justify-end gap-3">
+      <div className="mt-6 flex justify-end gap-3">
         <Button variant="ghost" onClick={onCancel} disabled={loadingCode}>Cancelar</Button>
         <Button onClick={handleSave} disabled={loadingCode}>Guardar</Button>
       </div>
@@ -190,33 +177,22 @@ function PlatoForm({
   const [selectedFoods, setSelectedFoods] = useState<PlatoFood[]>(initialData?.foods || []);
   const [searchIng, setSearchIng] = useState("");
   const [isCreatingFood, setIsCreatingFood] = useState(false);
-  const [healthScore, setHealthScore] = useState<"green" | "yellow" | "orange" | "red" | undefined>(initialData?.healthScore);
-  const [isManualScore, setIsManualScore] = useState(!!initialData?.healthScore);
+  const [healthScore, setHealthScore] = useState<HealthScore | undefined>(initialData?.healthScore);
 
   const availableFoods = useMemo(() => {
     return alimentos.filter(a => a.name.toLowerCase().includes(searchIng.toLowerCase()));
   }, [alimentos, searchIng]);
 
-  const { totalKcal, weight, totalP, totalC, totalF } = useMemo(() => {
-    return selectedFoods.reduce((acc, f) => {
-      const a = alimentos.find(x => x.id === f.alimentoId);
-      const factor = f.quantityG / 100;
-      return {
-        totalKcal: acc.totalKcal + ((a?.kcal || 0) * factor),
-        weight: acc.weight + f.quantityG,
-        totalP: acc.totalP + ((a?.protein || 0) * factor),
-        totalC: acc.totalC + ((a?.carbs || 0) * factor),
-        totalF: acc.totalF + ((a?.fat || 0) * factor)
-      };
-    }, { totalKcal: 0, weight: 0, totalP: 0, totalC: 0, totalF: 0 });
-  }, [selectedFoods, alimentos]);
-
-  useEffect(() => {
-    if (isManualScore || weight === 0) return;
-    const factor = 100 / weight;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHealthScore(estimateHealthScore(totalKcal * factor, totalP * factor, totalC * factor, totalF * factor));
-  }, [totalKcal, weight, totalP, totalC, totalF, isManualScore]);
+  // Solo las kcal: el resto de macros de un plato manual se recalculan siempre
+  // desde sus ingredientes (platoMacros), no se guardan aparte.
+  const totalKcal = useMemo(
+    () =>
+      selectedFoods.reduce((acc, f) => {
+        const a = alimentos.find(x => x.id === f.alimentoId);
+        return acc + (a?.kcal ?? 0) * (f.quantityG / 100);
+      }, 0),
+    [selectedFoods, alimentos],
+  );
 
   const handleSave = () => {
     if (!name.trim() || selectedFoods.length === 0) return;
@@ -301,16 +277,21 @@ function PlatoForm({
               />
             </div>
             <div className="max-h-32 overflow-y-auto flex flex-col gap-1 mt-1">
-              {availableFoods.map(a => (
-                <div 
-                  key={a.id} 
+              {availableFoods.map(a => {
+                const elegido = selectedFoods.some(f => f.alimentoId === a.id);
+                return (
+                <button
+                  key={a.id}
+                  type="button"
                   onClick={() => toggleFood(a.id)}
-                  className="flex items-center justify-between p-2 rounded-lg hover:bg-muted cursor-pointer text-xs"
+                  aria-pressed={elegido}
+                  className="flex w-full items-center justify-between p-2 rounded-lg hover:bg-muted text-xs text-left"
                 >
                   <span>{a.name}</span>
-                  {selectedFoods.some(f => f.alimentoId === a.id) && <Check className="size-3 text-primary" />}
-                </div>
-              ))}
+                  {elegido && <Check className="size-3 text-primary" />}
+                </button>
+                );
+              })}
               {searchIng && availableFoods.length === 0 && (
                 <div className="p-4 text-center text-xs text-muted-foreground">
                   <p>No se encontró el ingrediente.</p>
@@ -328,12 +309,23 @@ function PlatoForm({
       </div>
 
       <div className="flex items-center gap-2 mt-1">
-        <span className="text-[10px] text-muted-foreground mr-1">Nivel Salud:</span>
-        <button onClick={() => { setHealthScore("green"); setIsManualScore(true); }} className={cn("size-5 rounded-full bg-green-500", healthScore === "green" ? "ring-2 ring-foreground ring-offset-1 ring-offset-background" : "opacity-30")} />
-        <button onClick={() => { setHealthScore("yellow"); setIsManualScore(true); }} className={cn("size-5 rounded-full bg-yellow-400", healthScore === "yellow" ? "ring-2 ring-foreground ring-offset-1 ring-offset-background" : "opacity-30")} />
-        <button onClick={() => { setHealthScore("orange"); setIsManualScore(true); }} className={cn("size-5 rounded-full bg-orange-500", healthScore === "orange" ? "ring-2 ring-foreground ring-offset-1 ring-offset-background" : "opacity-30")} />
-        <button onClick={() => { setHealthScore("red"); setIsManualScore(true); }} className={cn("size-5 rounded-full bg-red-500", healthScore === "red" ? "ring-2 ring-foreground ring-offset-1 ring-offset-background" : "opacity-30")} />
-        {healthScore && <button onClick={() => { setHealthScore(undefined); setIsManualScore(true); }} className="ml-1 text-[10px] text-muted-foreground underline">Quitar</button>}
+        <span className="text-[10px] text-muted-foreground mr-1">Nutri-Score:</span>
+        {(["green", "yellow", "orange", "red"] as const).map((c) => (
+          <button
+            key={c}
+            type="button"
+            aria-label={HEALTH_LABEL[c]}
+            title={HEALTH_LABEL[c]}
+            aria-pressed={healthScore === c}
+            onClick={() => setHealthScore(c)}
+            className={cn(
+              "size-5 rounded-full",
+              { green: "bg-green-500", yellow: "bg-yellow-400", orange: "bg-orange-500", red: "bg-red-500" }[c],
+              healthScore === c ? "ring-2 ring-foreground ring-offset-1 ring-offset-background" : "opacity-30",
+            )}
+          />
+        ))}
+        {healthScore && <button type="button" onClick={() => setHealthScore(undefined)} className="ml-1 text-[10px] text-muted-foreground underline">Quitar</button>}
       </div>
 
       <div className="mt-6 flex justify-end gap-3">
@@ -347,21 +339,33 @@ function PlatoForm({
 
 // --- Modal Principal ---
 export function PantryModal({ open, onClose }: Props) {
-  const { 
-    alimentos, platos, 
+  const {
+    alimentos, platos, hydrated, loadError, reload, platosUsando,
     addAlimento, updateAlimento, deleteAlimento, toggleFavoriteAlimento,
     addPlato, updatePlato, deletePlato, toggleFavoritePlato
   } = usePantry();
-  
+
   const [tab, setTab] = useState<"alimentos" | "platos">("alimentos");
   const [query, setQuery] = useState("");
-  
+
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Borrar un alimento arrastra los platos que lo usan: hay que decirlo antes.
+  const [borrando, setBorrando] = useState<Alimento | null>(null);
 
-  const [portalTarget] = useState<Element | null>(() =>
-    typeof document !== "undefined" ? document.getElementById("app-shell") : null,
-  );
+  const afectados = borrando ? platosUsando(borrando.id) : [];
+  const seVacian = afectados.filter((p) => p.foods.length === 1).length;
+
+  const pedirBorrado = (alimento: Alimento) => {
+    if (platosUsando(alimento.id).length === 0) {
+      deleteAlimento(alimento.id);
+      return;
+    }
+    setBorrando(alimento);
+  };
+
+  const portalTarget = useAppShellPortal();
+  useEscapeToClose(open, onClose);
 
   // Sort: favorites first, then by name
   const filteredAlimentos = useMemo(() => {
@@ -453,7 +457,31 @@ export function PantryModal({ open, onClose }: Props) {
 
           <div className="flex-1 overflow-y-auto px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
             <div className="flex flex-col gap-2.5">
-              
+
+              {/* La despensa que se ve tiene que ser la del usuario o ninguna:
+                  nunca datos de ejemplo haciendose pasar por los suyos. */}
+              {loadError && (
+                <div className="flex items-center gap-3 rounded-3xl border border-border bg-surface p-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">No se pudo cargar tu despensa</p>
+                    <p className="text-xs text-muted-foreground">
+                      Lo que guardes ahora podría no conservarse.
+                    </p>
+                  </div>
+                  <Button onClick={reload}>Reintentar</Button>
+                </div>
+              )}
+              {!hydrated && !loadError && (
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  Cargando tu despensa…
+                </p>
+              )}
+              {hydrated && !loadError && !creating && alimentos.length === 0 && platos.length === 0 && (
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  Tu despensa está vacía. Usa el botón + para añadir tu primer alimento.
+                </p>
+              )}
+
               {/* Formulario de creación al principio de la lista */}
               {creating && tab === "alimentos" && (
                 <div className="rounded-3xl border border-border bg-surface p-4">
@@ -501,7 +529,7 @@ export function PantryModal({ open, onClose }: Props) {
                       <button type="button" onClick={() => setEditingId(editingId === alimento.id ? null : alimento.id)} className="flex size-10 items-center justify-center text-muted-foreground hover:text-foreground">
                         <Pencil className="size-4" />
                       </button>
-                      <button type="button" onClick={() => deleteAlimento(alimento.id)} className="flex size-10 items-center justify-center text-muted-foreground hover:text-red-500">
+                      <button type="button" onClick={() => pedirBorrado(alimento)} className="flex size-10 items-center justify-center text-muted-foreground hover:text-red-500">
                         <Trash2 className="size-4" />
                       </button>
                     </div>
@@ -529,6 +557,8 @@ export function PantryModal({ open, onClose }: Props) {
               
               {tab === "platos" && filteredPlatos.map((plato) => {
                 const ready = isReadyPlato(plato);
+                // Calculadas contra la despensa actual, no la copia guardada.
+                const macros = platoMacros(plato, alimentos);
                 return (
                 <div key={plato.id} className="rounded-3xl border border-border bg-surface p-4">
                   <div className="flex items-start justify-between">
@@ -542,7 +572,14 @@ export function PantryModal({ open, onClose }: Props) {
                         {ready && <span className="rounded-full bg-accent px-2 py-0.5 text-[9px] font-semibold text-accent-foreground">Listo</span>}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {ready ? `${Math.round(plato.kcal)} kcal (100g)` : `${plato.kcal} kcal totales`}
+                        {ready
+                          ? `${Math.round(macros.kcal)} kcal (100g)`
+                          : `${Math.round(macros.kcal)} kcal totales · ${macros.weightG}g`}
+                        {macros.missing > 0 && (
+                          <span className="text-red-500">
+                            {" "}· {macros.missing} ingrediente{macros.missing > 1 ? "s" : ""} sin despensa
+                          </span>
+                        )}
                       </p>
                     </div>
                     <div className="flex gap-1 shrink-0">
@@ -601,5 +638,27 @@ export function PantryModal({ open, onClose }: Props) {
     </div>
   );
 
-  return portalTarget ? createPortal(content, portalTarget) : content;
+  if (!portalTarget) return null;
+
+  return (
+    <>
+      {createPortal(content, portalTarget)}
+      <ConfirmDialog
+        open={!!borrando}
+        title={`¿Borrar "${borrando?.name}"?`}
+        description={
+          `Se usa en ${afectados.length} plato${afectados.length > 1 ? "s" : ""} y se quitará de ${afectados.length > 1 ? "ellos" : "él"}.` +
+          (seVacian > 0
+            ? ` ${seVacian} se ${seVacian > 1 ? "quedarían" : "quedaría"} sin ingredientes y se ${seVacian > 1 ? "borrarán" : "borrará"} también.`
+            : "")
+        }
+        confirmLabel="Borrar"
+        onConfirm={() => {
+          if (borrando) deleteAlimento(borrando.id);
+          setBorrando(null);
+        }}
+        onCancel={() => setBorrando(null)}
+      />
+    </>
+  );
 }

@@ -12,7 +12,6 @@ import {
 import { usePathname } from "next/navigation";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import type { RankId } from "@/lib/ranks";
 
 // --- Tipos ---
 
@@ -51,21 +50,6 @@ const SEND_MESSAGES: Record<string, string> = {
 
 export type SendResult = { ok: boolean; message: string };
 
-/** Una serie del amigo con el peso YA normalizado por su peso corporal: el
- *  servidor nunca envia kilos absolutos ni el peso del amigo. */
-export type FriendSet = {
-  /** id de la sesion a la que pertenece. */
-  s: string;
-  /** fecha ISO de la sesion. */
-  d: string;
-  /** exercise_id. */
-  e: string;
-  /** peso / peso corporal. */
-  w: number;
-  /** repeticiones. */
-  r: number;
-};
-
 export type FriendStats = {
   workouts?: number;
   first_workout?: string | null;
@@ -84,19 +68,8 @@ export type FriendProfile = {
   display_name: string;
   sex: "hombre" | "mujer";
   friends_since: string | null;
-  share_ranks: boolean;
   share_stats: boolean;
   stats: FriendStats;
-  sets: FriendSet[];
-};
-
-/** Rango medio cacheado de un amigo, para el punto de color de la home. Es un
- *  dato auto-declarado por el cliente del amigo (ver la migracion): sirve de
- *  adorno, no de fuente de verdad. */
-export type FriendRank = {
-  userId: string;
-  tier: RankId | null;
-  division: number | null;
 };
 
 export type FriendProfileError = {
@@ -116,8 +89,6 @@ export type FriendsContextValue = {
   outgoing: Friendship[];
   /** Atajo para el badge de "tienes solicitudes". */
   pendingCount: number;
-  /** Rango medio de cada amigo, indexado por su user_id. */
-  ranks: Record<string, FriendRank>;
   sendRequest: (username: string) => Promise<SendResult>;
   acceptRequest: (id: string) => Promise<void>;
   /** Rechaza una solicitud recibida, cancela una enviada o elimina un amigo:
@@ -158,43 +129,18 @@ export function FriendsProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const [items, setItems] = useState<Friendship[]>([]);
-  const [ranks, setRanks] = useState<Record<string, FriendRank>>({});
   const [hydrated, setHydrated] = useState(false);
   const userIdRef = useRef<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   const refresh = useCallback(async () => {
-    // Las dos RPC van juntas: la tira de amigos de la home necesita nombre y
-    // rango a la vez, y asi Realtime solo dispara un refresco.
-    const [list, ranksRes] = await Promise.all([
-      supabase.rpc("my_friendships"),
-      supabase.rpc("friends_ranks"),
-    ]);
+    const list = await supabase.rpc("my_friendships");
 
     if (list.error) {
       console.error("No se pudieron cargar las amistades:", list.error);
       return;
     }
     setItems(((list.data ?? []) as RpcRow[]).map(toFriendship));
-
-    if (ranksRes.error) {
-      console.error("No se pudieron cargar los rangos:", ranksRes.error);
-      return;
-    }
-    setRanks(
-      Object.fromEntries(
-        (
-          (ranksRes.data ?? []) as {
-            user_id: string;
-            rank_tier: RankId | null;
-            rank_division: number | null;
-          }[]
-        ).map((r) => [
-          r.user_id,
-          { userId: r.user_id, tier: r.rank_tier, division: r.rank_division },
-        ]),
-      ),
-    );
   }, [supabase]);
 
   // Carga inicial + suscripcion Realtime. Se re-comprueba en cada navegacion
@@ -216,7 +162,6 @@ export function FriendsProvider({ children }: { children: React.ReactNode }) {
           channelRef.current = null;
         }
         setItems([]);
-        setRanks({});
         setHydrated(true);
         return;
       }
@@ -387,7 +332,6 @@ export function FriendsProvider({ children }: { children: React.ReactNode }) {
       incoming,
       outgoing,
       pendingCount: incoming.length,
-      ranks,
       sendRequest,
       acceptRequest,
       removeFriendship,
@@ -399,7 +343,6 @@ export function FriendsProvider({ children }: { children: React.ReactNode }) {
       friends,
       incoming,
       outgoing,
-      ranks,
       sendRequest,
       acceptRequest,
       removeFriendship,

@@ -1,12 +1,23 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { X, Plus, Trash2, Search, Pencil, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAppShellPortal } from "@/lib/use-app-shell-portal";
+import { useEscapeToClose } from "@/lib/use-escape-to-close";
 import { Button } from "@/components/ui/button";
-import { usePantry, isReadyPlato } from "@/lib/store/pantry-store";
-import { useMeals, type MealType, type MealEntry, entryMacros, sumMacros, dayKey } from "@/lib/store/meals-store";
+import { usePantry, platoMacros, isReadyPlato } from "@/lib/store/pantry-store";
+import { useToast } from "@/components/ui/toast";
+import {
+  useMeals,
+  type MealType,
+  type MealEntry,
+  type BreakdownItem,
+  entryMacros,
+  splitMacros,
+  dayKey,
+} from "@/lib/store/meals-store";
 
 const HEALTH_DOT: Record<string, string> = {
   green: "bg-green-500",
@@ -24,13 +35,20 @@ type Props = {
 };
 
 export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
-  const { alimentos, platos } = usePantry();
+  const { alimentos, platos, hydrated: pantryHydrated, loadError, reload } = usePantry();
   const { entriesForDay, addEntry, removeEntry, updateEntryQuantity, updateEntry } = useMeals();
-  const [portalTarget] = useState<Element | null>(() =>
-    typeof document !== "undefined" ? document.getElementById("app-shell") : null,
-  );
+  const portalTarget = useAppShellPortal();
+  useEscapeToClose(open, onClose);
+  const { notify } = useToast();
   const [view, setView] = useState<"list" | "add">("list");
   const [search, setSearch] = useState("");
+  // Dos toques rapidos sobre el mismo alimento creaban dos entradas: el
+  // cierre de la vista no llega a tiempo de tapar el segundo click.
+  const addLockRef = useRef(false);
+  const abrirAñadir = () => {
+    addLockRef.current = false;
+    setView("add");
+  };
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -38,7 +56,8 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
   }, [open]);
 
   const entries = entriesForDay(date).filter(e => e.mealType === mealType);
-  const totals = useMemo(() => sumMacros(entries), [entries]);
+  // Cifra principal = lo comido; lo que sigue sin marcar se muestra aparte.
+  const { eaten: totals, planned } = useMemo(() => splitMacros(entries), [entries]);
 
   const isToday = date === dayKey();
   const dateLabel = isToday
@@ -56,9 +75,10 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
 
   const addAlimentoToMeal = (alimentoId: string) => {
     const a = alimentos.find(x => x.id === alimentoId);
-    if (!a) return;
+    if (!a || addLockRef.current) return;
+    addLockRef.current = true;
     addEntry({
-      date, mealType, name: a.name, brand: null, barcode: null,
+      date, mealType, name: a.name, brand: null, barcode: null, breakdown: null,
       // Racion del producto si OFF la dio; si no, 100 g.
       quantityG: a.servingG && a.servingG > 0 ? a.servingG : 100,
       kcal100: a.kcal, protein100: a.protein, fat100: a.fat, carbs100: a.carbs,
@@ -69,14 +89,15 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
 
   const addPlatoToMeal = (platoId: string) => {
     const p = platos.find(x => x.id === platoId);
-    if (!p) return;
+    if (!p || addLockRef.current) return;
+    addLockRef.current = true;
 
     // Plato "listo" (producto escaneado): sus macros ya son por 100 g y no tiene
     // ingredientes enlazados, asi que se registra como un alimento normal (por
     // gramos, sin desglose editable). Cantidad inicial: 100 g.
     if (isReadyPlato(p)) {
       addEntry({
-        date, mealType, name: p.name, brand: null, barcode: null,
+        date, mealType, name: p.name, brand: null, barcode: null, breakdown: null,
         // Racion del producto si OFF la dio; si no, 100 g.
         quantityG: p.servingG && p.servingG > 0 ? p.servingG : 100,
         kcal100: p.kcal, protein100: p.protein ?? 0, fat100: p.fat ?? 0, carbs100: p.carbs ?? 0,
@@ -86,31 +107,49 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
       return;
     }
 
+    // Solo ingredientes que siguen en la despensa: antes los que faltaban
+    // entraban como "Desconocido" a 0 kcal y rebajaban el plato en silencio.
     let totalP = 0, totalC = 0, totalF = 0, totalKcal = 0, totalWeight = 0;
-    const breakdown = p.foods.map(f => {
+    const breakdown: BreakdownItem[] = [];
+    let ausentes = 0;
+    for (const f of p.foods) {
       const a = alimentos.find(x => x.id === f.alimentoId);
-      const name = a ? a.name : "Desconocido";
-      const kcal100 = a ? a.kcal : 0;
-      const p100 = a ? a.protein : 0;
-      const c100 = a ? a.carbs : 0;
-      const f100 = a ? a.fat : 0;
+      if (!a) { ausentes++; continue; }
       const factor = f.quantityG / 100;
-      totalKcal += kcal100 * factor;
-      totalP += p100 * factor;
-      totalC += c100 * factor;
-      totalF += f100 * factor;
+      totalKcal += a.kcal * factor;
+      totalP += a.protein * factor;
+      totalC += a.carbs * factor;
+      totalF += a.fat * factor;
       totalWeight += f.quantityG;
-      return { id: f.alimentoId, name, quantityG: f.quantityG, kcal100, p100, c100, f100 };
-    });
+      breakdown.push({
+        id: f.alimentoId, name: a.name, quantityG: f.quantityG,
+        kcal100: a.kcal, p100: a.protein, c100: a.carbs, f100: a.fat,
+      });
+    }
 
     // Los campos *_100 son por 100 g: se normalizan por el peso real del
     // plato para que entryMacros (quantityG/100 * kcal100) devuelva el total
     // exacto y la cantidad mostrada sea el peso de verdad.
-    const per100 = totalWeight > 0 ? 100 / totalWeight : 0;
+    // Un plato sin peso no se puede registrar: `quantity_g > 0` es un CHECK en
+    // BD, asi que la fila se rechazaria despues de dar el alta por buena.
+    if (totalWeight <= 0) {
+      addLockRef.current = false;
+      notify("Este plato no tiene ingredientes con cantidad.", "error");
+      return;
+    }
+    if (ausentes > 0) {
+      notify(
+        `${ausentes} ingrediente${ausentes > 1 ? "s" : ""} ya no está${ausentes > 1 ? "n" : ""} en tu despensa y no se ha${ausentes > 1 ? "n" : ""} contado.`,
+        "info",
+      );
+    }
+
+    const per100 = 100 / totalWeight;
     addEntry({
       date, mealType, name: p.name,
       brand: null,
-      barcode: "__plato__:" + JSON.stringify(breakdown), // Store breakdown for individual editing
+      barcode: null,
+      breakdown,
       quantityG: Math.round(totalWeight),
       kcal100: totalKcal * per100,
       protein100: totalP * per100,
@@ -143,7 +182,7 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
             <div className="flex items-center gap-2">
               {view === "list" ? (
                 <button
-                  onClick={() => setView("add")}
+                  onClick={abrirAñadir}
                   className="flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground"
                 >
                   <Plus className="size-3.5" /> Añadir
@@ -166,11 +205,16 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
 
           {/* Totals */}
           {entries.length > 0 && (
-            <div className="mx-5 mb-3 flex gap-3 rounded-2xl bg-surface px-4 py-2.5 text-xs">
+            <div className="mx-5 mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-surface px-4 py-2.5 text-xs">
               <span className="font-semibold">{Math.round(totals.kcal)} kcal</span>
               <span className="text-muted-foreground">P: {Math.round(totals.protein)}g</span>
               <span className="text-muted-foreground">C: {Math.round(totals.carbs)}g</span>
               <span className="text-muted-foreground">G: {Math.round(totals.fat)}g</span>
+              {planned.kcal >= 1 && (
+                <span className="font-mono text-[11px] text-muted-foreground/70">
+                  +{Math.round(planned.kcal)} sin marcar
+                </span>
+              )}
             </div>
           )}
 
@@ -182,7 +226,7 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
                   <div className="py-10 text-center text-sm text-muted-foreground">
                     <p>Este apartado está vacío.</p>
                     <button
-                      onClick={() => setView("add")}
+                      onClick={abrirAñadir}
                       className="mt-3 rounded-full bg-accent px-4 py-2 text-xs font-semibold text-accent-foreground"
                     >
                       + Añadir alimento o plato
@@ -204,6 +248,19 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
 
             {view === "add" && (
               <div className="flex flex-col gap-3">
+                {loadError && (
+                  <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 text-xs">
+                    <p className="flex-1 text-muted-foreground">
+                      No se pudo cargar tu despensa.
+                    </p>
+                    <button
+                      onClick={reload}
+                      className="rounded-full bg-accent px-3 py-1.5 font-semibold text-accent-foreground"
+                    >
+                      Reintentar
+                    </button>
+                  </div>
+                )}
                 <label className="flex items-center gap-2.5 rounded-2xl border border-border bg-surface px-4 py-3">
                   <Search className="size-4 shrink-0 text-muted-foreground" />
                   <input
@@ -221,11 +278,16 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
                   <div>
                     <p className="mb-1.5 font-mono text-xs tracking-[0.2em] text-muted-foreground">PLATOS</p>
                     <div className="flex flex-col gap-2.5">
-                      {filteredPlatos.map(p => (
-                        <div
+                      {filteredPlatos.map(p => {
+                        // Contra la despensa actual: la copia guardada en el
+                        // plato se queda vieja al editar un ingrediente.
+                        const macros = platoMacros(p, alimentos);
+                        return (
+                        <button
                           key={p.id}
+                          type="button"
                           onClick={() => addPlatoToMeal(p.id)}
-                          className="flex items-center gap-3 rounded-3xl border border-border bg-surface p-3 cursor-pointer hover:bg-muted transition-colors"
+                          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-surface p-3 text-left hover:bg-muted transition-colors"
                         >
                           <div className="flex-1 min-w-0">
                             <p className="flex items-center gap-1.5 truncate text-sm font-semibold">
@@ -234,13 +296,17 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {isReadyPlato(p)
-                                ? `${Math.round(p.kcal)} kcal/100g · ${(p.ingredients ?? []).length} ingredientes`
-                                : `${p.kcal} kcal · ${p.foods.length} ingredientes`}
+                                ? `${Math.round(macros.kcal)} kcal/100g · ${(p.ingredients ?? []).length} ingredientes`
+                                : `${Math.round(macros.kcal)} kcal · ${p.foods.length - macros.missing} ingredientes`}
+                              {macros.missing > 0 && (
+                                <span className="text-red-500"> · {macros.missing} sin despensa</span>
+                              )}
                             </p>
                           </div>
                           <Plus className="size-4 shrink-0 text-muted-foreground" />
-                        </div>
-                      ))}
+                        </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -250,10 +316,11 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
                     <p className="mb-1.5 font-mono text-xs tracking-[0.2em] text-muted-foreground">ALIMENTOS</p>
                     <div className="flex flex-col gap-2.5">
                       {filteredAlimentos.map(a => (
-                        <div
+                        <button
                           key={a.id}
+                          type="button"
                           onClick={() => addAlimentoToMeal(a.id)}
-                          className="flex items-center gap-3 rounded-3xl border border-border bg-surface p-3 cursor-pointer hover:bg-muted transition-colors"
+                          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-surface p-3 text-left hover:bg-muted transition-colors"
                         >
                           <div className="flex-1 min-w-0">
                             <p className="flex items-center gap-1.5 truncate text-sm font-semibold">
@@ -263,14 +330,22 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
                             <p className="text-xs text-muted-foreground">{a.kcal} kcal/100g · P:{a.protein}g C:{a.carbs}g G:{a.fat}g</p>
                           </div>
                           <Plus className="size-4 shrink-0 text-muted-foreground" />
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>
                 )}
 
                 {filteredPlatos.length === 0 && filteredAlimentos.length === 0 && (
-                  <p className="py-8 text-center text-sm text-muted-foreground">Sin resultados para &ldquo;{search}&rdquo;</p>
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    {!pantryHydrated
+                      ? "Cargando tu despensa…"
+                      : loadError
+                        ? "Tu despensa no está disponible ahora mismo."
+                        : search
+                          ? `Sin resultados para “${search}”`
+                          : "Tu despensa está vacía. Añade alimentos desde el botón Despensa."}
+                  </p>
                 )}
               </div>
             )}
@@ -292,47 +367,50 @@ function EntryRow({
   onQuantityChange: (id: string, q: number) => void;
   onUpdateEntry: (id: string, data: Partial<MealEntry>) => void;
 }) {
-  const isPlato = entry.barcode?.startsWith("__plato__:");
-  const breakdown = useMemo(() => {
-    if (!isPlato) return [];
-    try {
-      return JSON.parse(entry.barcode!.replace("__plato__:", ""));
-    } catch {
-      return [];
-    }
-  }, [entry.barcode, isPlato]);
+  const breakdown = useMemo(() => entry.breakdown ?? [], [entry.breakdown]);
+  const isPlato = breakdown.length > 0;
 
   const [editing, setEditing] = useState(false);
-  
+
   // State for simple Alimento (g)
   const [draftQty, setDraftQty] = useState(() => entry.quantityG.toString());
-  
+
   // State for Plato breakdown
   const [draftBreakdown, setDraftBreakdown] = useState<Record<string, string>>({});
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setDraftQty(entry.quantityG.toString());
-    if (isPlato) {
-      const obj: Record<string, string> = {};
-      breakdown.forEach((b: { name: string; quantityG: number }, i: number) => obj[i] = b.quantityG.toString());
-      setDraftBreakdown(obj);
-    }
-  }, [entry.quantityG, breakdown, isPlato]);
+    const obj: Record<string, string> = {};
+    breakdown.forEach((b, i) => (obj[i] = b.quantityG.toString()));
+    setDraftBreakdown(obj);
+  }, [entry.quantityG, breakdown]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Suma en curso del editor de plato: `quantity_g > 0` es un CHECK en BD, asi
+  // que un plato a cero no se puede guardar (la fila la rechazaria Postgres
+  // despues de que la UI diera el cambio por bueno).
+  const draftTotal = isPlato
+    ? breakdown.reduce((acc, _b, i) => {
+        const n = Number(draftBreakdown[i]);
+        return acc + (Number.isFinite(n) && n > 0 ? Math.round(n) : 0);
+      }, 0)
+    : 0;
 
   const handleSaveSimple = () => {
     const n = Number(draftQty);
-    if (n > 0) onQuantityChange(entry.id, Math.round(n));
+    if (!Number.isFinite(n) || n <= 0) return;
+    onQuantityChange(entry.id, Math.round(n));
     setEditing(false);
   };
 
   const handleSavePlato = () => {
-    // Recalculate totals
+    if (draftTotal <= 0) return;
+
     let totalKcal = 0, totalP = 0, totalC = 0, totalF = 0, totalQty = 0;
-    const newBreakdown = breakdown.map((b: { kcal100: number; p100: number; c100: number; f100: number }, i: number) => {
+    const newBreakdown: BreakdownItem[] = breakdown.map((b, i) => {
       const n = Number(draftBreakdown[i]);
-      const qty = isNaN(n) || n < 0 ? 0 : Math.round(n);
+      const qty = Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
       const factor = qty / 100;
       totalKcal += b.kcal100 * factor;
       totalP += b.p100 * factor;
@@ -345,9 +423,9 @@ function EntryRow({
     // Igual que al añadir el plato: *_100 normalizado por el peso total. Sin
     // esto, guardar quantityG = peso total junto a los macros absolutos
     // multiplicaba las kcal mostradas por (peso/100).
-    const per100 = totalQty > 0 ? 100 / totalQty : 0;
+    const per100 = 100 / totalQty;
     onUpdateEntry(entry.id, {
-      barcode: "__plato__:" + JSON.stringify(newBreakdown),
+      breakdown: newBreakdown,
       quantityG: totalQty,
       kcal100: totalKcal * per100,
       protein100: totalP * per100,
@@ -359,15 +437,13 @@ function EntryRow({
 
   const handleCancel = () => {
     setDraftQty(entry.quantityG.toString());
-    if (isPlato) {
-      const obj: Record<string, string> = {};
-      breakdown.forEach((b: { name: string; quantityG: number }, i: number) => obj[i] = b.quantityG.toString());
-      setDraftBreakdown(obj);
-    }
+    const obj: Record<string, string> = {};
+    breakdown.forEach((b, i) => (obj[i] = b.quantityG.toString()));
+    setDraftBreakdown(obj);
     setEditing(false);
   };
 
-  const totalWeightStr = isPlato ? Math.round(breakdown.reduce((acc: number, b: { quantityG: number }) => acc + b.quantityG, 0)) + "g" : `${entry.quantityG}g`;
+  const totalWeightStr = `${entry.quantityG}g`;
 
   const handleToggleEaten = () => {
     onUpdateEntry(entry.id, { eaten: !entry.eaten });
@@ -430,7 +506,8 @@ function EntryRow({
           <span className="text-xs text-muted-foreground w-7">g</span>
           <button
             onClick={handleSaveSimple}
-            className="flex size-8 items-center justify-center rounded-full bg-foreground text-background hover:opacity-80 transition-opacity"
+            disabled={!(Number(draftQty) > 0)}
+            className="flex size-8 items-center justify-center rounded-full bg-foreground text-background transition-opacity hover:opacity-80 disabled:opacity-30"
           >
             <Check className="size-4" />
           </button>
@@ -443,11 +520,12 @@ function EntryRow({
       {editing && isPlato && (
         <div className="flex flex-col gap-2 border-t border-border">
           <div className="p-4 flex flex-col gap-2">
-            {breakdown.map((b: { name: string; quantityG: number }, i: number) => (
+            {breakdown.map((b, i) => (
               <div key={i} className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground flex-1 truncate">{b.name}</span>
                 <input
                   type="number"
+                  min="0"
                   value={draftBreakdown[i] || ""}
                   onChange={(e) => setDraftBreakdown(prev => ({ ...prev, [i]: e.target.value }))}
                   className="w-16 rounded-xl border border-border bg-background px-2 py-1.5 text-sm text-right outline-none"
@@ -460,8 +538,8 @@ function EntryRow({
             <button type="button" onClick={handleCancel} className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface hover:bg-muted transition-colors">
               <X className="size-4 text-muted-foreground" />
             </button>
-            <Button onClick={handleSavePlato} className="flex-1">
-              Guardar Plato
+            <Button onClick={handleSavePlato} disabled={draftTotal <= 0} className="flex-1">
+              {draftTotal > 0 ? `Guardar plato · ${draftTotal}g` : "Pon alguna cantidad"}
             </Button>
           </div>
         </div>

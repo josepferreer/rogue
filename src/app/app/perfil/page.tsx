@@ -9,7 +9,6 @@ import {
   Minus,
   Plus,
   RotateCcw,
-  Shield,
   Users,
   Weight,
   X,
@@ -17,21 +16,24 @@ import {
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useEffect } from "react";
-import { RanksPanel } from "@/components/profile/ranks-panel";
 import { PastelCard } from "@/components/ui/pastel-card";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { signOut } from "@/lib/supabase/actions";
+import { APP_VERSION } from "@/lib/version";
 import {
   SwitchRow,
   UnitToggle,
 } from "@/components/profile/preference-controls";
+import { NoaKeyCard } from "@/components/noa/noa-key-card";
+import { NoaPersonalityCard } from "@/components/noa/noa-personality-card";
 import { useRogue } from "@/lib/store/rogue-store";
 import { useFriends } from "@/lib/store/friends-store";
 import { formatWeight } from "@/lib/units";
 import { getDisplayName, type Sex } from "@/lib/workout/types";
 import { cn } from "@/lib/utils";
+import { useAppShellPortal } from "@/lib/use-app-shell-portal";
 
 const GOALS = ["Hipertrofia", "Fuerza", "Perder grasa", "Mantenerme"];
 
@@ -155,9 +157,7 @@ function EditIdentityModal({
   }, [open, profile.name, profile.username, preferences.displayNameSource]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const [portalTarget] = useState<Element | null>(() =>
-    typeof document !== "undefined" ? document.getElementById("app-shell") : null,
-  );
+  const portalTarget = useAppShellPortal();
 
   if (!open) return null;
 
@@ -293,9 +293,7 @@ function EditPhysicalModal({
   }, [open, profile]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const [portalTarget] = useState<Element | null>(() =>
-    typeof document !== "undefined" ? document.getElementById("app-shell") : null,
-  );
+  const portalTarget = useAppShellPortal();
 
   if (!open) return null;
 
@@ -376,10 +374,6 @@ function EditPhysicalModal({
           ))}
         </div>
 
-        <p className="text-[11px] text-muted-foreground">
-          Cambiar el peso o el sexo recalcula tus rangos al momento.
-        </p>
-
         <Button
           fullWidth
           onClick={() => {
@@ -398,16 +392,15 @@ function EditPhysicalModal({
   return portalTarget ? createPortal(content, portalTarget) : content;
 }
 
-type ProfileTab = "general" | "rangos" | "ajustes";
+type ProfileTab = "general" | "ajustes";
 
 const PROFILE_TABS: { id: ProfileTab; label: string }[] = [
   { id: "general", label: "General" },
-  { id: "rangos", label: "Rangos" },
   { id: "ajustes", label: "Ajustes" },
 ];
 
 function parseTab(value: string | undefined): ProfileTab {
-  return value === "rangos" || value === "ajustes" ? value : "general";
+  return value === "ajustes" ? value : "general";
 }
 
 export default function PerfilPage({
@@ -415,18 +408,17 @@ export default function PerfilPage({
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
-  const { profile, sessions, ranks, preferences, resetAll } = useRogue();
+  const { profile, stats, preferences, resetAll } = useRogue();
   const { friends, pendingCount: friendRequests } = useFriends();
   const friendsCount = friends.length;
   const [editOpen, setEditOpen] = useState(false);
   const [identityOpen, setIdentityOpen] = useState(false);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
-  // Pestana inicial via URL (?tab=rangos, usado por la home y el redirect de
-  // /rangos). El toggle local se guarda como override ligado al valor de la
-  // URL: si la URL cambia (p.ej. tocar "Perfil" en la barra estando en otra
-  // pestana), el override deja de aplicar y manda la URL — sin efectos de
-  // sincronizacion.
+  // Pestana inicial via URL (?tab=ajustes). El toggle local se guarda como
+  // override ligado al valor de la URL: si la URL cambia (p.ej. tocar "Perfil"
+  // en la barra estando en otra pestana), el override deja de aplicar y manda
+  // la URL — sin efectos de sincronizacion.
   const urlTab = parseTab(use(searchParams).tab);
   const [override, setOverride] = useState<{ base: ProfileTab; tab: ProfileTab } | null>(null);
   const tab = override && override.base === urlTab ? override.tab : urlTab;
@@ -441,7 +433,6 @@ export default function PerfilPage({
       .slice(0, 2)
       .join("")
       .toUpperCase() || "R";
-  const rankedCount = ranks.filter((r) => r.ranked).length;
 
   return (
     <div className="flex flex-col gap-6 pt-2 pb-4">
@@ -477,8 +468,6 @@ export default function PerfilPage({
           </button>
         ))}
       </div>
-
-      {tab === "rangos" && <RanksPanel />}
 
       {tab === "general" && (
         <>
@@ -521,20 +510,13 @@ export default function PerfilPage({
         </Link>
       </Section>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <PastelCard variant="neutral" className="flex flex-col gap-1.5">
           <Flame className="size-4 text-muted-foreground" />
           <p className="font-mono text-lg font-medium leading-none">
-            {sessions.length}
+            {stats.totalSessions}
           </p>
           <p className="text-[11px] text-muted-foreground">entrenos</p>
-        </PastelCard>
-        <PastelCard variant="neutral" className="flex flex-col gap-1.5">
-          <Shield className="size-4 text-muted-foreground" />
-          <p className="font-mono text-lg font-medium leading-none">
-            {rankedCount}
-          </p>
-          <p className="text-[11px] text-muted-foreground">rangos</p>
         </PastelCard>
         <PastelCard variant="neutral" className="flex flex-col gap-1.5">
           <Weight className="size-4 text-muted-foreground" />
@@ -559,9 +541,6 @@ export default function PerfilPage({
             { label: "Objetivo", value: profile.goal },
           ]}
         />
-        <p className="px-1 text-[11px] text-muted-foreground">
-          El peso corporal y el sexo se usan para calcular tus rangos de fuerza.
-        </p>
       </Section>
         </>
       )}
@@ -576,13 +555,15 @@ export default function PerfilPage({
         <UnitToggle />
       </Section>
 
+      <Section title="NOA">
+        <div className="flex flex-col gap-3">
+          <NoaKeyCard />
+          <NoaPersonalityCard />
+        </div>
+      </Section>
+
       <Section title="PRIVACIDAD">
         <PastelCard variant="neutral" className="flex flex-col divide-y divide-border p-0">
-          <SwitchRow
-            label="Compartir mis rangos"
-            description="Tus amigos ven tu rango y tu mapa corporal"
-            prefKey="shareRanks"
-          />
           <SwitchRow
             label="Compartir mis estadisticas"
             description="Entrenos, racha y kilometros de cardio"
@@ -609,7 +590,7 @@ export default function PerfilPage({
           />
           <SwitchRow
             label="Resumen semanal"
-            description="Progreso y rangos cada domingo"
+            description="Resumen de tu progreso cada domingo"
             prefKey="notifyWeeklySummary"
           />
         </PastelCard>
@@ -626,6 +607,10 @@ export default function PerfilPage({
           <RotateCcw className="size-4" />
           Reiniciar datos de demo
         </Button>
+        {/* Para poder saber que build ejecutaba el usuario cuando reporte algo. */}
+        <p className="pt-2 text-center font-mono text-[11px] text-muted-foreground/70">
+          Rogue {APP_VERSION}
+        </p>
       </div>
         </>
       )}

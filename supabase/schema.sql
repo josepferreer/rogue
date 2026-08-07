@@ -6,9 +6,14 @@
 -- historial de entrenamientos, favoritos y ejercicios recientes,
 -- e historial de cardio con GPS.
 --
--- Mientras no haya credenciales de Supabase, la app sigue en modo demo
--- (localStorage + src/data/exercises.es.json). Ver src/lib/exercises/repo.ts
--- y scripts/seed-supabase.mjs.
+-- ⚠️ Este fichero es el punto de partida, NO el estado actual de produccion:
+-- el esquema real ha derivado (columnas anadidas desde el SQL Editor) y hay
+-- cambios posteriores en supabase/migrations/. Reconciliar ambos esta
+-- pendiente; hasta entonces, la referencia es produccion + las migraciones.
+--
+-- La app lee el catalogo de ejercicios del dataset local
+-- (src/data/exercises.es.json, ver src/lib/exercises/repo.ts) aunque la tabla
+-- `exercises` este sembrada; scripts/seed-supabase.mjs la mantiene al dia.
 
 -- ============================================================
 -- 1. Catalogo de ejercicios (publico, solo lectura salvo service role)
@@ -77,6 +82,9 @@ create table if not exists profiles (
   notify_reminders boolean not null default true,
   notify_rest_end boolean not null default true,
   notify_weekly_summary boolean not null default false,
+  -- La despensa demo se siembra UNA vez: sin esta marca, vaciarla a mano la
+  -- repoblaba sola en la siguiente carga.
+  pantry_seeded boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -354,6 +362,10 @@ create table if not exists meal_entries (
   fat_100 numeric,
   carbs_100 numeric,
   eaten boolean not null default false,
+  -- Desglose por ingrediente cuando la entrada es un plato de la despensa
+  -- ({id, name, quantityG, kcal100, p100, c100, f100}[]); null en alimentos
+  -- sueltos. Antes viajaba serializado dentro de `barcode`.
+  breakdown jsonb check (breakdown is null or jsonb_typeof(breakdown) = 'array'),
   created_at timestamptz not null default now()
 );
 

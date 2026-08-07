@@ -28,8 +28,6 @@ export type Preferences = {
   notifyRestEnd: boolean;
   /** Resumen semanal de progreso. */
   notifyWeeklySummary: boolean;
-  /** Deja que tus amigos vean tus rangos (perfil y punto de color en la home). */
-  shareRanks: boolean;
   /** Deja que tus amigos vean tus contadores: entrenos, racha y km de cardio. */
   shareStats: boolean;
 };
@@ -85,7 +83,7 @@ export const WEEKDAY_LABELS: Record<number, string> = {
 /** Una serie efectivamente registrada en una sesion. */
 export type LoggedSet = {
   exerciseId: string;
-  /** Categoria del ejercicio (para mostrar tags de historial), no la region de rango. */
+  /** Categoria del ejercicio, para mostrar tags de historial. */
   grupo: ExerciseCategory;
   weightKg: number;
   reps: number;

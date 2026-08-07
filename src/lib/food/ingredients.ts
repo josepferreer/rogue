@@ -9,14 +9,50 @@ type OffProduct = {
   ingredients?: unknown;
   ingredients_text_es?: unknown;
   ingredients_text?: unknown;
-  nova_group?: unknown;
   categories_tags?: unknown;
   serving_size?: unknown;
 };
 
-// Categorias de OFF que delatan un plato/producto preparado.
-const MEAL_HINT =
-  /meal|salad|prepared|sandwich|pizza|sushi|soup|dish|ready|plate|wrap|lasagn|paella|risotto|hummus|dip/i;
+// Categorias canonicas de OFF (tags `en:`) que identifican un plato preparado:
+// lo que te comes tal cual, no un ingrediente que usas para cocinar.
+//
+// Se comparan EXACTAS a proposito. Antes esto era una regex por substring mas
+// `nova === 4` o ">= 4 ingredientes", y eso marcaba como "plato listo" a
+// cualquier ultraprocesado: la Nutella salia plato listo por tener 8
+// ingredientes. La categoria es el unico dato de OFF que habla de esto.
+const MEAL_TAGS = new Set([
+  "en:meals",
+  "en:prepared-salads",
+  "en:pasta-salads",
+  "en:pasta-dishes",
+  "en:rice-dishes",
+  "en:meals-with-fish",
+  "en:salads-with-fish",
+  "en:pizzas",
+  "en:sandwiches",
+  "en:sushi",
+  "en:soups",
+  "en:ready-made-meals",
+  "en:lasagne",
+  "en:paella",
+  "en:risotto",
+]);
+
+// Materia prima que OFF etiqueta ADEMAS como "meals" (una bolsa de rucula sale
+// con en:meals y en:prepared-salads). Si aparece alguna de estas, gana: es un
+// alimento. Exactas tambien: "en:meats-and-their-products" no debe vetar una
+// ensalada de pasta con jamon.
+const RAW_TAGS = new Set([
+  "en:vegetables",
+  "en:leaf-vegetables",
+  "en:fruits",
+  "en:canned-fishes",
+  "en:tunas",
+  "en:cheeses",
+  "en:yogurts",
+  "en:spreads",
+  "en:pastas",
+]);
 
 /** Ingrediente con nombre y, si OFF lo permite, gramos estimados en la racion. */
 export type ParsedIngredient = { name: string; grams?: number };
@@ -102,14 +138,12 @@ export function parseOffIngredients(product: OffProduct | null | undefined): Off
     if (ingredients.length >= 25) break;
   }
 
-  const nova = Number(product.nova_group);
   const cats = Array.isArray(product.categories_tags)
     ? (product.categories_tags as unknown[]).filter((c): c is string => typeof c === "string")
     : [];
-  const mealHint = cats.some((c) => MEAL_HINT.test(c));
 
   const isReadyMeal =
-    ingredients.length >= 2 && (nova === 4 || mealHint || ingredients.length >= 4);
+    cats.some((c) => MEAL_TAGS.has(c)) && !cats.some((c) => RAW_TAGS.has(c));
 
   return { ingredients, isReadyMeal, servingG };
 }

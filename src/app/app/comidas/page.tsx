@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronRight, Coffee, Cookie, Moon, Utensils, Barcode, Book, X, CalendarDays, Pencil } from "lucide-react";
 import { PastelCard } from "@/components/ui/pastel-card";
@@ -12,15 +12,17 @@ import { NutritionGoalsModal } from "@/components/food/nutrition-goals-modal";
 import { PantryProvider, usePantry } from "@/lib/store/pantry-store";
 import { BarcodeScanner } from "@/components/food/barcode-scanner";
 import { useToast } from "@/components/ui/toast";
-import { parseOffIngredients } from "@/lib/food/ingredients";
+import { lookupBarcode, lookupErrorMessage } from "@/lib/food/lookup";
+import type { FoodProduct } from "@/lib/food/types";
 import {
   dayKey,
   MEAL_TYPES,
-  sumMacros,
+  splitMacros,
   useMeals,
   type MealType,
 } from "@/lib/store/meals-store";
 import { cn } from "@/lib/utils";
+import { useAppShellPortal } from "@/lib/use-app-shell-portal";
 
 const MEAL_META: Record<
   MealType,
@@ -66,7 +68,7 @@ function formatDayLabel(key: string): string {
 }
 
 export default function ComidasPage() {
-  const { goals, entriesForDay } = useMeals();
+  const { goals, entriesForDay, ensureLoadedFrom } = useMeals();
 
   const [selected, setSelected] = useState(() => dayKey());
   const [pantryOpen, setPantryOpen] = useState(false);
@@ -75,8 +77,15 @@ export default function ComidasPage() {
   const [activeMeal, setActiveMeal] = useState<{ type: MealType; label: string } | null>(null);
 
   const week = useMemo(() => buildWeek(selected), [selected]);
+
+  // El diario se carga en una ventana de 3 meses; al elegir un dia anterior
+  // hay que pedir el tramo que falte antes de pintarlo como vacio.
+  useEffect(() => {
+    ensureLoadedFrom(week[0].key);
+  }, [week, ensureLoadedFrom]);
+
   const dayEntries = entriesForDay(selected);
-  const totals = useMemo(() => sumMacros(dayEntries.filter(e => e.eaten)), [dayEntries]);
+  const { eaten: totals, planned } = useMemo(() => splitMacros(dayEntries), [dayEntries]);
 
   const kcalPct = goals.kcal > 0 ? Math.min(100, (totals.kcal / goals.kcal) * 100) : 0;
   const kcalLeft = Math.max(0, Math.round(goals.kcal - totals.kcal));
@@ -103,11 +112,16 @@ export default function ComidasPage() {
       {/* Selector semanal */}
       <div className="flex gap-1.5">
         {week.map((d) => (
-          <div
+          // <button> y no <div>: la tira de dias se navega con teclado y los
+          // lectores de pantalla tienen que anunciar cual esta elegido.
+          <button
             key={d.key}
+            type="button"
             onClick={() => setSelected(d.key)}
+            aria-pressed={d.isSelected}
+            aria-label={formatDayLabel(d.key)}
             className={cn(
-              "flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-2 transition-colors cursor-pointer",
+              "flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-2 transition-colors",
               d.isSelected
                 ? "bg-accent text-accent-foreground"
                 : "text-muted-foreground hover:bg-muted",
@@ -122,7 +136,7 @@ export default function ComidasPage() {
             >
               {d.dayNum}
             </span>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -141,6 +155,9 @@ export default function ComidasPage() {
           <div className="flex items-center gap-2">
             <span className="font-mono text-[11px] text-muted-foreground">
               quedan {kcalLeft}
+              {planned.kcal >= 1 && (
+                <span className="opacity-60"> · +{Math.round(planned.kcal)} sin marcar</span>
+              )}
             </span>
             <button
               type="button"
@@ -188,12 +205,17 @@ export default function ComidasPage() {
         const meta = MEAL_META[type];
         const Icon = meta.icon;
         const items = dayEntries.filter((e) => e.mealType === type);
-        const mealKcal = Math.round(sumMacros(items).kcal);
+        // Mismo criterio que el resumen del dia: la cifra es lo comido y lo
+        // que sigue sin marcar se muestra aparte, no sumado.
+        const split = splitMacros(items);
+        const mealKcal = Math.round(split.eaten.kcal);
+        const plannedKcal = Math.round(split.planned.kcal);
         return (
           <PastelCard
             key={type}
+            as="button"
             variant={meta.variant}
-            className="rounded-3xl transition-transform cursor-pointer active:scale-[0.98]"
+            className="rounded-3xl transition-transform active:scale-[0.98]"
             onClick={() => setActiveMeal({ type, label })}
           >
             <div className="flex items-center justify-between">
@@ -203,7 +225,11 @@ export default function ComidasPage() {
               </div>
               <div className="flex items-center gap-1">
                 <span className="font-mono text-sm opacity-80">
-                  {items.length > 0 ? `${mealKcal} kcal` : "vacío"}
+                  {items.length === 0
+                    ? "vacío"
+                    : plannedKcal >= 1
+                      ? `${mealKcal} kcal · +${plannedKcal}`
+                      : `${mealKcal} kcal`}
                 </span>
                 <ChevronRight className="size-4 opacity-60" />
               </div>
@@ -263,66 +289,42 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
   const { addAlimento, addPlato } = usePantry();
   const { notify } = useToast();
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [scannedProduct, setScannedProduct] = useState<{
-    product_name?: string;
-    nutriscore_grade?: string;
-    nutriments?: Record<string, number>;
-    ingredients_text?: string;
-    serving_size?: string;
-  } | null>(null);
+  const [scannedProduct, setScannedProduct] = useState<FoodProduct | null>(null);
   const [loading, setLoading] = useState(false);
-  const [portalTarget] = useState<Element | null>(() =>
-    typeof document !== "undefined" ? document.getElementById("app-shell") : null,
-  );
+  const portalTarget = useAppShellPortal();
 
-  // Ingredientes + deteccion de "producto listo" del producto escaneado.
-  const parsed = useMemo(() => parseOffIngredients(scannedProduct), [scannedProduct]);
-
+  // El codigo de barras se resuelve SIEMPRE en el servidor (`/api/food/...`):
+  // sesion, limite de peticiones y solo los campos que usamos.
   const handleScan = async (barcode: string) => {
     setScannerOpen(false);
     setLoading(true);
-    try {
-      const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json`);
-      const data = await res.json();
-      if (data.status === 1 && data.product) {
-        setScannedProduct(data.product);
-      } else {
-        notify("Producto no encontrado en la base de datos.", "error");
-      }
-    } catch {
-      notify("Error al buscar el código de barras.", "error");
-    } finally {
-      setLoading(false);
+    const result = await lookupBarcode(barcode);
+    setLoading(false);
+    if (!result.ok) {
+      notify(lookupErrorMessage(result.reason), "error");
+      return;
+    }
+    setScannedProduct(result.product);
+    if (result.product.kcal100 == null) {
+      notify("Open Food Facts no da las calorías de este producto: revísalas.", "info");
     }
   };
 
   // Macros por 100 g + healthScore comunes a ambos tipos de guardado.
-  const productMacros = () => {
-    const n = scannedProduct?.nutriments;
-    let healthScore: "green" | "yellow" | "orange" | "red" | undefined = undefined;
-    if (scannedProduct?.nutriscore_grade) {
-      const grade = scannedProduct.nutriscore_grade.toLowerCase();
-      if (grade === "a" || grade === "b") healthScore = "green";
-      else if (grade === "c") healthScore = "yellow";
-      else if (grade === "d") healthScore = "orange";
-      else if (grade === "e") healthScore = "red";
-    }
-    return {
-      name: scannedProduct?.product_name || "Desconocido",
-      kcal: n?.["energy-kcal_100g"] || 0,
-      protein: n?.["proteins_100g"] || 0,
-      carbs: n?.["carbohydrates_100g"] || 0,
-      fat: n?.["fat_100g"] || 0,
-      healthScore,
-      ingredients: parsed.ingredients.length > 0 ? parsed.ingredients : undefined,
-      servingG: parsed.servingG > 0 ? parsed.servingG : undefined,
-    };
-  };
+  const productMacros = (p: FoodProduct) => ({
+    name: p.name,
+    kcal: p.kcal100 ?? 0,
+    protein: p.protein100 ?? 0,
+    carbs: p.carbs100 ?? 0,
+    fat: p.fat100 ?? 0,
+    healthScore: p.healthScore ?? undefined,
+    ingredients: p.ingredients.length > 0 ? p.ingredients : undefined,
+    servingG: p.servingG > 0 ? p.servingG : undefined,
+  });
 
   const saveAsAlimento = () => {
     if (!scannedProduct) return;
-    const m = productMacros();
-    addAlimento(m);
+    addAlimento(productMacros(scannedProduct));
     setScannedProduct(null);
     notify("¡Alimento guardado en la despensa!", "success");
   };
@@ -332,7 +334,7 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
   // por gramos como un alimento, pero vive en la pestana Platos.
   const saveAsPlato = () => {
     if (!scannedProduct) return;
-    const m = productMacros();
+    const m = productMacros(scannedProduct);
     addPlato({
       name: m.name,
       kcal: m.kcal,
@@ -383,8 +385,11 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
             >
               <div className="flex items-center justify-between px-5 pb-3 pt-4">
                 <div className="flex flex-col gap-1 min-w-0">
-                  <p className="font-semibold line-clamp-1">{scannedProduct.product_name || "Producto desconocido"}</p>
-                  {parsed.isReadyMeal && (
+                  <p className="font-semibold line-clamp-1">{scannedProduct.name}</p>
+                  {scannedProduct.brand && (
+                    <p className="text-xs text-muted-foreground line-clamp-1">{scannedProduct.brand}</p>
+                  )}
+                  {scannedProduct.isReadyMeal && (
                     <span className="w-fit rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-foreground">
                       Producto listo
                     </span>
@@ -403,45 +408,52 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
               <div className="px-5 pb-5 flex flex-col gap-4">
                 <div className="flex gap-5 text-sm">
                   <div className="flex flex-col">
-                    <span className="font-semibold">{scannedProduct.nutriments?.["energy-kcal_100g"] || 0}</span>
+                    <span className="font-semibold">{scannedProduct.kcal100 ?? "—"}</span>
                     <span className="text-[10px] text-muted-foreground">Kcal/100g</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="font-semibold">{scannedProduct.nutriments?.["proteins_100g"] || 0}g</span>
+                    <span className="font-semibold">{scannedProduct.protein100 ?? 0}g</span>
                     <span className="text-[10px] text-muted-foreground">Proteína</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="font-semibold">{scannedProduct.nutriments?.["carbohydrates_100g"] || 0}g</span>
+                    <span className="font-semibold">{scannedProduct.carbs100 ?? 0}g</span>
                     <span className="text-[10px] text-muted-foreground">Carbos</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="font-semibold">{scannedProduct.nutriments?.["fat_100g"] || 0}g</span>
+                    <span className="font-semibold">{scannedProduct.fat100 ?? 0}g</span>
                     <span className="text-[10px] text-muted-foreground">Grasas</span>
                   </div>
                 </div>
 
-                {scannedProduct.nutriscore_grade && (
+                {scannedProduct.kcal100 == null && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Open Food Facts no declara las calorías de este producto. Se
+                    guardará a 0 kcal: edítalo en la despensa.
+                  </p>
+                )}
+
+                {scannedProduct.nutriscore && (
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">Nutriscore:</span>
                     <span className={cn(
                       "px-2 py-0.5 rounded-md text-[10px] font-bold text-white uppercase",
-                      ['a', 'b'].includes(scannedProduct.nutriscore_grade.toLowerCase()) ? "bg-green-500" :
-                      scannedProduct.nutriscore_grade.toLowerCase() === 'c' ? "bg-yellow-400 text-yellow-900" :
-                      scannedProduct.nutriscore_grade.toLowerCase() === 'd' ? "bg-orange-500" :
+                      scannedProduct.healthScore === "green" ? "bg-green-500" :
+                      scannedProduct.healthScore === "yellow" ? "bg-yellow-400 text-yellow-900" :
+                      scannedProduct.healthScore === "orange" ? "bg-orange-500" :
                       "bg-red-500"
                     )}>
-                      {scannedProduct.nutriscore_grade}
+                      {scannedProduct.nutriscore}
                     </span>
                   </div>
                 )}
 
-                {parsed.ingredients.length > 0 && (
+                {scannedProduct.ingredients.length > 0 && (
                   <div className="flex flex-col gap-1.5">
                     <p className="font-mono text-[11px] tracking-[0.2em] text-muted-foreground">
-                      INGREDIENTES{parsed.servingG > 0 && ` · RACIÓN ${parsed.servingG} G`}
+                      INGREDIENTES{scannedProduct.servingG > 0 && ` · RACIÓN ${scannedProduct.servingG} G`}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
-                      {parsed.ingredients.map((ing, i) => (
+                      {scannedProduct.ingredients.map((ing, i) => (
                         <span
                           key={i}
                           className="rounded-full bg-surface border border-border px-2.5 py-1 text-[11px] text-muted-foreground"
@@ -462,7 +474,7 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
                 {/* La opcion sugerida por la deteccion va primero/destacada; la
                     otra queda como alternativa por si el usuario discrepa. */}
                 <div className="flex flex-col gap-2">
-                  {parsed.isReadyMeal ? (
+                  {scannedProduct.isReadyMeal ? (
                     <>
                       <Button fullWidth onClick={saveAsPlato}>
                         Guardar como plato listo

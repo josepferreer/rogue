@@ -36,8 +36,12 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Se permite el zoom: bloquearlo incumple WCAG 1.4.4 y WKWebView (iOS) lo
+  // respeta, asi que dejaba sin ampliar a quien lo necesita. El doble toque
+  // accidental que se queria evitar ya no ocurre: los controles cumplen el
+  // tamano minimo tactil y el layout no depende de un ancho fijo.
+  maximumScale: 5,
+  userScalable: true,
   viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f6f6f8" },

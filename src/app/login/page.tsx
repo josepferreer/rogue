@@ -38,12 +38,12 @@ export default function LoginPage() {
 
       <div className="relative z-10 mb-8">
         <h1 className="text-xl font-semibold tracking-tight">
-          Sube de rango
+          Entrena y progresa
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {mode === "login"
-            ? "Registra cada entreno y escala de Principiante a Maestro, musculo a musculo."
-            : "Crea tu cuenta y empieza a subir de rango desde tu primera serie."}
+            ? "Registra cada entreno y sigue tu progreso serie a serie."
+            : "Crea tu cuenta y empieza a registrar tus entrenos hoy mismo."}
         </p>
       </div>
 

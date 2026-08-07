@@ -22,9 +22,14 @@ export async function GET(
   if (!rateLimit(`food:${userId}`, 60, 60_000)) return tooManyRequests();
 
   const { barcode } = await params;
-  const product = await fetchOffProduct(barcode);
-  if (!product) {
+  const result = await fetchOffProduct(barcode);
+  if (result.status === "not_found") {
     return Response.json({ error: "not_found" }, { status: 404 });
   }
-  return Response.json({ product });
+  if (result.status === "unavailable") {
+    // 503 y no 404: el producto puede existir perfectamente, es OFF quien no
+    // contesta. La UI lo dice de otra forma y invita a reintentar.
+    return Response.json({ error: "upstream_unavailable" }, { status: 503 });
+  }
+  return Response.json({ product: result.product });
 }

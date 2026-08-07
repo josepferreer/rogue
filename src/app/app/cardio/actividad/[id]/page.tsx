@@ -1,11 +1,18 @@
 "use client";
 
-import { use, useMemo } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ArrowLeft, MapPin, Activity, Clock, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCardio } from "@/lib/store/cardio-store";
+import { createClient } from "@/lib/supabase/client";
+import { estimateKcal } from "@/lib/cardio/estimates";
+import { useRogue } from "@/lib/store/rogue-store";
+import {
+  fetchCoordinates,
+  useCardio,
+  type Coordinate,
+} from "@/lib/store/cardio-store";
 
 const MapView = dynamic(() => import("@/components/cardio/map-view"), {
   ssr: false,
@@ -32,11 +39,36 @@ export default function ActivityDetailsPage({
   const { id } = use(params);
   const router = useRouter();
   const { history } = useCardio();
+  const { profile } = useRogue();
 
   const session = useMemo(
     () => history.find((s) => s.id === id),
     [history, id],
   );
+
+  // La polilinea NO viene en el listado (son ~130 KB por ruta y solo se pinta
+  // aqui): se pide por id al abrir el detalle. Si la sesion acaba de terminar,
+  // ya la trae en memoria y no hace falta consultar.
+  const [fetched, setFetched] = useState<Coordinate[] | null>(null);
+  // Derivado, no copiado: si la sesion ya trae la traza (acaba de terminar) se
+  // usa esa; si no, la que se haya descargado.
+  const coordinates = session?.coordinates ?? fetched ?? [];
+
+  useEffect(() => {
+    if (session?.coordinates) return;
+    let vigente = true;
+    const supabase = createClient();
+    fetchCoordinates(supabase, id)
+      .then((puntos) => {
+        if (vigente) setFetched(puntos);
+      })
+      .catch((err) => {
+        console.error("No se pudo cargar la ruta:", err);
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [id, session?.coordinates]);
 
   if (!session) {
     return (
@@ -56,8 +88,9 @@ export default function ActivityDetailsPage({
   const paceDisplay =
     pace > 0 ? `${paceMin}'${paceSec.toString().padStart(2, "0")}"` : "--";
 
-  // Estimación muy básica de calorías para simular
-  const calories = Math.round(session.durationSec * 0.15); // ~9 kcal/min
+  // Misma estimación que el resumen de cardio: antes esta pantalla usaba una
+  // fórmula distinta (por tiempo) y la misma ruta mostraba dos cifras.
+  const calories = estimateKcal(session.distanceKm, profile.bodyweightKg);
 
   const dateFormatted = new Intl.DateTimeFormat("es-ES", {
     weekday: "long",
@@ -84,9 +117,11 @@ export default function ActivityDetailsPage({
         </div>
       </div>
 
-      {/* Map container */}
-      <div className="relative h-[300px] w-full overflow-hidden rounded-3xl border border-border shadow-sm">
-        <MapView coordinates={session.coordinates} snapToRoads />
+      {/* Map container. Altura relativa a la pantalla (debajo sobraba hueco en
+          moviles altos), con topes para que no se coma la vista en pantallas
+          bajas ni se estire de mas en desktop. */}
+      <div className="relative h-[46dvh] min-h-[300px] max-h-[520px] w-full overflow-hidden rounded-3xl border border-border shadow-sm">
+        <MapView coordinates={coordinates} cleanOutliers />
       </div>
 
       {/* Stats Grid */}
