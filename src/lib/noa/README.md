@@ -94,13 +94,45 @@ claves; nunca redacta prompt.
 2. Registrarlo en `modules/index.ts` (`ALL_MODULES`).
    El núcleo de NOA no se toca.
 
+## Canal de vuelta al cliente
+
+NOA escribe en **servidor**, así que los stores del móvil no se enteran solos.
+Cada write lleva `refetch: NoaRefetchScope` en su `ToolDef`; el executor emite
+`{ type: "refetch", scope }` tras ejecutarlo con éxito y el dispatcher lo
+traduce a la recarga del store correspondiente (`useMeals().reload`,
+`useRogue().reloadRoutine`). **Al añadir un write nuevo, ponle su `refetch`** o
+el usuario verá la pantalla sin actualizar y creerá que no ha pasado nada.
+
+`cardio` todavía no tiene recarga en su store: ese scope se ignora a propósito
+en vez de fingir que refresca.
+
+La conversación vive en el componente `Noa` (no en la hoja, que se desmonta al
+cerrar) y se persiste en `sessionStorage`.
+
+## Intent en dos etapas
+
+1. **Palabras clave** (gratis, determinista). Puntúa por número de aciertos y
+   se queda con los 4 módulos mejores: con 6 módulos registrados, una frase
+   larga casaba media app y le metía a Gemini decenas de tools irrelevantes.
+2. **Router con Gemini** (`intent/router.ts`), SOLO si la etapa 1 se queda a
+   cero. Es el caso que más dolía: "¿cómo lo llevo?" no casa nada y NOA
+   respondía sin herramientas, o sea sin datos. Cuesta una llamada extra a la
+   clave del usuario, por eso no se usa cuando la etapa 1 ya acertó. Si falla,
+   el turno sigue como conversación general.
+
 ## Pendiente
 
-- Módulos: nutrition, cardio, statistics, profile, calendar, notifications,
-  library, settings, y **heatmap** (aún no existe en Rogue).
+- Módulos: **heatmap** (la funcionalidad no existe todavía en Rogue).
 - Conectar writes a la cola persistente `SyncOp` (idempotente, offline).
-- UI de chat + dispatcher de `NoaClientAction` en el cliente.
-- Etapa 2 del Intent Analyzer (router con Gemini Flash) para casos ambiguos.
+- `openModal`, `prefillForm` y `highlight`: no hay registro de modales por
+  nombre, formularios prellenables ni anclas. El dispatcher avisa en vez de
+  fingir.
+- El store de cardio no expone recarga, así que `deleteCardioSession` no lleva
+  `refetch`: tras borrar una ruta hay que recargar para verlo.
+- `rateLimit` cuenta por instancia (Map en memoria): en serverless el límite
+  real se multiplica por el número de instancias. Con BYOK la cuota que se
+  gasta es la del propio usuario, así que se deja así a sabiendas en vez de
+  meter una ida y vuelta a BD en cada turno.
 - Migraciones `20260806_noa_byok.sql` y `20260806_noa_personality.sql`
   aplicadas en Supabase.
 ```

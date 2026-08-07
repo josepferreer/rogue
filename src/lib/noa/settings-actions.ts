@@ -110,6 +110,55 @@ export async function saveNoaPersonality(
   return { ok: true };
 }
 
+// —— Uso ————————————————————————————————————————————————————————
+
+export interface NoaUsage {
+  /** Herramientas ejecutadas hoy. null = la auditoría aún no está migrada. */
+  hoy: number | null;
+  /** Herramientas ejecutadas en los últimos 7 días. */
+  semana: number | null;
+}
+
+/**
+ * Cuánto ha usado NOA el usuario, leído de la auditoría.
+ *
+ * Cuenta EJECUCIONES DE HERRAMIENTAS, no peticiones a Gemini: son cosas
+ * distintas y un turno puede gastar varias llamadas al modelo. Google no expone
+ * el consumo de una clave, así que esto es lo más cercano y honesto que se
+ * puede enseñar sin inventar un número.
+ */
+export async function getNoaUsage(): Promise<NoaUsage> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { hoy: null, semana: null };
+
+  const ahora = new Date();
+  const inicioHoy = new Date(
+    ahora.getFullYear(),
+    ahora.getMonth(),
+    ahora.getDate(),
+  ).toISOString();
+  const hace7 = new Date(ahora.getTime() - 7 * 86400_000).toISOString();
+
+  const [hoy, semana] = await Promise.all([
+    supabase
+      .from("noa_tool_calls")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", inicioHoy),
+    supabase
+      .from("noa_tool_calls")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", hace7),
+  ]);
+
+  // Tabla sin migrar u otro fallo: se devuelve null y la UI no enseña la
+  // sección, en vez de un cero que parecería un dato real.
+  if (hoy.error || semana.error) return { hoy: null, semana: null };
+  return { hoy: hoy.count ?? 0, semana: semana.count ?? 0 };
+}
+
 /** Borra la clave (desactiva NOA para el usuario). */
 export async function clearNoaKey(): Promise<{ ok: boolean }> {
   const supabase = await createClient();

@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ToolRegistry } from "@/lib/noa/registry";
 import { ALL_MODULES } from "@/lib/noa/modules";
 import { analyzeIntent } from "@/lib/noa/intent/analyzer";
+import { routeModules } from "@/lib/noa/intent/router";
 import { buildContext, renderContextBlock } from "@/lib/noa/context/builder";
 import { getUserGeminiKey } from "@/lib/noa/keys";
 import { getUserPersonality, renderPersonalityBlock } from "@/lib/noa/personality";
@@ -62,7 +63,6 @@ export async function runNoa(input: RunNoaInput): Promise<NoaResponse> {
     ? analyzeIntent(lastUserMsg, registry.modules()).modules
     : [];
   const intent = analyzeIntent(input.message, registry.modules(), recentModules);
-  const tools = registry.select(intent.modules);
 
   // 2. BYOK: sin clave, NOA no llama a Gemini.
   const apiKey = await getUserGeminiKey(supabase, input.userId);
@@ -81,8 +81,16 @@ export async function runNoa(input: RunNoaInput): Promise<NoaResponse> {
     };
   }
 
+  // 2b. Etapa 2 del Intent Analyzer: si las palabras clave no dieron nada
+  // ("¿cómo lo llevo?"), se le pregunta a Gemini qué módulos hacen falta antes
+  // de responder a ciegas. Solo en ese caso: cuesta una llamada.
+  const modules = intent.general
+    ? await routeModules(input.message, registry.modules(), apiKey)
+    : intent.modules;
+  const tools = registry.select(modules);
+
   // 3. Context Builder: snapshot compacto de los módulos en scope.
-  const snapshot = await buildContext(registry, intent.modules, ctx);
+  const snapshot = await buildContext(registry, modules, ctx);
   const contextBlock = renderContextBlock(snapshot);
 
   // 3b. Personalidad: SOLO forma (tono, cercanía, longitud). Se inserta entre
@@ -113,7 +121,7 @@ export async function runNoa(input: RunNoaInput): Promise<NoaResponse> {
     actions: loop.actions,
     pending: loop.pending,
     meta: {
-      modules: intent.modules,
+      modules,
       usedTools: loop.usedTools,
       iterations: loop.iterations,
     },
@@ -153,7 +161,15 @@ export async function runNoaConfirm(input: RunNoaConfirmInput): Promise<NoaRespo
   const outcome = await runTool(tool, input.args, ctx);
   switch (outcome.status) {
     case "result":
-      return { reply: "Hecho ✅", actions: [], pending: [], meta };
+      // Este es el camino habitual de un write: el usuario confirmó y se acaba
+      // de escribir. Sin el refetch, la pantalla que tiene delante sigue
+      // enseñando los datos de antes.
+      return {
+        reply: "Hecho ✅",
+        actions: outcome.refetch ? [outcome.refetch] : [],
+        pending: [],
+        meta,
+      };
     case "action":
       return { reply: "Hecho ✅", actions: [outcome.action], pending: [], meta };
     case "error":

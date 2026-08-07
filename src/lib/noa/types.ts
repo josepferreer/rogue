@@ -63,8 +63,16 @@ export interface NoaToolContext {
  */
 export const CLIENT_ACTION_VERSION = 1 as const;
 
+/**
+ * Partes de la app que el cliente sabe recargar. Cuando NOA escribe en el
+ * servidor, los stores del móvil no se enteran: sin esto, registrabas una
+ * comida y el diario seguía enseñando los datos viejos hasta recargar la app.
+ */
+export type NoaRefetchScope = "nutrition" | "training" | "cardio" | "profile";
+
 export type NoaClientAction =
   | { type: "navigate"; path: string }
+  | { type: "refetch"; scope: NoaRefetchScope }
   | { type: "openModal"; modal: string; props?: Record<string, unknown> }
   | { type: "startWorkout"; routineDayId?: string }
   | { type: "startCardio" }
@@ -102,6 +110,13 @@ export interface ToolDef<
   scopes?: string[];
   /** JSON Schema del resultado, para un contexto predecible. */
   returns?: JsonSchema;
+
+  /**
+   * Parte de la app a recargar tras ejecutar esta tool con éxito. Solo tiene
+   * sentido en writes: el servidor ya ha cambiado los datos y el cliente debe
+   * releerlos para que la pantalla no mienta.
+   */
+  refetch?: NoaRefetchScope;
 
   /** Data tools (`read`/`write`): ejecución en servidor. */
   handler?: (args: Args, ctx: NoaToolContext) => Promise<Result>;

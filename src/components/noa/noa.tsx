@@ -9,6 +9,14 @@ import { useToast } from "@/components/ui/toast";
 import { useAppShellPortal } from "@/lib/use-app-shell-portal";
 import { dispatchNoaAction } from "@/lib/noa/client/dispatch";
 import { Markdown } from "@/lib/noa/client/markdown";
+import { useMeals } from "@/lib/store/meals-store";
+import { useRogue } from "@/lib/store/rogue-store";
+import { useCardio } from "@/lib/store/cardio-store";
+import { useWorkoutSession } from "@/lib/store/workout-session-store";
+import {
+  cancelNoaReminder,
+  scheduleNoaReminder,
+} from "@/lib/notifications/noa-reminders";
 import type {
   NoaClientAction,
   NoaProposedAction,
@@ -24,10 +32,54 @@ import type {
  * Es un primer chat mínimo para probar el engine end-to-end con el módulo
  * Training; el diseño visual y la persistencia de la conversación son TODO.
  */
+/** Dónde sobrevive la conversación a cerrar la hoja y a recargar la app. */
+const HISTORY_KEY = "rogue.noa.turns.v1";
+/** Tope de turnos guardados: el engine solo manda los últimos al modelo. */
+const MAX_STORED_TURNS = 40;
+
+function loadTurns(): NoaTurn[] {
+  if (typeof sessionStorage === "undefined") return [];
+  try {
+    const raw = sessionStorage.getItem(HISTORY_KEY);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : null;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (t): t is NoaTurn =>
+        !!t &&
+        typeof t === "object" &&
+        typeof (t as NoaTurn).content === "string" &&
+        ((t as NoaTurn).role === "user" || (t as NoaTurn).role === "assistant"),
+    );
+  } catch {
+    return [];
+  }
+}
+
 export function Noa() {
   const [open, setOpen] = useState(false);
   const portalTarget = useAppShellPortal();
   const pathname = usePathname();
+
+  // La conversación vive AQUÍ, no dentro de la hoja: la hoja se desmonta al
+  // cerrarla, así que antes cerrar NOA borraba el hilo entero. Se persiste
+  // además en sessionStorage para que sobreviva a una recarga (pero no para
+  // siempre: al cerrar la pestaña se empieza de cero, que es lo esperable).
+  // Inicializador perezoso, no efecto: en servidor `loadTurns` devuelve [] y en
+  // cliente lee lo guardado. No hay desajuste de hidratación porque la hoja no
+  // se pinta hasta que el usuario la abre.
+  const [turns, setTurns] = useState<NoaTurn[]>(loadTurns);
+
+  useEffect(() => {
+    if (typeof sessionStorage === "undefined") return;
+    try {
+      sessionStorage.setItem(
+        HISTORY_KEY,
+        JSON.stringify(turns.slice(-MAX_STORED_TURNS)),
+      );
+    } catch {
+      // Sin almacenamiento: la conversación sigue viva en memoria.
+    }
+  }, [turns]);
 
   // Onboarding gestiona su propio layout sin navegación: NOA no pinta ahí.
   if (pathname.startsWith("/app/onboarding")) return null;
@@ -35,7 +87,11 @@ export function Noa() {
 
   return createPortal(
     open ? (
-      <NoaSheet onClose={() => setOpen(false)} />
+      <NoaSheet
+        onClose={() => setOpen(false)}
+        turns={turns}
+        setTurns={setTurns}
+      />
     ) : (
       <button
         type="button"
@@ -50,10 +106,21 @@ export function Noa() {
   );
 }
 
-function NoaSheet({ onClose }: { onClose: () => void }) {
+function NoaSheet({
+  onClose,
+  turns,
+  setTurns,
+}: {
+  onClose: () => void;
+  turns: NoaTurn[];
+  setTurns: React.Dispatch<React.SetStateAction<NoaTurn[]>>;
+}) {
   const router = useRouter();
   const { notify } = useToast();
-  const [turns, setTurns] = useState<NoaTurn[]>([]);
+  const { reload: reloadMeals } = useMeals();
+  const { reloadRoutine, routineDays } = useRogue();
+  const { startTracking } = useCardio();
+  const { start: startSession } = useWorkoutSession();
   const [pending, setPending] = useState<NoaProposedAction[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -70,6 +137,39 @@ function NoaSheet({ onClose }: { onClose: () => void }) {
         router.push(path);
       },
       notify,
+      // NOA escribe en servidor; sin esto la pantalla se queda con los datos
+      // anteriores y parece que no ha pasado nada.
+      refetch: (scope) => {
+        if (scope === "nutrition") void reloadMeals();
+        else if (scope === "training" || scope === "profile") void reloadRoutine();
+        // `cardio` aún no tiene recarga en su store: se omite en vez de mentir.
+      },
+      startWorkout: (routineDayId) => {
+        const day = routineDayId
+          ? routineDays.find((d) => d.id === routineDayId)
+          : routineDays[0];
+        if (!day) {
+          notify("No encuentro ese día de rutina.", "error");
+          return;
+        }
+        startSession(day);
+        onClose();
+      },
+      startCardio: () => {
+        startTracking();
+        onClose();
+        router.push("/app/cardio");
+      },
+      scheduleNotification: (id, title, body, atISO) => {
+        void scheduleNoaReminder(id, title, body, atISO).then((ok) => {
+          if (!ok) {
+            notify("Los recordatorios solo funcionan en la app instalada.", "info");
+          }
+        });
+      },
+      cancelNotification: (id) => {
+        void cancelNoaReminder(id);
+      },
     });
   }
 

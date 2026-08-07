@@ -290,6 +290,7 @@ const addMealEntries: ToolDef = {
   module: "nutrition",
   kind: "write",
   sensitivity: "confirm",
+  refetch: "nutrition",
   summarize(args) {
     const entries = Array.isArray(args.entries) ? (args.entries as EntryInput[]) : [];
 
@@ -384,6 +385,7 @@ const clearMealEntries: ToolDef = {
   module: "nutrition",
   kind: "write",
   sensitivity: "confirm",
+  refetch: "nutrition",
   summarize(args) {
     const from = String(args.from ?? "?");
     const to = String(args.to ?? from);
@@ -428,6 +430,7 @@ const setNutritionGoals: ToolDef = {
   module: "nutrition",
   kind: "write",
   sensitivity: "confirm",
+  refetch: "nutrition",
   summarize(args) {
     return `Cambiar tus objetivos diarios a ${args.kcal} kcal · P ${args.protein} g · G ${args.fat} g · H ${args.carbs} g.`;
   },
@@ -467,6 +470,7 @@ const savePantryFood: ToolDef = {
   module: "nutrition",
   kind: "write",
   sensitivity: "confirm",
+  refetch: "nutrition",
   summarize(args) {
     return `Guardar «${args.name}» en tu despensa — por 100 g: ${args.kcal} kcal · P ${args.protein} g · H ${args.carbs} g · G ${args.fat} g.`;
   },
@@ -516,6 +520,7 @@ const savePantryDish: ToolDef = {
   module: "nutrition",
   kind: "write",
   sensitivity: "confirm",
+  refetch: "nutrition",
   summarize(args) {
     const foods = Array.isArray(args.foods) ? args.foods : [];
     return `Guardar el plato «${args.name}» con ${foods.length} ingrediente(s) en tu despensa.`;

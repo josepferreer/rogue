@@ -152,6 +152,8 @@ type MealsContextValue = {
    *  quien pinte fechas hacia atras (selector semanal, planificador); si ya
    *  esta dentro de la ventana cargada no hace nada. */
   ensureLoadedFrom: (date: string) => void;
+  /** Re-lee diario y objetivos (lo usa NOA tras escribir en servidor). */
+  reload: () => Promise<void>;
   addEntry: (input: NewMealEntry) => void;
   updateEntryQuantity: (id: string, quantityG: number) => void;
   updateEntry: (id: string, data: Partial<Omit<MealEntry, "id" | "date" | "mealType">>) => void;
@@ -404,6 +406,26 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
     [entriesByDay],
   );
 
+  /**
+   * Re-lee el diario y los objetivos desde la ventana ya cargada. La usa NOA
+   * tras escribir en servidor: ese cambio no pasa por `addEntry`, así que sin
+   * esto la pantalla seguiría enseñando el diario de antes.
+   */
+  const reload = useCallback(async () => {
+    const userId = userIdRef.current;
+    if (!userId) return;
+    try {
+      const [freshEntries, freshGoals] = await Promise.all([
+        fetchEntries(supabase, userId, rangeStartRef.current),
+        fetchGoals(supabase, userId),
+      ]);
+      setEntries(freshEntries);
+      setGoalsState(freshGoals);
+    } catch (err) {
+      console.error("No se pudo recargar el diario:", err);
+    }
+  }, [supabase]);
+
   const ensureLoadedFrom = useCallback(
     (date: string) => {
       const userId = userIdRef.current;
@@ -568,6 +590,7 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
       goals,
       entriesForDay,
       ensureLoadedFrom,
+      reload,
       addEntry,
       updateEntryQuantity,
       updateEntry,
@@ -581,6 +604,7 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
       goals,
       entriesForDay,
       ensureLoadedFrom,
+      reload,
       addEntry,
       updateEntryQuantity,
       updateEntry,

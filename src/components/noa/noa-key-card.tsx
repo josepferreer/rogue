@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import {
   clearNoaKey,
   getNoaKeyStatus,
+  getNoaUsage,
   saveNoaKey,
+  type NoaUsage,
 } from "@/lib/noa/settings-actions";
 
 /**
@@ -24,12 +26,15 @@ export function NoaKeyCard() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [usage, setUsage] = useState<NoaUsage | null>(null);
+
   useEffect(() => {
     let alive = true;
-    getNoaKeyStatus()
-      .then((s) => {
+    Promise.all([getNoaKeyStatus(), getNoaUsage()])
+      .then(([s, u]) => {
         if (!alive) return;
         setMasked(s.masked);
+        setUsage(u);
         setLoading(false);
       })
       .catch(() => {
@@ -97,6 +102,19 @@ export function NoaKeyCard() {
           </div>
         </div>
       ) : (
+        <></>
+      )}
+
+      {/* Uso: solo si hay clave y la auditoría está disponible. Google no
+          expone el consumo de una clave, así que se cuenta lo que sí sabemos:
+          las herramientas que NOA ha ejecutado. */}
+      {!editing && masked && usage?.hoy != null && (
+        <p className="font-mono text-[11px] text-muted-foreground">
+          {usage.hoy} acciones hoy · {usage.semana} esta semana
+        </p>
+      )}
+
+      {editing && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-3 focus-within:border-foreground">
             <input

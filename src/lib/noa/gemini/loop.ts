@@ -86,6 +86,9 @@ export async function runGeminiLoop(input: LoopInput): Promise<LoopResult> {
       const outcome = await executeTool(tool, call.args, input.ctx);
       switch (outcome.status) {
         case "result":
+          // Un write ejecutado sin confirmación ya ha cambiado los datos: se
+          // acompaña de la orden de recargar esa parte de la app.
+          if (outcome.refetch) actions.push(outcome.refetch);
           responseParts.push({
             functionResponse: {
               name: call.name,

@@ -251,6 +251,7 @@ const saveRoutine: ToolDef = {
   module: "training",
   kind: "write",
   sensitivity: "confirm",
+  refetch: "training",
   summarize(args) {
     const days = Array.isArray(args.days) ? (args.days as RoutineDayInput[]) : [];
     const lines = days.map((d) => {

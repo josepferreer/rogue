@@ -21,7 +21,7 @@ import { logToolCall } from "@/lib/noa/audit";
  * recargas). El punto de decisión es este; no hay que tocar el resto.
  */
 export type ExecOutcome =
-  | { status: "result"; value: unknown }
+  | { status: "result"; value: unknown; refetch?: NoaClientAction }
   | { status: "action"; action: NoaClientAction }
   | { status: "pending"; proposal: NoaProposedAction }
   | { status: "error"; message: string };
@@ -39,7 +39,7 @@ export async function executeTool(
       tool: tool.name,
       args,
       outcome: "pending_confirmation",
-    });
+    }, ctx.supabase);
     return { status: "pending", proposal: buildProposal(tool, args) };
   }
 
@@ -67,7 +67,7 @@ export async function runTool(
         args,
         outcome: "ok",
         ms: Date.now() - started,
-      });
+      }, ctx.supabase);
       return { status: "action", action };
     }
 
@@ -81,8 +81,14 @@ export async function runTool(
       args,
       outcome: "ok",
       ms: Date.now() - started,
-    });
-    return { status: "result", value };
+    }, ctx.supabase);
+    return {
+      status: "result",
+      value,
+      // El dato ya ha cambiado en servidor: se acompaña de la orden de releerlo
+      // en el cliente, o la pantalla se queda enseñando lo anterior.
+      refetch: tool.refetch ? { type: "refetch", scope: tool.refetch } : undefined,
+    };
   } catch (err) {
     const message = err instanceof Error ? err.message : "error desconocido";
     logToolCall({
@@ -93,7 +99,7 @@ export async function runTool(
       outcome: "error",
       ms: Date.now() - started,
       error: message,
-    });
+    }, ctx.supabase);
     return { status: "error", message };
   }
 }
