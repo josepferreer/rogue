@@ -5,7 +5,7 @@ import {
   tooManyRequests,
   unauthorized,
 } from "@/lib/api/guard";
-import { runNoa, runNoaConfirm } from "@/lib/noa/engine";
+import { runNoa, runNoaConfirm, type ConfirmAction } from "@/lib/noa/engine";
 import { GeminiError } from "@/lib/noa/gemini/client";
 import type { NoaResponse, NoaTurn } from "@/lib/noa/types";
 
@@ -34,23 +34,26 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "bad_request" }, { status: 400 });
   }
 
-  const { message, history, confirm } = (body ?? {}) as {
+  const { message, history, confirm, clientDate } = (body ?? {}) as {
     message?: unknown;
     history?: unknown;
     confirm?: unknown;
+    clientDate?: unknown;
   };
+  const clientToday = typeof clientDate === "string" ? clientDate : undefined;
 
-  // Rama de confirmación: el usuario aceptó una acción propuesta (Action Gate).
+  // Rama de confirmación: el usuario aceptó un plan (una o varias acciones).
   if (confirm && typeof confirm === "object") {
-    const { toolName, args } = confirm as { toolName?: unknown; args?: unknown };
-    if (typeof toolName !== "string" || toolName.length === 0) {
+    const actions = parseConfirmActions(confirm);
+    if (actions.length === 0) {
       return Response.json({ error: "toolName_required" }, { status: 400 });
     }
     try {
       const response = await runNoaConfirm({
         userId,
-        toolName,
-        args: args && typeof args === "object" ? (args as Record<string, unknown>) : {},
+        actions,
+        history: sanitizeHistory(history),
+        clientToday,
       });
       return Response.json(response);
     } catch (err) {
@@ -67,6 +70,7 @@ export async function POST(req: NextRequest) {
       userId,
       message: message.trim(),
       history: sanitizeHistory(history),
+      clientToday,
     });
     return Response.json(response);
   } catch (err) {
@@ -108,6 +112,30 @@ function errorResponse(err: unknown, fase: string): NoaResponse {
     pending: [],
     meta: { modules: [], usedTools: [], iterations: 0 },
   };
+}
+
+/**
+ * Normaliza el payload de confirmación a una lista de acciones. Acepta un plan
+ * (`{ actions: [...] }`) o una sola acción (`{ toolName, args }`, compat).
+ */
+function parseConfirmActions(confirm: object): ConfirmAction[] {
+  const c = confirm as { toolName?: unknown; args?: unknown; actions?: unknown };
+  const raw = Array.isArray(c.actions)
+    ? c.actions
+    : typeof c.toolName === "string"
+      ? [{ toolName: c.toolName, args: c.args }]
+      : [];
+  const out: ConfirmAction[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const { toolName, args } = item as { toolName?: unknown; args?: unknown };
+    if (typeof toolName !== "string" || toolName.length === 0) continue;
+    out.push({
+      toolName,
+      args: args && typeof args === "object" ? (args as Record<string, unknown>) : {},
+    });
+  }
+  return out;
 }
 
 /** Acepta solo turnos con la forma esperada; descarta el resto. */

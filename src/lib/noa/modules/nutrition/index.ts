@@ -755,19 +755,12 @@ function sumMacros(entries: DiaryEntry[]) {
   );
 }
 
-/** Fecha local YYYY-MM-DD, como la guarda la app (no UTC). */
-function todayKey(now: Date): string {
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
 function asDate(value: unknown, ctx: NoaToolContext, fallback?: string): string {
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
     return value.trim();
   }
-  return fallback ?? todayKey(ctx.now);
+  // `ctx.today` viene en la tz del usuario; no derivar de `now` (servidor UTC).
+  return fallback ?? ctx.today;
 }
 
 function asMealType(value: unknown): MealType {
@@ -814,7 +807,7 @@ function clampInt(value: unknown, fallback: number, min: number, max: number): n
 
 /** Snapshot compacto para el Context Builder cuando el turno es de nutrición. */
 async function contextProvider(ctx: NoaToolContext) {
-  const today = todayKey(ctx.now);
+  const today = ctx.today;
   const [entries, goals] = await Promise.all([readEntries(ctx, today, today), readGoals(ctx)]);
   const eaten = sumMacros(entries.filter((e) => e.eaten));
   return {

@@ -118,8 +118,8 @@ function NoaSheet({
   const router = useRouter();
   const { notify } = useToast();
   const { reload: reloadMeals } = useMeals();
-  const { reloadRoutine, routineDays } = useRogue();
-  const { startTracking } = useCardio();
+  const { reloadRoutine, reloadProfile, routineDays } = useRogue();
+  const { startTracking, reloadHistory: reloadCardio } = useCardio();
   const { start: startSession } = useWorkoutSession();
   const [pending, setPending] = useState<NoaProposedAction[]>([]);
   const [input, setInput] = useState("");
@@ -141,8 +141,9 @@ function NoaSheet({
       // anteriores y parece que no ha pasado nada.
       refetch: (scope) => {
         if (scope === "nutrition") void reloadMeals();
-        else if (scope === "training" || scope === "profile") void reloadRoutine();
-        // `cardio` aún no tiene recarga en su store: se omite en vez de mentir.
+        else if (scope === "training") void reloadRoutine();
+        else if (scope === "profile") void reloadProfile();
+        else if (scope === "cardio") void reloadCardio();
       },
       startWorkout: (routineDayId) => {
         const day = routineDayId
@@ -187,7 +188,7 @@ function NoaSheet({
       const res = await fetch("/api/noa", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message, history }),
+        body: JSON.stringify({ message, history, clientDate: localDateKey() }),
       });
       // El engine ya devuelve 200 con un `reply` explicativo cuando algo falla
       // por dentro. Lo que llega aqui como no-OK es el guard de la route, y
@@ -222,16 +223,24 @@ function NoaSheet({
     }
   }
 
-  async function confirm(proposal: NoaProposedAction) {
-    // Quita la tarjeta en cuanto se acepta (evita doble pulsación).
-    setPending((p) => p.filter((a) => a.id !== proposal.id));
+  /** Confirma un plan (una o varias acciones) en una sola pasada. */
+  async function confirmActions(proposals: NoaProposedAction[]) {
+    if (proposals.length === 0 || busy) return;
+    const ids = new Set(proposals.map((p) => p.id));
+    setPending((p) => p.filter((a) => !ids.has(a.id))); // evita doble pulsación
     setBusy(true);
     try {
       const res = await fetch("/api/noa", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          confirm: { toolName: proposal.toolName, args: proposal.args },
+          confirm: {
+            actions: proposals.map((p) => ({ toolName: p.toolName, args: p.args })),
+          },
+          // El historial permite a NOA REANUDAR el plan tras confirmar (p.ej.
+          // cerrar el menú tras crear los platos).
+          history: turns,
+          clientDate: localDateKey(),
         }),
       });
       if (!res.ok) {
@@ -246,6 +255,8 @@ function NoaSheet({
         setTurns((t) => [...t, { role: "assistant", content: data.reply }]);
       }
       for (const action of data.actions) dispatch(action);
+      // El plan reanudado puede proponer el siguiente paso: se muestra su tarjeta.
+      setPending(data.pending);
     } catch {
       setTurns((t) => [
         ...t,
@@ -254,6 +265,14 @@ function NoaSheet({
     } finally {
       setBusy(false);
     }
+  }
+
+  function discardPending() {
+    setPending([]);
+    setTurns((t) => [
+      ...t,
+      { role: "assistant", content: "Vale, lo dejo así. No he tocado nada." },
+    ]);
   }
 
   return (
@@ -292,18 +311,43 @@ function NoaSheet({
               {t.role === "assistant" ? <Markdown text={t.content} /> : t.content}
             </div>
           ))}
-          {pending.map((a) => (
-            <div
-              key={a.id}
-              className="flex flex-col gap-2 self-start rounded-2xl border border-border bg-background p-3"
-            >
-              <p className="text-sm">{a.summary}</p>
-              <Button onClick={() => confirm(a)} className="py-2">
-                <Check className="size-4" />
-                Confirmar
-              </Button>
+          {pending.length > 0 && (
+            <div className="flex w-[85%] flex-col gap-3 self-start rounded-2xl border border-border bg-background p-3">
+              {pending.length > 1 ? (
+                <>
+                  <p className="text-sm font-medium">NOA quiere hacer esto:</p>
+                  <div className="flex flex-col gap-2">
+                    {groupProposals(pending).map((g) => (
+                      <div key={g.label} className="flex flex-col gap-0.5">
+                        <p className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
+                          {g.label} ({g.items.length})
+                        </p>
+                        <p className="text-sm">
+                          {g.items.map((a) => shortLabel(a.summary)).join(" · ")}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm">{pending[0].summary}</p>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  onClick={discardPending}
+                  className="py-2"
+                >
+                  Descartar
+                </Button>
+                <Button fullWidth onClick={() => confirmActions(pending)} className="py-2">
+                  <Check className="size-4" />
+                  {pending.length > 1 ? "Confirmar todo" : "Confirmar"}
+                </Button>
+              </div>
             </div>
-          ))}
+          )}
           {busy && (
             <div className={cnBubble("assistant")}>Pensando…</div>
           )}
@@ -333,6 +377,70 @@ function NoaSheet({
       </div>
     </div>
   );
+}
+
+/** Hoy en la zona horaria del navegador (YYYY-MM-DD). El servidor corre en UTC,
+ *  así que "hoy" debe salir del cliente para no fallar de madrugada. */
+function localDateKey(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// —— Tarjeta "plan": agrupa varias confirmaciones en secciones legibles ——
+
+/** Etiqueta de sección por herramienta. */
+const GROUP_LABELS: Record<string, string> = {
+  savePantryFood: "Alimentos",
+  savePantryDish: "Platos",
+  addMealEntries: "Menú / comidas",
+  clearMealEntries: "Limpiar diario",
+  setNutritionGoals: "Objetivos",
+  saveRoutine: "Rutina",
+  startWorkout: "Entreno",
+  startCardio: "Cardio",
+  deleteCardioSession: "Borrar ruta",
+};
+
+/** Orden de las secciones: lo que otras cosas necesitan va antes (igual que el
+ *  orden de ejecución del servidor). */
+const GROUP_ORDER: Record<string, number> = {
+  savePantryFood: 1,
+  savePantryDish: 2,
+  setNutritionGoals: 2,
+  saveRoutine: 2,
+  clearMealEntries: 3,
+  addMealEntries: 4,
+};
+
+/** Nombre corto para el resumen: el texto entre «», o el resumen recortado. */
+function shortLabel(summary: string): string {
+  const m = summary.match(/«([^»]+)»/);
+  if (m) return m[1];
+  return summary.length > 70 ? `${summary.slice(0, 69)}…` : summary;
+}
+
+interface ProposalGroup {
+  label: string;
+  order: number;
+  items: NoaProposedAction[];
+}
+
+function groupProposals(items: NoaProposedAction[]): ProposalGroup[] {
+  const byLabel = new Map<string, ProposalGroup>();
+  for (const a of items) {
+    const label = GROUP_LABELS[a.toolName] ?? "Acciones";
+    const g = byLabel.get(label) ?? {
+      label,
+      order: GROUP_ORDER[a.toolName] ?? 5,
+      items: [],
+    };
+    g.items.push(a);
+    byLabel.set(label, g);
+  }
+  return [...byLabel.values()].sort((a, b) => a.order - b.order);
 }
 
 function cnBubble(role: NoaTurn["role"]): string {

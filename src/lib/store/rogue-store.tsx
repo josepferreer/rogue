@@ -155,6 +155,10 @@ type RogueContextValue = {
    *  escribir la rutina server-side (canal de refetch), para que la UI se
    *  refresque sin recargar la app. */
   reloadRoutine: () => Promise<void>;
+  /** Re-lee el perfil y las preferencias desde Supabase. La usa NOA tras
+   *  cambiar peso/objetivo/ajustes server-side, para refrescar la UI sin
+   *  recargar la app. */
+  reloadProfile: () => Promise<void>;
   resetAll: () => void;
 };
 
@@ -990,6 +994,22 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
   }, [supabase],
   );
 
+  const reloadProfile = useCallback(async () => {
+    const userId = userIdRef.current;
+    if (!userId) return;
+    try {
+      const profileRow = await fetchProfile(supabase, userId);
+      if (!profileRow) return;
+      setState((prev) => ({
+        ...prev,
+        profile: rowToProfile(profileRow),
+        preferences: rowToPreferences(profileRow),
+      }));
+    } catch (err) {
+      console.error("No se pudo recargar el perfil:", err);
+    }
+  }, [supabase]);
+
   const resetAll = useCallback(() => {
     // El username no se toca: sigue siendo la cuenta del mismo usuario.
     setState({
@@ -1048,6 +1068,7 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
       acknowledgeReminders,
       saveRoutine,
       reloadRoutine,
+      reloadProfile,
       resetAll,
     }),
     [
@@ -1070,6 +1091,7 @@ export function RogueProvider({ children }: { children: React.ReactNode }) {
       acknowledgeReminders,
       saveRoutine,
       reloadRoutine,
+      reloadProfile,
       resetAll,
     ],
   );

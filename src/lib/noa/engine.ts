@@ -1,6 +1,8 @@
 import "server-only";
 import type {
+  NoaClientAction,
   NoaModule,
+  NoaRefetchScope,
   NoaResponse,
   NoaToolContext,
   NoaTurn,
@@ -42,14 +44,58 @@ export interface RunNoaInput {
   message: string;
   /** Historial de la conversación (sin el turno actual). */
   history?: NoaTurn[];
+  /** Día de hoy en la tz del usuario (YYYY-MM-DD), aportado por el cliente. */
+  clientToday?: string;
+}
+
+/** Fecha del servidor como YYYY-MM-DD (fallback si el cliente no la manda). */
+function serverToday(now: Date): string {
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Usa la fecha local del cliente si es válida; si no, la del servidor. */
+function resolveToday(clientToday: string | undefined, now: Date): string {
+  return typeof clientToday === "string" && /^\d{4}-\d{2}-\d{2}$/.test(clientToday)
+    ? clientToday
+    : serverToday(now);
+}
+
+/** System prompt = reglas base + personalidad (solo forma) + contexto precargado
+ *  de los módulos en scope. Si la personalidad falla al leerse, se usan valores
+ *  por defecto: nunca bloquea la conversación. */
+async function buildSystemPrompt(
+  ctx: NoaToolContext,
+  modules: NoaModule[],
+): Promise<string> {
+  const snapshot = await buildContext(registry, modules, ctx);
+  const contextBlock = renderContextBlock(snapshot);
+  const { personality, profileName } = await getUserPersonality(
+    ctx.supabase,
+    ctx.userId,
+  );
+  const personalityBlock = renderPersonalityBlock(personality, profileName);
+  return [SYSTEM_BASE, personalityBlock, contextBlock].filter(Boolean).join("\n\n");
+}
+
+/** Convierte el historial de la UI al formato de Gemini (turnos de solo texto). */
+function historyToContents(history: NoaTurn[] | undefined): GeminiContent[] {
+  return (history ?? []).map((t) => ({
+    role: (t.role === "assistant" ? "model" : "user") as GeminiContent["role"],
+    parts: [{ text: t.content }],
+  }));
 }
 
 export async function runNoa(input: RunNoaInput): Promise<NoaResponse> {
   const supabase = await createClient();
+  const now = new Date();
   const ctx: NoaToolContext = {
     userId: input.userId,
     supabase,
-    now: new Date(),
+    now,
+    today: resolveToday(input.clientToday, now),
     locale: "es-ES",
   };
 
@@ -89,27 +135,13 @@ export async function runNoa(input: RunNoaInput): Promise<NoaResponse> {
     : intent.modules;
   const tools = registry.select(modules);
 
-  // 3. Context Builder: snapshot compacto de los módulos en scope.
-  const snapshot = await buildContext(registry, modules, ctx);
-  const contextBlock = renderContextBlock(snapshot);
-
-  // 3b. Personalidad: SOLO forma (tono, cercanía, longitud). Se inserta entre
-  // las reglas base y el contexto, y su último párrafo vuelve a fijar que no
-  // puede saltarse una herramienta ni tocar un dato. Si falla la lectura, se
-  // usan los valores por defecto: nunca bloquea la conversación.
-  const { personality, profileName } = await getUserPersonality(supabase, input.userId);
-  const personalityBlock = renderPersonalityBlock(personality, profileName);
-
-  const system = [SYSTEM_BASE, personalityBlock, contextBlock]
-    .filter(Boolean)
-    .join("\n\n");
+  // 3. System prompt: reglas base + personalidad (solo forma) + contexto
+  // precargado de los módulos en scope.
+  const system = await buildSystemPrompt(ctx, modules);
 
   // 4. Conversación en formato Gemini (historial + turno actual).
   const contents: GeminiContent[] = [
-    ...(input.history ?? []).map((t) => ({
-      role: (t.role === "assistant" ? "model" : "user") as GeminiContent["role"],
-      parts: [{ text: t.content }],
-    })),
+    ...historyToContents(input.history),
     { role: "user", parts: [{ text: input.message }] },
   ];
 
@@ -133,53 +165,142 @@ export async function runNoa(input: RunNoaInput): Promise<NoaResponse> {
  * Salta el gate a propósito: la confirmación es la autorización. Corre bajo la
  * RLS del usuario, igual que el resto.
  */
-export interface RunNoaConfirmInput {
-  userId: string;
+/** Una acción confirmada por el usuario (parte de un plan). */
+export interface ConfirmAction {
   toolName: string;
   args: Record<string, unknown>;
 }
 
+export interface RunNoaConfirmInput {
+  userId: string;
+  /** Acciones confirmadas (una o varias: un "plan"). Se ejecutan en orden de
+   *  dependencia, no en el orden en que llegan. */
+  actions: ConfirmAction[];
+  /** Conversación previa, para poder REANUDAR el plan tras confirmar. */
+  history?: NoaTurn[];
+  /** Día de hoy en la tz del usuario (YYYY-MM-DD), aportado por el cliente. */
+  clientToday?: string;
+}
+
+/**
+ * Orden de ejecución de un plan: lo que otras acciones necesitan va primero.
+ * Un alimento existe antes que el plato que lo usa; la despensa antes que el
+ * menú; y limpiar la semana antes de registrar las comidas nuevas.
+ */
+const CONFIRM_ORDER: Record<string, number> = {
+  savePantryFood: 1,
+  savePantryDish: 2,
+  setNutritionGoals: 2,
+  saveRoutine: 2,
+  clearMealEntries: 3,
+  addMealEntries: 4,
+};
+const orderOf = (toolName: string): number => CONFIRM_ORDER[toolName] ?? 5;
+
+interface ExecutedStep {
+  tool: string;
+  ok: boolean;
+  error?: string;
+}
+
+/** Resumen humano de un plan ejecutado (cuando NOA no aporta texto propio). */
+function summarizeBatch(steps: ExecutedStep[]): string {
+  const fails = steps.filter((s) => !s.ok);
+  if (fails.length === 0) return "Hecho ✅";
+  const okN = steps.length - fails.length;
+  return `Hecho ${okN}/${steps.length}. No se pudo: ${fails
+    .map((f) => `${f.tool} (${f.error ?? "error"})`)
+    .join(", ")}.`;
+}
+
+/** Nota para que NOA continúe/cierre el plan tras ejecutarlo. */
+function resumeBatchNote(steps: ExecutedStep[]): string {
+  const lista = steps
+    .map((s) => (s.ok ? `${s.tool} OK` : `${s.tool} FALLÓ (${s.error ?? "error"})`))
+    .join("; ");
+  return [
+    `[sistema] El usuario ha confirmado un plan. Ejecutado: ${lista}.`,
+    "Si el plan ya está completo, resúmelo al usuario en una sola frase breve y",
+    "NO llames a más herramientas. Si quedaba algún paso pendiente, continúa",
+    "proponiendo la siguiente acción.",
+  ].join(" ");
+}
+
 export async function runNoaConfirm(input: RunNoaConfirmInput): Promise<NoaResponse> {
   const supabase = await createClient();
+  const now = new Date();
   const ctx: NoaToolContext = {
     userId: input.userId,
     supabase,
-    now: new Date(),
+    now,
+    today: resolveToday(input.clientToday, now),
     locale: "es-ES",
   };
 
-  const meta = {
-    modules: [] as NoaModule[],
-    usedTools: [input.toolName],
-    iterations: 0,
-  };
-  const tool = registry.get(input.toolName);
-  if (!tool || tool.kind === "read") {
-    return { reply: "No reconozco esa acción.", actions: [], pending: [], meta };
+  // Orden de dependencia (estable): alimentos → platos → vaciar → menú.
+  const actions = [...input.actions].sort((a, b) => orderOf(a.toolName) - orderOf(b.toolName));
+
+  const executedActions: NoaClientAction[] = [];
+  const refetchScopes = new Set<NoaRefetchScope>();
+  const modules = new Set<NoaModule>();
+  const steps: ExecutedStep[] = [];
+
+  for (const a of actions) {
+    const tool = registry.get(a.toolName);
+    if (!tool || tool.kind === "read") {
+      steps.push({ tool: a.toolName, ok: false, error: "acción no reconocida" });
+      continue;
+    }
+    modules.add(tool.module);
+    const outcome = await runTool(tool, a.args, ctx);
+    if (outcome.status === "result") {
+      if (outcome.refetch?.type === "refetch") refetchScopes.add(outcome.refetch.scope);
+      steps.push({ tool: a.toolName, ok: true });
+    } else if (outcome.status === "action") {
+      executedActions.push(outcome.action);
+      steps.push({ tool: a.toolName, ok: true });
+    } else if (outcome.status === "error") {
+      steps.push({ tool: a.toolName, ok: false, error: outcome.message });
+    }
+  }
+  for (const scope of refetchScopes) executedActions.push({ type: "refetch", scope });
+
+  const scopeModules = [...modules];
+
+  // REANUDAR: se re-entra en el bucle con lo ejecutado, para que NOA cierre el
+  // plan (o proponga un paso que faltara). Aquí vivía el bug de "limpia pero no
+  // añade": antes se ejecutaba una sola acción y el plan moría.
+  const apiKey = await getUserGeminiKey(supabase, input.userId);
+  if (!apiKey) {
+    return {
+      reply: summarizeBatch(steps),
+      actions: executedActions,
+      pending: [],
+      meta: { modules: scopeModules, usedTools: steps.map((s) => s.tool), iterations: 0 },
+    };
   }
 
-  const outcome = await runTool(tool, input.args, ctx);
-  switch (outcome.status) {
-    case "result":
-      // Este es el camino habitual de un write: el usuario confirmó y se acaba
-      // de escribir. Sin el refetch, la pantalla que tiene delante sigue
-      // enseñando los datos de antes.
-      return {
-        reply: "Hecho ✅",
-        actions: outcome.refetch ? [outcome.refetch] : [],
-        pending: [],
-        meta,
-      };
-    case "action":
-      return { reply: "Hecho ✅", actions: [outcome.action], pending: [], meta };
-    case "error":
-      return {
-        reply: `No se pudo completar: ${outcome.message}`,
-        actions: [],
-        pending: [],
-        meta,
-      };
-    default:
-      return { reply: "…", actions: [], pending: [], meta };
-  }
+  const system = await buildSystemPrompt(ctx, scopeModules);
+  const contents: GeminiContent[] = [
+    ...historyToContents(input.history),
+    { role: "user", parts: [{ text: resumeBatchNote(steps) }] },
+  ];
+  const loop = await runGeminiLoop({
+    apiKey,
+    system,
+    contents,
+    tools: registry.select(scopeModules),
+    ctx,
+  });
+
+  return {
+    reply: loop.reply || summarizeBatch(steps),
+    actions: [...executedActions, ...loop.actions],
+    pending: loop.pending,
+    meta: {
+      modules: scopeModules,
+      usedTools: [...steps.map((s) => s.tool), ...loop.usedTools],
+      iterations: loop.iterations,
+    },
+  };
 }

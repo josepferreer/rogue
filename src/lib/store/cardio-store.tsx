@@ -82,6 +82,9 @@ export type CardioContextValue = {
   openLocationSettings: () => void;
   /** Borra una ruta del historial (optimista + delete en Supabase). */
   deleteSession: (id: string) => void;
+  /** Re-lee el historial desde Supabase. La usa NOA tras borrar una ruta
+   *  server-side (canal de refetch), para refrescar la lista sin recargar. */
+  reloadHistory: () => Promise<void>;
 };
 
 type CardioRow = {
@@ -694,6 +697,17 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const reloadHistory = useCallback(async () => {
+    const userId = userIdRef.current;
+    if (!userId) return;
+    try {
+      const sessions = await fetchHistory(supabase, userId);
+      setHistory(sessions);
+    } catch (err) {
+      console.error("No se pudo recargar el historial de cardio:", err);
+    }
+  }, [supabase]);
+
   // Memoizado: sin esto se creaba un objeto nuevo en CADA render del provider,
   // y durante una carrera el reloj avanza cada segundo y las coordenadas en
   // cada punto GPS. Eso re-renderizaba a todos los consumidores --incluido el
@@ -719,6 +733,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
       maximize,
       openLocationSettings,
       deleteSession,
+      reloadHistory,
     }),
     [
       hydrated,
@@ -738,6 +753,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
       minimize,
       maximize,
       deleteSession,
+      reloadHistory,
     ],
   );
 

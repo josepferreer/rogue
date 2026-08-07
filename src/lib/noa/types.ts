@@ -52,6 +52,13 @@ export interface NoaToolContext {
   userId: string;
   supabase: SupabaseClient;
   now: Date;
+  /**
+   * Día de HOY en la zona horaria del USUARIO (YYYY-MM-DD). Lo aporta el cliente
+   * en la petición; si falta, el engine cae a la fecha del servidor. Úsalo para
+   * cualquier "hoy" en vez de derivarlo de `now`: el servidor corre en UTC
+   * (Vercel) y `now` daría el día equivocado de madrugada.
+   */
+  today: string;
   locale: string;
 }
 

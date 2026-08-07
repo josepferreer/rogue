@@ -30,7 +30,9 @@ const getAgenda: ToolDef = {
   sensitivity: "safe",
   async handler(args, ctx: NoaToolContext) {
     const days = clampInt(args.days, 1, 1, 14);
-    const fechas = Array.from({ length: days }, (_, i) => addDays(ctx.now, i));
+    // Ancla en el "hoy" del usuario (ctx.today), no en `now` (servidor UTC).
+    const anchor = parseKey(ctx.today);
+    const fechas = Array.from({ length: days }, (_, i) => addDays(anchor, i));
     const from = dayKey(fechas[0]);
     const to = dayKey(fechas[fechas.length - 1]);
 
@@ -149,6 +151,14 @@ async function readPlannedMeals(
 }
 
 // —— Fechas ——————————————————————————————————————————————————
+
+/** Parte "YYYY-MM-DD" en una fecha LOCAL (no UTC). El día de la semana de una
+ *  fecha de calendario es el mismo en cualquier tz, así que la aritmética
+ *  posterior (addDays, getDay) es correcta independientemente del servidor. */
+function parseKey(key: string): Date {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
 
 function addDays(base: Date, n: number): Date {
   const d = new Date(base);

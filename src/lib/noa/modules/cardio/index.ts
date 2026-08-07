@@ -1,5 +1,6 @@
 import "server-only";
 import type { NoaToolContext, ToolDef, ToolModule } from "@/lib/noa/types";
+import { estimateKcal, estimateSteps } from "@/lib/cardio/estimates";
 
 /**
  * Módulo CARDIO — rutas de carrera/marcha registradas por GPS.
@@ -12,12 +13,17 @@ import type { NoaToolContext, ToolDef, ToolModule } from "@/lib/noa/types";
  * a un razonamiento sobre entrenamiento; además son el dato más sensible que
  * tiene el usuario (empiezan y acaban en su casa) y no hay motivo para que
  * salgan del servidor hacia el modelo.
+ *
+ * Kcal y pasos son ESTIMACIONES: salen de la misma fórmula que usa la app
+ * (`lib/cardio/estimates.ts`, ~1 kcal por kg y km) con el peso del perfil, NO
+ * de un pulsómetro. Se exponen para que NOA responda "¿cuántas calorías quemé?"
+ * sin inventarse nada; su etiqueta deja claro que son estimadas.
  */
 
 const getCardioHistory: ToolDef = {
   name: "getCardioHistory",
   description:
-    "Últimas sesiones de cardio del usuario: fecha, distancia en km y duración. Úsala para preguntas sobre carreras o caminatas recientes.",
+    "Últimas sesiones de cardio del usuario: fecha, distancia, duración, ritmo y una ESTIMACIÓN de calorías (kcal) y pasos. Úsala para preguntas sobre carreras/caminatas recientes, incluido «¿cuántas calorías quemé?». Presenta kcal y pasos siempre como estimados, no medidos.",
   parameters: {
     type: "object",
     properties: {
@@ -29,22 +35,31 @@ const getCardioHistory: ToolDef = {
   sensitivity: "safe",
   async handler(args, ctx: NoaToolContext) {
     const limit = clampInt(args.limit, 10, 1, 50);
-    const { data, error } = await ctx.supabase
-      .from("cardio_sessions")
-      // Sin `coordinates` a propósito (ver cabecera).
-      .select("id, date, distance_km, duration_sec")
-      .order("date", { ascending: false })
-      .limit(limit);
+    const [{ data, error }, bodyweightKg] = await Promise.all([
+      ctx.supabase
+        .from("cardio_sessions")
+        // Sin `coordinates` a propósito (ver cabecera).
+        .select("id, date, distance_km, duration_sec")
+        .order("date", { ascending: false })
+        .limit(limit),
+      readBodyweight(ctx),
+    ]);
     if (error) throw new Error(error.message);
 
     return {
-      sessions: (data ?? []).map((s) => ({
-        id: s.id,
-        date: s.date,
-        distanceKm: round(num(s.distance_km), 2),
-        durationSec: num(s.duration_sec),
-        ritmoMinPorKm: pace(num(s.distance_km), num(s.duration_sec)),
-      })),
+      pesoUsadoKg: bodyweightKg,
+      sessions: (data ?? []).map((s) => {
+        const distanceKm = round(num(s.distance_km), 2);
+        return {
+          id: s.id,
+          date: s.date,
+          distanceKm,
+          durationSec: num(s.duration_sec),
+          ritmoMinPorKm: pace(num(s.distance_km), num(s.duration_sec)),
+          kcalEstimadas: estimateKcal(num(s.distance_km), bodyweightKg),
+          pasosEstimados: estimateSteps(num(s.distance_km)),
+        };
+      }),
     };
   },
 };
@@ -52,7 +67,7 @@ const getCardioHistory: ToolDef = {
 const getCardioSummary: ToolDef = {
   name: "getCardioSummary",
   description:
-    "Resumen agregado de cardio en un periodo: número de sesiones, kilómetros y tiempo totales, distancia media y ritmo medio. Úsala para progreso general, no para una ruta concreta.",
+    "Resumen agregado de cardio en un periodo: número de sesiones, kilómetros y tiempo totales, distancia media, ritmo medio y una ESTIMACIÓN de las calorías totales quemadas. Úsala para progreso general, no para una ruta concreta.",
   parameters: {
     type: "object",
     properties: {
@@ -69,10 +84,13 @@ const getCardioSummary: ToolDef = {
     const days = clampInt(args.days, 30, 1, 365);
     const since = new Date(ctx.now.getTime() - days * 86400_000).toISOString();
 
-    const { data, error } = await ctx.supabase
-      .from("cardio_sessions")
-      .select("distance_km, duration_sec")
-      .gte("date", since);
+    const [{ data, error }, bodyweightKg] = await Promise.all([
+      ctx.supabase
+        .from("cardio_sessions")
+        .select("distance_km, duration_sec")
+        .gte("date", since),
+      readBodyweight(ctx),
+    ]);
     if (error) throw new Error(error.message);
 
     const rows = data ?? [];
@@ -85,6 +103,9 @@ const getCardioSummary: ToolDef = {
       tiempoTotalSec: sec,
       kmPorSesion: rows.length > 0 ? round(km / rows.length, 2) : 0,
       ritmoMedioMinPorKm: pace(km, sec),
+      // Estimación (misma fórmula que la app); lineal en km, así que el total
+      // se calcula sobre el kilometraje agregado.
+      kcalEstimadasTotales: estimateKcal(km, bodyweightKg),
     };
   },
 };
@@ -119,8 +140,7 @@ const deleteCardioSession: ToolDef = {
   module: "cardio",
   kind: "write",
   sensitivity: "confirm",
-  // Sin `refetch`: el store de cardio aún no expone recarga. Se documenta en el
-  // README para no fingir que la pantalla se actualiza sola.
+  refetch: "cardio",
   summarize(args) {
     return `Borrar la ruta de cardio ${String(args.id).slice(0, 8)}… del historial. No se puede deshacer.`;
   },
@@ -178,6 +198,18 @@ export const cardioModule: ToolModule = {
   ],
   contextProvider,
 };
+
+/** Peso corporal del usuario (kg) para las estimaciones; 75 por defecto, igual
+ *  que la app cuando el perfil no lo tiene. */
+async function readBodyweight(ctx: NoaToolContext): Promise<number> {
+  const { data } = await ctx.supabase
+    .from("profiles")
+    .select("bodyweight_kg")
+    .eq("user_id", ctx.userId)
+    .maybeSingle();
+  const w = num(data?.bodyweight_kg);
+  return w > 0 ? w : 75;
+}
 
 /** Ritmo en min/km como texto ("5'30\""), o null si no hay distancia. */
 function pace(km: number, sec: number): string | null {
