@@ -7,9 +7,13 @@ android {
   }
 }
 
-apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
+def cordovaVariablesFile = new File(projectDir, "../capacitor-cordova-android-plugins/cordova.variables.gradle")
+if (cordovaVariablesFile.exists()) {
+    apply from: cordovaVariablesFile
+}
 dependencies {
     implementation project(':capacitor-community-background-geolocation')
+    implementation project(':capacitor-mlkit-barcode-scanning')
     implementation project(':capacitor-app')
     implementation project(':capacitor-filesystem')
     implementation project(':capacitor-local-notifications')

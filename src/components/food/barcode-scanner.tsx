@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Keyboard, X } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { BarcodeScanner as NativeScanner, BarcodeFormat } from "@capacitor-mlkit/barcode-scanning";
 
 // Tipado minimo de la API nativa BarcodeDetector (aun no esta en lib.dom).
 type DetectedBarcode = { rawValue: string };
@@ -26,35 +28,73 @@ export function BarcodeScanner({
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const onDetectRef = useRef(onDetect);
+  const [isNative] = useState(() => Capacitor.isNativePlatform());
+
   useEffect(() => {
     onDetectRef.current = onDetect;
   }, [onDetect]);
 
-  // El escaner solo se monta tras un clic del usuario (nunca en SSR), asi que
-  // leer window en el inicializador es seguro y no da hidratacion inconsistente.
-  const [supported] = useState(
-    () => typeof window !== "undefined" && "BarcodeDetector" in window,
-  );
+  const [supported] = useState(() => {
+    if (typeof window === "undefined") return false;
+    // En nativo siempre intentamos usar el plugin.
+    if (Capacitor.isNativePlatform()) return true;
+    // En web, soportamos si existe BarcodeDetector o si usaremos el fallback de software.
+    return true;
+  });
+
   const [manual, setManual] = useState(!supported);
   const [manualCode, setManualCode] = useState("");
-  const [hint, setHint] = useState<string | null>(
-    supported ? null : "Tu navegador no soporta el escáner. Introduce el código a mano.",
-  );
+  const [hint, setHint] = useState<string | null>(null);
+  const [isSoftwareScanning, setIsSoftwareScanning] = useState(false);
 
   useEffect(() => {
     if (manual) return;
 
     let active = true;
     let raf = 0;
+    let zxingReader: any = null;
 
-    (async () => {
+    const startNativeScanner = async () => {
       try {
-        // El constructor va dentro del try: algunos navegadores exponen
-        // window.BarcodeDetector pero no es un constructor real (lanza), y hay
-        // que caer a entrada manual en vez de romper la pantalla.
-        const detector = new window.BarcodeDetector!({
-          formats: ["ean_13", "ean_8", "upc_a", "upc_e"],
+        const { camera: currentCamera } = await NativeScanner.checkPermissions();
+        if (currentCamera !== "granted") {
+          const { camera } = await NativeScanner.requestPermissions();
+          if (camera !== "granted") {
+            setManual(true);
+            setHint("Permiso de cámara denegado.");
+            return;
+          }
+        }
+
+        await NativeScanner.installGoogleBarcodeScannerModule();
+
+        const listener = await NativeScanner.addListener("barcodesScanned", (event) => {
+          const barcode = event.barcodes[0];
+          if (active && barcode?.rawValue) {
+            if (navigator.vibrate) navigator.vibrate(60);
+            onDetectRef.current(barcode.rawValue);
+          }
         });
+
+        document.body.classList.add("barcode-scanner-active");
+        await NativeScanner.startScan({
+          formats: [BarcodeFormat.Ean13, BarcodeFormat.Ean8, BarcodeFormat.UpcA, BarcodeFormat.UpcE],
+        });
+
+        return () => {
+          listener.remove();
+          NativeScanner.stopScan();
+          document.body.classList.remove("barcode-scanner-active");
+        };
+      } catch (err) {
+        console.error("Native Scanner error:", err);
+        setManual(true);
+        setHint("Error al iniciar el escáner nativo.");
+      }
+    };
+
+    const startWebScanner = async () => {
+      try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "environment" },
         });
@@ -68,36 +108,88 @@ export function BarcodeScanner({
           video.srcObject = stream;
           await video.play().catch(() => {});
         }
-        const scan = async () => {
-          if (!active || !videoRef.current) return;
-          try {
-            const codes = await detector.detect(videoRef.current);
-            const value = codes[0]?.rawValue;
-            if (value) {
-              if (navigator.vibrate) navigator.vibrate(60);
-              onDetectRef.current(value);
-              return;
-            }
-          } catch {
-            // Frame ilegible: seguimos intentando.
-          }
+
+        // INTENTO 1: BarcodeDetector (Nativo del navegador, ej. Chrome)
+        if ("BarcodeDetector" in window) {
+          const detector = new window.BarcodeDetector!({
+            formats: ["ean_13", "ean_8", "upc_a", "upc_e"],
+          });
+          const scan = async () => {
+            if (!active || !videoRef.current) return;
+            try {
+              const codes = await detector.detect(videoRef.current);
+              const value = codes[0]?.rawValue;
+              if (value) {
+                if (navigator.vibrate) navigator.vibrate(60);
+                onDetectRef.current(value);
+                return;
+              }
+            } catch {}
+            raf = requestAnimationFrame(scan);
+          };
           raf = requestAnimationFrame(scan);
-        };
-        raf = requestAnimationFrame(scan);
-      } catch {
+        }
+        // INTENTO 2: ZXing (Software, ej. Safari / PWA iOS)
+        else {
+          setIsSoftwareScanning(true);
+          const { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat: ZXingFormat } = await import("@zxing/library");
+
+          const hints = new Map();
+          const formats = [
+            ZXingFormat.EAN_13,
+            ZXingFormat.EAN_8,
+            ZXingFormat.UPC_A,
+            ZXingFormat.UPC_E,
+            ZXingFormat.CODE_128,
+          ];
+          hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
+          hints.set(DecodeHintType.TRY_HARDER, true);
+
+          zxingReader = new BrowserMultiFormatReader(hints);
+
+          const scanSoftware = async () => {
+            if (!active || !videoRef.current) return;
+            try {
+              const result = await zxingReader.decodeFromVideoElement(videoRef.current);
+              if (result && result.getText()) {
+                if (navigator.vibrate) navigator.vibrate(60);
+                onDetectRef.current(result.getText());
+                return;
+              }
+            } catch {
+              // No hay código en este frame, reintentamos en 200ms para no saturar CPU en software
+              if (active) setTimeout(scanSoftware, 200);
+            }
+          };
+          scanSoftware();
+        }
+      } catch (err) {
+        console.error("Web Scanner error:", err);
         if (active) {
           setManual(true);
-          setHint("No se pudo iniciar el escáner. Introduce el código a mano.");
+          setHint("No se pudo acceder a la cámara.");
         }
       }
-    })();
+    };
+
+    let cleanup: (() => void) | undefined;
+    if (isNative) {
+      startNativeScanner().then((c) => (cleanup = c));
+    } else {
+      startWebScanner();
+    }
 
     return () => {
       active = false;
-      cancelAnimationFrame(raf);
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+      if (isNative) {
+        cleanup?.();
+      } else {
+        cancelAnimationFrame(raf);
+        if (zxingReader) zxingReader.reset();
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+      }
     };
-  }, [manual]);
+  }, [manual, isNative]);
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col bg-black pt-[env(safe-area-inset-top)]">
@@ -110,7 +202,12 @@ export function BarcodeScanner({
         >
           <X className="size-5" />
         </button>
-        <p className="text-sm font-medium text-white">Escanear código</p>
+        <div className="flex flex-col items-center">
+          <p className="text-sm font-medium text-white">Escanear código</p>
+          {!isNative && !("BarcodeDetector" in window) && supported && !manual && (
+            <span className="text-[10px] text-white/50 uppercase tracking-widest">Modo PWA</span>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => setManual((m) => !m)}
@@ -122,8 +219,6 @@ export function BarcodeScanner({
       </header>
 
       {manual ? (
-        // Contenido arriba (no centrado) para que el teclado del movil no tape
-        // el boton, y en <form> para que "Enter/Buscar" del teclado envie.
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -152,17 +247,24 @@ export function BarcodeScanner({
         </form>
       ) : (
         <div className="relative flex flex-1 items-center justify-center overflow-hidden">
-          <video
-            ref={videoRef}
-            playsInline
-            muted
-            className="absolute inset-0 size-full object-cover"
-          />
+          {!isNative && (
+            <video
+              ref={videoRef}
+              playsInline
+              muted
+              className="absolute inset-0 size-full object-cover"
+            />
+          )}
           {/* Marco guia */}
           <div className="relative z-10 h-40 w-72 rounded-2xl border-2 border-white/80 shadow-[0_0_0_100vmax_rgba(0,0,0,0.45)]" />
           <p className="absolute bottom-16 z-10 px-6 text-center text-sm text-white/80">
             Apunta al código de barras del producto
           </p>
+          {isSoftwareScanning && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 rounded-full bg-black/40 px-3 py-1 backdrop-blur-sm">
+              <p className="text-[10px] text-white/70">Procesando por software...</p>
+            </div>
+          )}
         </div>
       )}
     </div>

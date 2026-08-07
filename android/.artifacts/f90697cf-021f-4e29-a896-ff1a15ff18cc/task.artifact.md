@@ -1,0 +1,10 @@
+- `[x]` Make `:capacitor-cordova-android-plugins` inclusion conditional
+- `[x]` Make `:capacitor-cordova-android-plugins` dependency conditional
+- `[x]` Make `cordova.variables.gradle` application conditional
+- `[x]` Sync Gradle to verify the fix
+- `[x]` Install `@capacitor-mlkit/barcode-scanning`
+- `[x]` Integrate Native ML Kit scanner in `barcode-scanner.tsx`
+- `[x]` Configure Android Manifest for ML Kit
+- `[x]` Install `@zxing/library`
+- `[x]` Implement ZXing fallback in `barcode-scanner.tsx` for PWA/Safari
+- `[x]` Verify build
