@@ -10,7 +10,7 @@ import { useAppShellPortal } from "@/lib/use-app-shell-portal";
 import { dispatchNoaAction } from "@/lib/noa/client/dispatch";
 import { Markdown } from "@/lib/noa/client/markdown";
 import { useMeals } from "@/lib/store/meals-store";
-import { useRogue } from "@/lib/store/rogue-store";
+import { getExerciseInfo, useRogue } from "@/lib/store/rogue-store";
 import { useCardio } from "@/lib/store/cardio-store";
 import { useWorkoutSession } from "@/lib/store/workout-session-store";
 import {
@@ -118,9 +118,9 @@ function NoaSheet({
   const router = useRouter();
   const { notify } = useToast();
   const { reload: reloadMeals } = useMeals();
-  const { reloadRoutine, reloadProfile, routineDays } = useRogue();
+  const { reloadRoutine, reloadProfile, routineDays, logSession } = useRogue();
   const { startTracking, reloadHistory: reloadCardio } = useCardio();
-  const { start: startSession } = useWorkoutSession();
+  const { start: startSession, finish: finishSession } = useWorkoutSession();
   const [pending, setPending] = useState<NoaProposedAction[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -156,15 +156,60 @@ function NoaSheet({
         startSession(day);
         onClose();
       },
+      finishWorkout: () => {
+        const outcome = finishSession();
+        if (outcome.ok) {
+          notify("Entreno guardado en tu historial.", "success");
+          onClose();
+        } else if (outcome.reason === "sin-entreno") {
+          notify("No tienes ningún entreno en curso.", "error");
+        } else {
+          notify("Marca alguna serie con repeticiones antes de terminar.", "error");
+        }
+      },
+      logWorkout: (dayLabel, exercises, durationSec) => {
+        // Una entrada por ejercicio se expande a `sets` series iguales: es lo
+        // que espera logSession, que trabaja siempre a nivel de serie.
+        const sets = exercises.flatMap((ex) =>
+          Array.from({ length: ex.sets }, () => ({
+            exerciseId: ex.exerciseId,
+            grupo: getExerciseInfo(ex.exerciseId).grupo,
+            weightKg: ex.weightKg,
+            reps: ex.reps,
+          })),
+        );
+        if (sets.length === 0) {
+          notify("No he podido identificar los ejercicios del entreno.", "error");
+          return;
+        }
+        logSession(dayLabel, sets, durationSec);
+        notify(`Entreno "${dayLabel}" guardado en tu historial.`, "success");
+      },
       startCardio: () => {
         startTracking();
         onClose();
         router.push("/app/cardio");
       },
       scheduleNotification: (id, title, body, atISO) => {
-        void scheduleNoaReminder(id, title, body, atISO).then((ok) => {
-          if (!ok) {
+        void scheduleNoaReminder(id, title, body, atISO).then((res) => {
+          if (res.ok) {
+            // Programado pero sin alarma exacta: Android puede retrasarlo. Se
+            // dice, en vez de dejar que el usuario piense que ha fallado cuando
+            // el aviso llegue 10 minutos tarde.
+            if (!res.exact) {
+              notify(
+                "Aviso programado. Para que llegue puntual, activa «Alarmas y recordatorios» en los ajustes de Rogue.",
+                "info",
+              );
+            }
+            return;
+          }
+          if (res.reason === "web") {
             notify("Los recordatorios solo funcionan en la app instalada.", "info");
+          } else if (res.reason === "pasado") {
+            notify("Esa hora ya ha pasado: dime un momento futuro.", "error");
+          } else {
+            notify("No he podido programar el aviso: falta el permiso de notificaciones.", "error");
           }
         });
       },
@@ -188,7 +233,12 @@ function NoaSheet({
       const res = await fetch("/api/noa", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message, history, clientDate: localDateKey() }),
+        body: JSON.stringify({
+          message,
+          history,
+          clientDate: localDateKey(),
+          clientNow: localNowISO(),
+        }),
       });
       // El engine ya devuelve 200 con un `reply` explicativo cuando algo falla
       // por dentro. Lo que llega aqui como no-OK es el guard de la route, y
@@ -241,6 +291,7 @@ function NoaSheet({
           // cerrar el menú tras crear los platos).
           history: turns,
           clientDate: localDateKey(),
+          clientNow: localNowISO(),
         }),
       });
       if (!res.ok) {
@@ -389,6 +440,29 @@ function localDateKey(): string {
   return `${y}-${m}-${day}`;
 }
 
+/**
+ * Instante actual del usuario en ISO 8601 CON offset (2026-08-08T19:23:45+02:00).
+ *
+ * Sin esto NOA no sabia que hora era: solo recibia la fecha (YYYY-MM-DD), asi
+ * que un "avisame en 5 minutos" lo calculaba a ojo desde una hora inventada.
+ * Se manda con offset, y no en UTC, porque los `atISO` de los recordatorios se
+ * interpretan en hora local: asi el modelo puede copiar la zona tal cual.
+ */
+function localNowISO(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  // getTimezoneOffset() devuelve minutos DETRAS de UTC (Madrid en verano: -120),
+  // de ahi que el signo se invierta.
+  const offMin = -d.getTimezoneOffset();
+  const sign = offMin >= 0 ? "+" : "-";
+  const off = Math.abs(offMin);
+  return (
+    `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` +
+    `T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}` +
+    `${sign}${p(Math.floor(off / 60))}:${p(off % 60)}`
+  );
+}
+
 // —— Tarjeta "plan": agrupa varias confirmaciones en secciones legibles ——
 
 /** Etiqueta de sección por herramienta. */
@@ -400,6 +474,8 @@ const GROUP_LABELS: Record<string, string> = {
   setNutritionGoals: "Objetivos",
   saveRoutine: "Rutina",
   startWorkout: "Entreno",
+  finishWorkout: "Terminar entreno",
+  logWorkout: "Registrar entreno",
   startCardio: "Cardio",
   deleteCardioSession: "Borrar ruta",
 };

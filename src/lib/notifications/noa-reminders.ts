@@ -47,19 +47,68 @@ async function ensureChannel(): Promise<void> {
   }
 }
 
-/** Programa un recordatorio. Devuelve false si no se pudo (web o sin permiso). */
+/**
+ * ¿Puede el sistema disparar la alarma a la hora EXACTA?
+ *
+ * En Android 12+ hace falta que el usuario conceda SCHEDULE_EXACT_ALARM desde
+ * Ajustes. Sin él la notificación llega igual, pero Android la agrupa con otras
+ * para ahorrar batería y puede retrasarse 10-15 min con el móvil en reposo, que
+ * es justo lo que rompe un "avísame en 5 minutos".
+ */
+export async function canScheduleExact(): Promise<boolean> {
+  if (!isNative()) return false;
+  try {
+    const { exact_alarm } = await LocalNotifications.checkExactNotificationSetting();
+    return exact_alarm === "granted";
+  } catch {
+    // Android < 12 no tiene el concepto: allí las alarmas ya son exactas.
+    return true;
+  }
+}
+
+/**
+ * Abre la pantalla de Ajustes donde se concede el permiso de alarmas exactas.
+ *
+ * OJO: al volver, Android REINICIA la app y borra las notificaciones ya
+ * programadas con alarma exacta (documentado en el plugin). Por eso no se llama
+ * sola al programar un aviso: sería reiniciar la app a mitad de conversación.
+ * Solo se invoca si el usuario lo pide explícitamente.
+ */
+export async function openExactAlarmSettings(): Promise<void> {
+  if (!isNative()) return;
+  try {
+    await LocalNotifications.changeExactNotificationSetting();
+  } catch {
+    // Si la pantalla no existe (Android < 12) no hay nada que ajustar.
+  }
+}
+
+export type ScheduleResult =
+  | { ok: true; exact: boolean }
+  | { ok: false; reason: "web" | "pasado" | "sin-permiso" };
+
+/**
+ * Programa un recordatorio.
+ *
+ * Devuelve `exact: false` cuando el aviso quedó programado pero SIN alarma
+ * exacta: se programa igualmente (mejor tarde que nunca) y quien llama decide
+ * si avisar al usuario de que puede retrasarse.
+ */
 export async function scheduleNoaReminder(
   id: string,
   title: string,
   body: string,
   atISO: string,
-): Promise<boolean> {
-  if (!isNative()) return false;
+): Promise<ScheduleResult> {
+  if (!isNative()) return { ok: false, reason: "web" };
   const at = new Date(atISO);
-  if (!Number.isFinite(at.getTime()) || at.getTime() <= Date.now()) return false;
+  if (!Number.isFinite(at.getTime()) || at.getTime() <= Date.now()) {
+    return { ok: false, reason: "pasado" };
+  }
 
   try {
     await ensureChannel();
+    const exact = await canScheduleExact();
     await LocalNotifications.schedule({
       notifications: [
         {
@@ -71,9 +120,9 @@ export async function scheduleNoaReminder(
         },
       ],
     });
-    return true;
+    return { ok: true, exact };
   } catch {
-    return false;
+    return { ok: false, reason: "sin-permiso" };
   }
 }
 

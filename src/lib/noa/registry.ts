@@ -41,6 +41,28 @@ export class ToolRegistry {
     return this.byName.get(name);
   }
 
+  /**
+   * Inventario de TODA la app: qué sabe hacer NOA, módulo a módulo, esté o no
+   * en scope este turno.
+   *
+   * El scope decide qué tools puede LLAMAR; este índice decide qué sabe que
+   * EXISTE. Sin él, un turno mal enrutado dejaba a NOA sin tools del dominio y
+   * sin forma de saberlo: en vez de decir "no puedo", improvisaba y llegaba a
+   * confirmar acciones que nunca ejecutó (un "hoy he hecho banca, apúntalo"
+   * caía en `calendar` por la palabra "hoy" y respondía "ya lo tienes
+   * registrado" sin haber guardado nada).
+   *
+   * Solo nombres, sin schemas: es barato y no permite invocar nada fuera de
+   * scope, que sigue siendo cosa de `select()`.
+   */
+  capabilityIndex(): string {
+    const lines: string[] = [];
+    for (const mod of this.byModule.values()) {
+      lines.push(`- ${mod.id}: ${mod.tools.map((t) => t.name).join(", ")}`);
+    }
+    return lines.join("\n");
+  }
+
   /** Providers de contexto de los módulos en scope, para el Context Builder. */
   contextProviders(modules: NoaModule[]): ToolModule["contextProvider"][] {
     return modules

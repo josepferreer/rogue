@@ -19,6 +19,27 @@ import type { NoaModule, ToolModule } from "@/lib/noa/types";
  */
 const MAX_MODULES = 4;
 
+/**
+ * Palabras que aparecen en frases de cualquier dominio ("hoy he hecho banca",
+ * "hoy me he pesado", "esta semana he comido fatal"). Casan, pero no fijan el
+ * scope por sí solas: si TODO lo que casó viene de aquí, la señal se considera
+ * débil y el turno se manda al router de Gemini (etapa 2).
+ *
+ * Es la red de seguridad del fallo que hacía a NOA confirmar entrenos que nunca
+ * guardaba: "hoy" casaba `calendar`, el scope quedaba fijado y el router —que
+ * solo corría cuando NADA casaba— no llegaba a ejecutarse nunca.
+ */
+const GENERIC_KEYWORDS = new Set([
+  "hoy",
+  "manana",
+  "mañana",
+  "ayer",
+  "semana",
+  "mes",
+  "dia",
+  "dias",
+]);
+
 /** Normaliza para casar acentos/mayúsculas de forma tosca pero suficiente. */
 function normalize(text: string): string {
   return text
@@ -49,13 +70,24 @@ export function analyzeIntent(
   // Se cuentan los aciertos, no solo si hubo alguno: sirve para ordenar cuando
   // el mensaje toca varios módulos y hay que quedarse con los más probables.
   const scores = new Map<NoaModule, number>();
+  // Aciertos que NO vienen de palabras genéricas: si al final no hay ninguno,
+  // el scope no es de fiar y se delega en el router.
+  let strongHits = 0;
   for (const mod of modules) {
     let score = 0;
     for (const kw of mod.intentKeywords) {
-      if (haystack.includes(normalize(kw))) score += 1;
+      if (haystack.includes(normalize(kw))) {
+        score += 1;
+        if (!GENERIC_KEYWORDS.has(normalize(kw))) strongHits += 1;
+      }
     }
     if (score > 0) scores.set(mod.id, score);
   }
+
+  // Señal solo genérica ("hoy he hecho banca"): se trata como si no hubiera
+  // casado nada, para que el engine llame al router en vez de fijar un scope
+  // que casi seguro es el equivocado.
+  if (strongHits === 0) scores.clear();
 
   // Continuidad: si el turno no casó ningún módulo por sí mismo, hereda los del
   // turno anterior (p.ej. "guárdala", "y el otro brazo?" tras hablar de

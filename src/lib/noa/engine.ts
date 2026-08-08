@@ -39,6 +39,44 @@ const SYSTEM_BASE = [
   "confirme. No conoces la base de datos ni escribes SQL: solo usas herramientas.",
 ].join(" ");
 
+/**
+ * Regla anti-alucinación. Va aparte de SYSTEM_BASE por lo específica que es:
+ * el fallo que corrige es real y grave (ver `capabilityIndex`), no teórico.
+ *
+ * Sin esto, un turno cuyo módulo no entró en scope acababa con NOA diciendo
+ * "¡hecho, ya lo tienes registrado!" sin haber llamado a nada.
+ */
+const SYSTEM_HONESTY = [
+  "REGLA INVIOLABLE — nunca digas que has hecho algo si no lo has hecho:",
+  "- Un cambio SOLO existe si has llamado a la herramienta correspondiente y el",
+  "  usuario ha confirmado la tarjeta. Tu texto no guarda, no borra y no programa nada.",
+  "- Prohibido responder «hecho», «ya está registrado», «lo he guardado» o similar",
+  "  si en ese turno no hubo llamada a herramienta. Es el peor fallo posible: el",
+  "  usuario se queda tranquilo creyendo que sus datos están a salvo y no lo están.",
+  "- Si la herramienta que necesitas NO está entre las disponibles de este turno,",
+  "  mira el INVENTARIO: si existe en otro módulo, dile al usuario que se lo repita",
+  "  nombrando el tema (p. ej. «dímelo otra vez empezando por “entreno:”») para que",
+  "  pueda cargarla. Si no existe en ningún módulo, di claramente que la app no sabe",
+  "  hacer eso todavía y ofrece la alternativa manual.",
+  "- Ante la duda, prefiere quedarte corto: es mejor un «no puedo» que una mentira.",
+].join("\n");
+
+/**
+ * Inventario completo de capacidades. NOA debe conocer la app ENTERA aunque el
+ * turno solo cargue unos módulos: así distingue "no puedo hacerlo aquí" (existe,
+ * mal enrutado) de "la app no sabe hacer eso" (no existe).
+ */
+function renderCapabilityBlock(available: string[]): string {
+  return [
+    "INVENTARIO DE LA APP (todo lo que NOA sabe hacer, por módulo):",
+    registry.capabilityIndex(),
+    "",
+    available.length > 0
+      ? `HERRAMIENTAS DISPONIBLES ESTE TURNO (las únicas que puedes llamar ahora): ${available.join(", ")}`
+      : "ESTE TURNO NO TIENES NINGUNA HERRAMIENTA DISPONIBLE: no puedes leer ni modificar datos. Responde solo con lo que sepas de la conversación y, si te piden algo de la app, pide al usuario que lo reformule nombrando el tema.",
+  ].join("\n");
+}
+
 export interface RunNoaInput {
   userId: string;
   message: string;
@@ -46,6 +84,7 @@ export interface RunNoaInput {
   history?: NoaTurn[];
   /** Día de hoy en la tz del usuario (YYYY-MM-DD), aportado por el cliente. */
   clientToday?: string;
+  clientNowISO?: string;
 }
 
 /** Fecha del servidor como YYYY-MM-DD (fallback si el cliente no la manda). */
@@ -63,12 +102,42 @@ function resolveToday(clientToday: string | undefined, now: Date): string {
     : serverToday(now);
 }
 
+/**
+ * Bloque con el instante actual del usuario para el system prompt.
+ *
+ * Sin esto el modelo NO recibia la hora por ningun lado (`ctx.today` solo lo
+ * usan las tools internamente), asi que inventaba tanto la fecha como la hora:
+ * un "avisame en 5 minutos" salia con una hora arbitraria. Se le da el ISO con
+ * offset ya montado para que pueda copiar la zona horaria tal cual en los
+ * `atISO` de los recordatorios.
+ */
+function renderNowBlock(clientNowISO: string | undefined, fallback: Date): string {
+  const iso = isValidLocalISO(clientNowISO) ? clientNowISO : fallback.toISOString();
+  return [
+    `MOMENTO ACTUAL DEL USUARIO: ${iso}`,
+    "Esa es la hora LOCAL del usuario, con su offset. Es tu única fuente de verdad para el tiempo:",
+    "- Calcula siempre desde ahí lo relativo («en 5 minutos», «esta tarde», «mañana»).",
+    "- Los `atISO` que generes van en esa misma hora local y con ese mismo offset.",
+    "- Nunca digas que no sabes qué hora es, ni la deduzcas de otra cosa.",
+  ].join("\n");
+}
+
+/** ISO 8601 con offset (2026-08-08T19:23:45+02:00) o en Z. */
+function isValidLocalISO(v: string | undefined): v is string {
+  return (
+    typeof v === "string" &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(v) &&
+    Number.isFinite(new Date(v).getTime())
+  );
+}
+
 /** System prompt = reglas base + personalidad (solo forma) + contexto precargado
  *  de los módulos en scope. Si la personalidad falla al leerse, se usan valores
  *  por defecto: nunca bloquea la conversación. */
 async function buildSystemPrompt(
   ctx: NoaToolContext,
   modules: NoaModule[],
+  clientNowISO?: string,
 ): Promise<string> {
   const snapshot = await buildContext(registry, modules, ctx);
   const contextBlock = renderContextBlock(snapshot);
@@ -77,7 +146,20 @@ async function buildSystemPrompt(
     ctx.userId,
   );
   const personalityBlock = renderPersonalityBlock(personality, profileName);
-  return [SYSTEM_BASE, personalityBlock, contextBlock].filter(Boolean).join("\n\n");
+  const nowBlock = renderNowBlock(clientNowISO, ctx.now);
+  const capabilityBlock = renderCapabilityBlock(
+    registry.select(modules).map((t) => t.name),
+  );
+  return [
+    SYSTEM_BASE,
+    SYSTEM_HONESTY,
+    personalityBlock,
+    nowBlock,
+    capabilityBlock,
+    contextBlock,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 /** Convierte el historial de la UI al formato de Gemini (turnos de solo texto). */
@@ -137,7 +219,7 @@ export async function runNoa(input: RunNoaInput): Promise<NoaResponse> {
 
   // 3. System prompt: reglas base + personalidad (solo forma) + contexto
   // precargado de los módulos en scope.
-  const system = await buildSystemPrompt(ctx, modules);
+  const system = await buildSystemPrompt(ctx, modules, input.clientNowISO);
 
   // 4. Conversación en formato Gemini (historial + turno actual).
   const contents: GeminiContent[] = [
@@ -180,6 +262,7 @@ export interface RunNoaConfirmInput {
   history?: NoaTurn[];
   /** Día de hoy en la tz del usuario (YYYY-MM-DD), aportado por el cliente. */
   clientToday?: string;
+  clientNowISO?: string;
 }
 
 /**
@@ -280,7 +363,7 @@ export async function runNoaConfirm(input: RunNoaConfirmInput): Promise<NoaRespo
     };
   }
 
-  const system = await buildSystemPrompt(ctx, scopeModules);
+  const system = await buildSystemPrompt(ctx, scopeModules, input.clientNowISO);
   const contents: GeminiContent[] = [
     ...historyToContents(input.history),
     { role: "user", parts: [{ text: resumeBatchNote(steps) }] },

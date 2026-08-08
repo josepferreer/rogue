@@ -27,6 +27,7 @@ import {
   UnitToggle,
 } from "@/components/profile/preference-controls";
 import { NoaKeyCard } from "@/components/noa/noa-key-card";
+import { NoaExactAlarmCard } from "@/components/noa/noa-exact-alarm-card";
 import { NoaPersonalityCard } from "@/components/noa/noa-personality-card";
 import { useRogue } from "@/lib/store/rogue-store";
 import { useFriends } from "@/lib/store/friends-store";
@@ -559,6 +560,7 @@ export default function PerfilPage({
         <div className="flex flex-col gap-3">
           <NoaKeyCard />
           <NoaPersonalityCard />
+          <NoaExactAlarmCard />
         </div>
       </Section>
 

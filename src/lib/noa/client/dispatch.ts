@@ -16,6 +16,19 @@ export interface DispatchDeps {
   refetch: (scope: NoaRefetchScope) => void;
   /** Inicia un entreno; sin día, entreno libre. */
   startWorkout: (routineDayId?: string) => void;
+  /** Cierra la sesión en curso y la guarda; avisa si no hay nada que cerrar. */
+  finishWorkout: () => void;
+  /** Registra un entreno ya hecho directamente en el historial. */
+  logWorkout: (
+    dayLabel: string,
+    exercises: {
+      exerciseId: string;
+      sets: number;
+      reps: number;
+      weightKg: number;
+    }[],
+    durationSec?: number,
+  ) => void;
   startCardio: () => void;
   scheduleNotification: (
     id: string,
@@ -41,6 +54,14 @@ export function dispatchNoaAction(
 
     case "startWorkout":
       deps.startWorkout(action.routineDayId);
+      return;
+
+    case "finishWorkout":
+      deps.finishWorkout();
+      return;
+
+    case "logWorkout":
+      deps.logWorkout(action.dayLabel, action.exercises, action.durationSec);
       return;
 
     case "startCardio":

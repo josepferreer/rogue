@@ -65,17 +65,20 @@ const getAgenda: ToolDef = {
 export const calendarModule: ToolModule = {
   id: "calendar",
   tools: [getAgenda],
+  // OJO: nada de palabras temporales sueltas ("hoy", "manana", "semana").
+  // Aparecen en frases de CUALQUIER modulo ("hoy he hecho banca", "hoy me he
+  // pesado") y como el pre-filtro casaba solo calendar, el turno se quedaba sin
+  // las tools del dominio real. Van en GENERIC_KEYWORDS del analyzer: cuentan
+  // como senal debil y no bastan por si solas para fijar el scope.
   intentKeywords: [
-    "hoy",
-    "manana",
-    "mañana",
-    "semana",
     "agenda",
     "calendario",
-    "toca",
+    "que toca",
     "programado",
     "planificado",
-    "descanso",
+    "dia de descanso",
+    "planning",
+    "planifica",
   ],
 };
 

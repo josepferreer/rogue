@@ -361,6 +361,76 @@ const addMealEntries: ToolDef = {
   },
 };
 
+const markMealEaten: ToolDef = {
+  name: "markMealEaten",
+  description:
+    "Marca como COMIDAS las entradas que estaban planificadas («ya me he comido la cena», «me he tomado todo lo de hoy»). Solo cambia la marca: no crea ni borra nada, y las macros ya estaban puestas. Para algo que NO estaba planificado, usa addMealEntries con eaten=true. Si el usuario quiere deshacerlo («no me lo he comido»), pasa eaten=false.",
+  parameters: {
+    type: "object",
+    properties: {
+      date: {
+        type: "string",
+        description: "Día en YYYY-MM-DD. Por defecto, hoy.",
+      },
+      mealType: {
+        type: "string",
+        enum: [...MEAL_TYPES],
+        description:
+          "Limitar a una comida del día (desayuno, comida, cena, snack). Omítelo para marcar todas las del día.",
+      },
+      eaten: {
+        type: "boolean",
+        description: "true = marcar como comida (por defecto). false = desmarcar.",
+      },
+    },
+  },
+  module: "nutrition",
+  kind: "write",
+  sensitivity: "confirm",
+  refetch: "nutrition",
+  summarize(args) {
+    const dia = typeof args.date === "string" ? args.date : "hoy";
+    const meal = typeof args.mealType === "string" ? `la ${args.mealType}` : "todas las comidas";
+    return args.eaten === false
+      ? `Desmarcar ${meal} de ${dia}: vuelven a contar como planificadas.`
+      : `Marcar ${meal} de ${dia} como ya comidas.`;
+  },
+  async handler(args, ctx: NoaToolContext) {
+    const date = asDate(args.date, ctx);
+    const eaten = args.eaten !== false;
+
+    let q = ctx.supabase
+      .from("meal_entries")
+      .update({ eaten })
+      .eq("date", date)
+      // Solo las que están en el estado contrario: así el contador de filas
+      // afectadas dice lo que REALMENTE ha cambiado, y no se toca lo que ya
+      // estaba bien.
+      .eq("eaten", !eaten);
+    if (typeof args.mealType === "string") {
+      q = q.eq("meal_type", asMealType(args.mealType));
+    }
+
+    const { data, error } = await q.select("id, name");
+    if (error) throw new Error(error.message);
+
+    const filas = data ?? [];
+    if (filas.length === 0) {
+      return {
+        actualizadas: 0,
+        aviso: eaten
+          ? "No había comidas planificadas sin marcar en ese día."
+          : "No había comidas marcadas como comidas en ese día.",
+      };
+    }
+    return {
+      actualizadas: filas.length,
+      eaten,
+      comidas: filas.map((r) => r.name),
+    };
+  },
+};
+
 const clearMealEntries: ToolDef = {
   name: "clearMealEntries",
   description:
@@ -829,6 +899,7 @@ export const nutritionModule: ToolModule = {
     searchPantry,
     searchFoodDatabase,
     addMealEntries,
+    markMealEaten,
     clearMealEntries,
     setNutritionGoals,
     savePantryFood,

@@ -34,13 +34,15 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "bad_request" }, { status: 400 });
   }
 
-  const { message, history, confirm, clientDate } = (body ?? {}) as {
+  const { message, history, confirm, clientDate, clientNow } = (body ?? {}) as {
     message?: unknown;
     history?: unknown;
     confirm?: unknown;
     clientDate?: unknown;
+    clientNow?: unknown;
   };
   const clientToday = typeof clientDate === "string" ? clientDate : undefined;
+  const clientNowISO = typeof clientNow === "string" ? clientNow : undefined;
 
   // Rama de confirmación: el usuario aceptó un plan (una o varias acciones).
   if (confirm && typeof confirm === "object") {
@@ -54,6 +56,7 @@ export async function POST(req: NextRequest) {
         actions,
         history: sanitizeHistory(history),
         clientToday,
+        clientNowISO,
       });
       return Response.json(response);
     } catch (err) {
@@ -71,6 +74,7 @@ export async function POST(req: NextRequest) {
       message: message.trim(),
       history: sanitizeHistory(history),
       clientToday,
+      clientNowISO,
     });
     return Response.json(response);
   } catch (err) {

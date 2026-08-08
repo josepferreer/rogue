@@ -191,6 +191,107 @@ const startWorkout: ToolDef = {
   },
 };
 
+const finishWorkout: ToolDef = {
+  name: "finishWorkout",
+  description:
+    "Termina la sesión de entrenamiento que está en curso en el mini-player y la guarda en el historial, con las series que el usuario ya haya marcado como hechas. Úsala cuando el usuario diga que ha acabado el entreno que tenía abierto. Si no hay ninguna sesión en curso, o no hay series marcadas, avisa de ello y no guarda nada: en ese caso usa logWorkout.",
+  parameters: { type: "object", properties: {} },
+  module: "training",
+  kind: "client-action",
+  sensitivity: "confirm",
+  summarize() {
+    return "Terminar el entreno en curso y guardarlo en tu historial.";
+  },
+  toAction() {
+    return { type: "finishWorkout" };
+  },
+};
+
+const logWorkout: ToolDef = {
+  name: "logWorkout",
+  description:
+    "Registra en el historial un entreno YA realizado, sin necesidad de haberlo iniciado en la app. Úsala cuando el usuario diga que ha entrenado y quiera apuntarlo (por ejemplo 'marca el entreno de pecho como hecho'). Cada ejercicio se guarda como `sets` series iguales de `reps` repeticiones con `weightKg` kilos. Consulta antes getRoutine o searchExercise para obtener los exerciseId correctos, y pregunta al usuario los pesos y repeticiones si no los ha dicho.",
+  parameters: {
+    type: "object",
+    properties: {
+      dayLabel: {
+        type: "string",
+        description:
+          "Nombre del entreno tal como aparecerá en el historial, p. ej. 'Pecho y tríceps' o 'Día A'.",
+      },
+      exercises: {
+        type: "array",
+        description: "Ejercicios realizados, con sus series.",
+        items: {
+          type: "object",
+          properties: {
+            exerciseId: { type: "string", description: "Id del ejercicio." },
+            sets: { type: "number", description: "Número de series hechas." },
+            reps: { type: "number", description: "Repeticiones por serie." },
+            weightKg: {
+              type: "number",
+              description: "Peso en kilos por serie (0 si es peso corporal).",
+            },
+          },
+          required: ["exerciseId", "sets", "reps", "weightKg"],
+        },
+      },
+      durationSec: {
+        type: "number",
+        description: "Duración del entreno en segundos, si el usuario la indica.",
+      },
+    },
+    required: ["dayLabel", "exercises"],
+  },
+  module: "training",
+  kind: "client-action",
+  sensitivity: "confirm",
+  // Sin esto la tarjeta de confirmacion enseñaba la `description` entera, que
+  // esta escrita para el modelo (habla de exerciseId, getRoutine…): el usuario
+  // veia un parrafo tecnico en vez de lo que va a guardar.
+  summarize(args) {
+    const raw = Array.isArray(args.exercises) ? args.exercises : [];
+    const lineas = raw.map((e) => {
+      const ex = e as Record<string, unknown>;
+      // Los exerciseId ya son legibles ("press-banca"); resolver el nombre real
+      // exigiria ir al repo de ejercicios, y `summarize` es sincrona.
+      const nombre = String(ex.exerciseId ?? "?").replace(/-/g, " ");
+      const kg = Number(ex.weightKg) || 0;
+      return `• ${nombre}: ${ex.sets}×${ex.reps}${kg > 0 ? ` con ${kg} kg` : ""}`;
+    });
+    const titulo = String(args.dayLabel ?? "Entreno");
+    return `Guardar «${titulo}» en tu historial:\n${lineas.join("\n")}`;
+  },
+  toAction(args) {
+    // Gemini a veces manda numeros como string; se normaliza aqui para que el
+    // cliente reciba siempre la forma tipada que declara NoaClientAction.
+    const raw = Array.isArray(args.exercises) ? args.exercises : [];
+    const exercises = raw
+      .map((e) => {
+        const ex = e as Record<string, unknown>;
+        return {
+          exerciseId: String(ex.exerciseId ?? ""),
+          sets: clampInt(ex.sets, 1, 1, 50),
+          reps: clampInt(ex.reps, 1, 1, 500),
+          weightKg: Math.max(0, Number(ex.weightKg) || 0),
+        };
+      })
+      .filter((e) => e.exerciseId !== "");
+
+    const durationSec =
+      args.durationSec === undefined
+        ? undefined
+        : clampInt(args.durationSec, 0, 0, 86400);
+
+    return {
+      type: "logWorkout",
+      dayLabel: String(args.dayLabel ?? "Entreno"),
+      exercises,
+      durationSec,
+    };
+  },
+};
+
 /** Forma de un día tal como lo espera `save_routine` (y esta tool). */
 interface RoutineDayInput {
   id?: string;
@@ -292,6 +393,8 @@ export const trainingModule: ToolModule = {
     getRoutine,
     searchExercise,
     startWorkout,
+    finishWorkout,
+    logWorkout,
     saveRoutine,
   ],
   intentKeywords: [
@@ -310,6 +413,34 @@ export const trainingModule: ToolModule = {
     "triceps",
     "hombro",
     "gym",
+    // Nombres de ejercicios y jerga de gimnasio: son la señal MÁS fiable de que
+    // se habla de entrenamiento, y antes no casaban ninguna keyword. Una frase
+    // como "hoy he hecho banca 4x8" se quedaba sin módulo y acababa en el router,
+    // que a veces elegía mal (llegó a mandarla a cardio).
+    "banca",
+    "press",
+    "sentadilla",
+    "dominada",
+    "remo",
+    "curl",
+    "peso muerto",
+    "jalon",
+    "jalón",
+    "fondos",
+    "zancada",
+    "femoral",
+    "gemelo",
+    "abdominal",
+    "mancuerna",
+    "barra",
+    "repes",
+    "rm",
+    "levant",
+    "musculo",
+    "músculo",
+    "fuerza",
+    "volumen",
+    "hipertrofia",
   ],
   contextProvider,
 };

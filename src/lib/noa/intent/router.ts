@@ -24,14 +24,34 @@ const SYSTEM = [
   "Responde SOLO con los identificadores de los módulos que harían falta para",
   "responderla, separados por comas, sin explicar nada. Si ninguno encaja,",
   "responde exactamente: ninguno",
-].join(" ");
+  "",
+  "Ante la duda, incluye de más: un módulo sobrante solo gasta contexto, pero",
+  "uno que falte deja a NOA sin poder hacer lo que le piden.",
+  "",
+  "Ejemplos:",
+  "- «hoy he hecho banca 4x8 con 80, apúntamelo» → training",
+  "  (levantar peso en el gimnasio es training, aunque diga «hoy»; cardio es SOLO",
+  "  correr/andar/bici)",
+  "- «me he pesado 79,4» → profile",
+  "- «he salido a hacer 10k» → cardio",
+  "- «cuántas calorías he quemado» → cardio",
+  "- «cuántas calorías he comido» → nutrition",
+  "- «ya me he comido la cena» → nutrition",
+  "- «qué me toca mañana» → calendar",
+  "- «recuérdame estirar luego» → notifications",
+  "- «cómo lo llevo este mes» → training, nutrition, cardio",
+].join("\n");
 
 /** Descripción corta de cada módulo, para que el router sepa qué es cada uno. */
 const DESCRIPTIONS: Record<NoaModule, string> = {
-  training: "entrenamientos, rutina, ejercicios, series y progreso de fuerza",
-  nutrition: "comidas, calorías, macros, dieta, despensa y objetivos nutricionales",
-  cardio: "carreras, caminatas, distancia, ritmo y rutas de GPS",
-  profile: "datos del usuario (peso, altura, objetivo) y preferencias de la app",
+  training:
+    "gimnasio y pesas: rutina, ejercicios (banca, sentadilla, dominadas…), series, repeticiones, kilos levantados, registrar o terminar un entreno y progreso de fuerza",
+  nutrition:
+    "comidas, calorías INGERIDAS, macros, dieta, despensa y objetivos nutricionales",
+  cardio:
+    "correr, andar o bici: distancia, ritmo, rutas de GPS y calorías QUEMADAS. NO incluye levantar pesas",
+  profile:
+    "datos del usuario (peso corporal, pesajes, altura, objetivo) y preferencias de la app",
   calendar: "qué toca hoy o esta semana, agenda y planificación",
   notifications: "recordatorios y avisos programados",
   heatmap: "mapa de calor muscular",

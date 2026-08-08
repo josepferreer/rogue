@@ -126,6 +126,76 @@ const startCardioSession: ToolDef = {
   },
 };
 
+const logCardio: ToolDef = {
+  name: "logCardio",
+  description:
+    "Registra en el historial una sesión de cardio YA hecha (correr, andar, bici…), sin haberla seguido con el GPS. Úsala cuando el usuario cuente que ha salido y quiera apuntarlo («he corrido 5 km en 25 minutos, apúntalo»). No lleva recorrido en el mapa, porque no se grabó. Si falta la distancia o el tiempo, pregúntaselos antes: sin ellos el ritmo y las estimaciones salen mal.",
+  parameters: {
+    type: "object",
+    properties: {
+      distanceKm: {
+        type: "number",
+        description: "Distancia recorrida en kilómetros.",
+      },
+      durationMin: {
+        type: "number",
+        description: "Duración en minutos.",
+      },
+      dateISO: {
+        type: "string",
+        description:
+          "Cuándo fue, en ISO 8601. Omítelo para «ahora» (usa el MOMENTO ACTUAL si el usuario dice una hora concreta).",
+      },
+    },
+    required: ["distanceKm", "durationMin"],
+  },
+  module: "cardio",
+  kind: "write",
+  sensitivity: "confirm",
+  refetch: "cardio",
+  summarize(args) {
+    const km = Number(args.distanceKm) || 0;
+    const min = Number(args.durationMin) || 0;
+    const ritmo = km > 0 ? (min / km).toFixed(1) : "?";
+    return `Registrar ${km} km en ${min} min (ritmo ${ritmo} min/km) en tu historial de cardio.`;
+  },
+  async handler(args, ctx: NoaToolContext) {
+    const distanceKm = Number(args.distanceKm);
+    const durationMin = Number(args.durationMin);
+    if (!Number.isFinite(distanceKm) || distanceKm <= 0) {
+      throw new Error("La distancia debe ser mayor que cero.");
+    }
+    if (!Number.isFinite(durationMin) || durationMin <= 0) {
+      throw new Error("La duración debe ser mayor que cero.");
+    }
+
+    const raw = typeof args.dateISO === "string" ? new Date(args.dateISO) : null;
+    const date = raw && Number.isFinite(raw.getTime()) ? raw : ctx.now;
+
+    const { data, error } = await ctx.supabase
+      .from("cardio_sessions")
+      .insert({
+        user_id: ctx.userId,
+        date: date.toISOString(),
+        distance_km: Number(distanceKm.toFixed(2)),
+        duration_sec: Math.round(durationMin * 60),
+        // Sin GPS no hay traza: el mapa de esa sesión sale vacío a propósito.
+        coordinates: [],
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+
+    return {
+      registrada: true,
+      id: data?.id,
+      distanciaKm: Number(distanceKm.toFixed(2)),
+      duracionMin: Math.round(durationMin),
+      ritmoMinKm: Number((durationMin / distanceKm).toFixed(2)),
+    };
+  },
+};
+
 const deleteCardioSession: ToolDef = {
   name: "deleteCardioSession",
   description:
@@ -178,7 +248,13 @@ async function contextProvider(ctx: NoaToolContext) {
 
 export const cardioModule: ToolModule = {
   id: "cardio",
-  tools: [getCardioHistory, getCardioSummary, startCardioSession, deleteCardioSession],
+  tools: [
+    getCardioHistory,
+    getCardioSummary,
+    startCardioSession,
+    logCardio,
+    deleteCardioSession,
+  ],
   intentKeywords: [
     "cardio",
     "correr",
@@ -195,6 +271,10 @@ export const cardioModule: ToolModule = {
     "ritmo",
     "pasos",
     "trote",
+    // "calorias" es keyword de nutrition: sin esto, "cuantas calorias he
+    // quemado" se iba a nutrition y NOA respondia sobre lo ingerido.
+    "quemad",
+    "quemar",
   ],
   contextProvider,
 };

@@ -53,6 +53,118 @@ const getProfile: ToolDef = {
   },
 };
 
+const logBodyWeight: ToolDef = {
+  name: "logBodyWeight",
+  description:
+    "Registra un pesaje en el historial de peso corporal y actualiza el peso actual del perfil. Úsala cuando el usuario diga cuánto pesa («hoy me he pesado 79,4»). Preferible a updateProfile para el peso: esta guarda el histórico, la otra solo sobrescribe el valor actual.",
+  parameters: {
+    type: "object",
+    properties: {
+      weightKg: { type: "number", description: "Peso en kilogramos." },
+      date: {
+        type: "string",
+        description: "Día del pesaje en YYYY-MM-DD. Por defecto, hoy.",
+      },
+    },
+    required: ["weightKg"],
+  },
+  module: "profile",
+  kind: "write",
+  sensitivity: "confirm",
+  refetch: "profile",
+  summarize(args) {
+    const dia = typeof args.date === "string" ? ` (${args.date})` : "";
+    return `Registrar ${Number(args.weightKg)} kg como tu peso${dia}.`;
+  },
+  async handler(args, ctx: NoaToolContext) {
+    const weightKg = Number(args.weightKg);
+    // Rango de cordura: filtra un "peso" que en realidad eran las repes o los
+    // kilos de la barra, que es el error tipico al dictar.
+    if (!Number.isFinite(weightKg) || weightKg < 20 || weightKg > 400) {
+      throw new Error("Ese peso no parece correcto (debe estar entre 20 y 400 kg).");
+    }
+    const date =
+      typeof args.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(args.date)
+        ? args.date
+        : ctx.today;
+
+    const { error } = await ctx.supabase
+      .from("body_weight_log")
+      .upsert(
+        { user_id: ctx.userId, date, weight_kg: weightKg },
+        { onConflict: "user_id,date" },
+      );
+    if (error) throw new Error(error.message);
+
+    // El perfil guarda el peso ACTUAL: solo se toca si el pesaje es el mas
+    // reciente (registrar uno antiguo no debe pisar el de hoy).
+    const { data: ultimo } = await ctx.supabase
+      .from("body_weight_log")
+      .select("date, weight_kg")
+      .order("date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (ultimo && ultimo.date === date) {
+      await ctx.supabase
+        .from("profiles")
+        .update({ bodyweight_kg: weightKg })
+        .eq("user_id", ctx.userId);
+    }
+
+    return { registrado: true, date, pesoKg: weightKg };
+  },
+};
+
+const getWeightHistory: ToolDef = {
+  name: "getWeightHistory",
+  description:
+    "Historial de peso corporal del usuario en una ventana de días, con la variación total. Úsala para «¿cuánto he adelgazado este mes?» o para ver la tendencia. Si devuelve un solo pesaje, dilo: no hay tendencia con un único dato.",
+  parameters: {
+    type: "object",
+    properties: {
+      days: {
+        type: "integer",
+        description: "Ventana hacia atrás en días (def. 90, máx. 730).",
+      },
+    },
+  },
+  module: "profile",
+  kind: "read",
+  sensitivity: "safe",
+  async handler(args, ctx: NoaToolContext) {
+    const days = clampInt(args.days, 90, 1, 730);
+    const desde = new Date(ctx.now.getTime() - days * 86400_000)
+      .toISOString()
+      .slice(0, 10);
+
+    const { data, error } = await ctx.supabase
+      .from("body_weight_log")
+      .select("date, weight_kg")
+      .gte("date", desde)
+      .order("date", { ascending: true });
+    if (error) throw new Error(error.message);
+
+    const rows = (data ?? []).map((r) => ({
+      date: r.date as string,
+      pesoKg: Number(r.weight_kg),
+    }));
+    if (rows.length === 0) {
+      return { ventanaDias: days, pesajes: [], aviso: "No hay pesajes en ese periodo." };
+    }
+    const primero = rows[0];
+    const ultimo = rows[rows.length - 1];
+    return {
+      ventanaDias: days,
+      pesajes: rows,
+      primero,
+      ultimo,
+      variacionKg: Number((ultimo.pesoKg - primero.pesoKg).toFixed(2)),
+      // Con un solo pesaje la "variacion" es 0 y enganaria: se avisa.
+      tendenciaFiable: rows.length >= 2,
+    };
+  },
+};
+
 const updateProfile: ToolDef = {
   name: "updateProfile",
   description:
@@ -179,10 +291,22 @@ async function contextProvider(ctx: NoaToolContext) {
 
 export const profileModule: ToolModule = {
   id: "profile",
-  tools: [getProfile, updateProfile, updatePreferences],
+  tools: [
+    getProfile,
+    logBodyWeight,
+    getWeightHistory,
+    updateProfile,
+    updatePreferences,
+  ],
   intentKeywords: [
     "perfil",
     "peso",
+    "pesado",
+    "peso corporal",
+    "adelgaz",
+    "engord",
+    "bascula",
+    "báscula",
     "pesar",
     "altura",
     "estatura",
@@ -201,6 +325,13 @@ export const profileModule: ToolModule = {
   ],
   contextProvider,
 };
+
+/** Entero acotado con valor por defecto, para args que vienen de Gemini. */
+function clampInt(value: unknown, fallback: number, min: number, max: number): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.trunc(n)));
+}
 
 function num(value: unknown): number {
   const n = Number(value);

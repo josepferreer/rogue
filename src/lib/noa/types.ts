@@ -82,6 +82,23 @@ export type NoaClientAction =
   | { type: "refetch"; scope: NoaRefetchScope }
   | { type: "openModal"; modal: string; props?: Record<string, unknown> }
   | { type: "startWorkout"; routineDayId?: string }
+  /** Cierra la sesion abierta en el mini-player y la guarda en el historial. */
+  | { type: "finishWorkout" }
+  /**
+   * Registra un entreno YA hecho directamente en el historial, sin pasar por el
+   * mini-player. Cada entrada de `exercises` se expande a `sets` series iguales.
+   */
+  | {
+      type: "logWorkout";
+      dayLabel: string;
+      exercises: {
+        exerciseId: string;
+        sets: number;
+        reps: number;
+        weightKg: number;
+      }[];
+      durationSec?: number;
+    }
   | { type: "startCardio" }
   | {
       type: "scheduleLocalNotification";
