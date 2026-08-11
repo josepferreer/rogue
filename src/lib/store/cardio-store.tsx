@@ -45,7 +45,7 @@ const MAX_JUMP_M = 80;
 
 // --- Types ---
 
-export type Coordinate = { lat: number; lng: number; timestamp: number };
+export type Coordinate = { lat: number; lng: number; alt?: number; timestamp: number };
 
 /**
  * Ruta del historial. `coordinates` es OPCIONAL a proposito: el listado no las
@@ -402,7 +402,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
           (p) => {
             setGpsError(null);
             setGpsNeedsSettings(false);
-            const newCoord: Coordinate = { lat: p.lat, lng: p.lng, timestamp: p.timestamp };
+            const newCoord: Coordinate = { lat: p.lat, lng: p.lng, alt: p.alt, timestamp: p.timestamp };
             const last = lastAcceptedRef.current;
             if (last) {
               const distKm = haversineKm(last.lat, last.lng, newCoord.lat, newCoord.lng);

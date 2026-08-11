@@ -2,12 +2,14 @@ import "server-only";
 import type { NoaToolContext, ToolDef, ToolModule } from "@/lib/noa/types";
 import { getExercises } from "@/lib/exercises/repo";
 import { EXERCISE_CATEGORIES } from "@/lib/exercises/types";
+import type { EquipmentId } from "@/lib/exercises/types";
 import { WEEKDAY_LABELS } from "@/lib/workout/types";
 
 /**
  * Módulo TRAINING — entrenamientos.
  *
- * Lectura:  getWorkoutHistory, getTrainingSummary, getRoutine, searchExercise
+ * Lectura:  getWorkoutHistory, getTrainingSummary, getRoutine, searchExercise,
+ *           listExercisesByMuscle
  * Cliente:  startWorkout (abre el mini-player)
  * Escritura: saveRoutine (vía rpc `save_routine`, con confirmación)
  *
@@ -127,7 +129,7 @@ const getRoutine: ToolDef = {
 const searchExercise: ToolDef = {
   name: "searchExercise",
   description:
-    "Busca ejercicios en el catálogo por nombre y/o grupo muscular. Devuelve sus identificadores reales (id), necesarios para añadirlos a una rutina. Úsala para resolver nombres antes de guardar.",
+    "Busca ejercicios en el catálogo por nombre y/o grupo muscular. Devuelve sus identificadores reales (id), necesarios para añadirlos a una rutina. Úsala para resolver nombres concretos antes de guardar. Para explorar todos los ejercicios disponibles de un músculo, usa listExercisesByMuscle.",
   parameters: {
     type: "object",
     properties: {
@@ -137,7 +139,7 @@ const searchExercise: ToolDef = {
         enum: [...EXERCISE_CATEGORIES],
         description: "Filtra por grupo muscular.",
       },
-      limit: { type: "integer", description: "Máximo de resultados (def. 8)." },
+      limit: { type: "integer", description: "Máximo de resultados (def. 12)." },
     },
   },
   module: "training",
@@ -150,7 +152,7 @@ const searchExercise: ToolDef = {
         ? (args.grupo as (typeof EXERCISE_CATEGORIES)[number])
         : undefined;
     const query = typeof args.query === "string" ? args.query : undefined;
-    const limit = clampInt(args.limit, 8, 1, 20);
+    const limit = clampInt(args.limit, 12, 1, 30);
 
     const list = await getExercises({ query, grupo });
     return {
@@ -163,6 +165,193 @@ const searchExercise: ToolDef = {
         mecanica: e.mecanica,
       })),
     };
+  },
+};
+
+const getExerciseProgress: ToolDef = {
+  name: "getExerciseProgress",
+  description:
+    "Muestra la evolución histórica de un ejercicio concreto: peso máximo, 1RM estimado (fórmula de Epley) y un desglose por sesión con la mejor serie de cada día. Úsala cuando el usuario pregunte por su progreso en un ejercicio, si se ha estancado, o cuánto lleva levantando. Necesitas el exerciseId (búscalo con searchExercise si no lo tienes).",
+  parameters: {
+    type: "object",
+    properties: {
+      exerciseId: {
+        type: "string",
+        description: "Id del ejercicio (ej. 'press-banca-con-barra').",
+      },
+      weeks: {
+        type: "integer",
+        description: "Cuántas semanas hacia atrás analizar (def. 12, máx. 52).",
+      },
+    },
+    required: ["exerciseId"],
+  },
+  module: "training",
+  kind: "read",
+  sensitivity: "safe",
+  async handler(args, ctx: NoaToolContext) {
+    const exerciseId = typeof args.exerciseId === "string" ? args.exerciseId.trim() : "";
+    if (!exerciseId) throw new Error("exerciseId requerido.");
+    const weeks = clampInt(args.weeks, 12, 1, 52);
+    const since = new Date(ctx.now.getTime() - weeks * 7 * 86400_000).toISOString();
+
+    // Busca todas las series de este ejercicio + la fecha de su sesión.
+    const { data, error } = await ctx.supabase
+      .from("workout_sets")
+      .select("weight_kg, reps, session_id, workout_sessions!inner(date, day_label)")
+      .eq("exercise_id", exerciseId)
+      .gte("workout_sessions.date", since)
+      .order("workout_sessions(date)", { ascending: true });
+
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) {
+      return {
+        exerciseId,
+        mensaje: "No hay series registradas para este ejercicio en el período seleccionado.",
+        sesiones: [],
+      };
+    }
+
+    // Agrupa por sesión y calcula la mejor serie (máx 1RM estimado) de cada día.
+    const bySession = new Map<
+      string,
+      { date: string; dayLabel: string; sets: { weightKg: number; reps: number; est1RM: number }[] }
+    >();
+
+    for (const row of data) {
+      const r = row as {
+        weight_kg: number;
+        reps: number;
+        session_id: string;
+        workout_sessions: { date: string; day_label: string } | { date: string; day_label: string }[];
+      };
+      const sess = Array.isArray(r.workout_sessions) ? r.workout_sessions[0] : r.workout_sessions;
+      const dateStr = String(sess?.date ?? "").slice(0, 10);
+      const label = String(sess?.day_label ?? "");
+      const weightKg = Number(r.weight_kg) || 0;
+      const reps = Number(r.reps) || 0;
+      // Fórmula de Epley: 1RM ≈ peso × (1 + reps/30)
+      const est1RM = reps === 1 ? weightKg : Math.round(weightKg * (1 + reps / 30) * 10) / 10;
+
+      const existing = bySession.get(r.session_id) ?? { date: dateStr, dayLabel: label, sets: [] };
+      existing.sets.push({ weightKg, reps, est1RM });
+      bySession.set(r.session_id, existing);
+    }
+
+    const sesiones = [...bySession.values()].map((s) => {
+      const bestSet = s.sets.reduce((best, cur) => (cur.est1RM > best.est1RM ? cur : best));
+      return {
+        fecha: s.date,
+        dayLabel: s.dayLabel,
+        series: s.sets.length,
+        mejorSerie: { weightKg: bestSet.weightKg, reps: bestSet.reps },
+        est1RM: bestSet.est1RM,
+      };
+    });
+
+    const maxWeight = Math.max(...sesiones.map((s) => s.mejorSerie.weightKg));
+    const max1RM = Math.max(...sesiones.map((s) => s.est1RM));
+
+    // Detecta estancamiento: si las últimas 3 sesiones tienen el mismo peso máximo.
+    const ultimas3 = sesiones.slice(-3);
+    const estancado =
+      ultimas3.length >= 3 &&
+      ultimas3.every((s) => s.mejorSerie.weightKg === ultimas3[0].mejorSerie.weightKg);
+
+    return {
+      exerciseId,
+      semanas: weeks,
+      totalSesiones: sesiones.length,
+      pesoMaximo: maxWeight,
+      est1RMMax: max1RM,
+      estancado,
+      sesiones,
+    };
+  },
+};
+
+const listExercisesByMuscle: ToolDef = {
+  name: "listExercisesByMuscle",
+  description:
+    "Devuelve el catálogo COMPLETO de ejercicios de uno o varios grupos musculares, ordenados por relevancia (compuestos primero, luego aislamientos). Úsala SIEMPRE antes de crear o modificar una rutina desde cero, para saber qué ejercicios hay disponibles en el catálogo real y elegir los mejores en vez de inventar nombres. Por ejemplo, si el usuario pide 'una rutina de pecho y tríceps', llama a esta tool con grupos=['Pecho','Triceps'] para ver todas las opciones y escoger.",
+  parameters: {
+    type: "object",
+    properties: {
+      grupos: {
+        type: "array",
+        items: {
+          type: "string",
+          enum: [...EXERCISE_CATEGORIES],
+        },
+        description:
+          "Lista de grupos musculares a consultar (ej. ['Pecho', 'Triceps']). Siempre en castellano con mayúscula inicial.",
+      },
+      equipo: {
+        type: "string",
+        description:
+          "Filtra por equipamiento (ej. 'barra', 'mancuernas', 'polea', 'maquina', 'peso-corporal'). Omite si no hay restricción.",
+      },
+    },
+    required: ["grupos"],
+  },
+  module: "training",
+  kind: "read",
+  sensitivity: "safe",
+  async handler(args) {
+    const gruposRaw = Array.isArray(args.grupos) ? args.grupos : [];
+    const grupos = gruposRaw.filter(
+      (g): g is (typeof EXERCISE_CATEGORIES)[number] =>
+        typeof g === "string" &&
+        (EXERCISE_CATEGORIES as readonly string[]).includes(g),
+    );
+
+    if (grupos.length === 0) {
+      return { exercises: [], error: "Ningún grupo muscular válido especificado." };
+    }
+
+    const equipoArg = typeof args.equipo === "string" ? args.equipo : undefined;
+    const equipo = equipoArg as EquipmentId | undefined;
+
+    // Fetch each group in parallel
+    const results = await Promise.all(
+      grupos.map((grupo) =>
+        getExercises({ grupo, ...(equipo ? { equipo } : {}) }),
+      ),
+    );
+
+    // Merge and deduplicate by id, compuestos primero
+    const seen = new Set<string>();
+    const merged: {
+      id: string;
+      nombre: string;
+      grupo: string;
+      equipo: string;
+      mecanica: string;
+      dificultad: string;
+      musculosPrimarios: string[];
+    }[] = [];
+
+    for (const list of results) {
+      const sorted = [...list].sort((a, b) => {
+        if (a.mecanica === b.mecanica) return 0;
+        return a.mecanica === "compuesto" ? -1 : 1;
+      });
+      for (const e of sorted) {
+        if (seen.has(e.id)) continue;
+        seen.add(e.id);
+        merged.push({
+          id: e.id,
+          nombre: e.nombre,
+          grupo: e.grupo,
+          equipo: e.equipo,
+          mecanica: e.mecanica,
+          dificultad: e.dificultad,
+          musculosPrimarios: e.musculosPrimarios,
+        });
+      }
+    }
+
+    return { total: merged.length, exercises: merged };
   },
 };
 
@@ -210,7 +399,7 @@ const finishWorkout: ToolDef = {
 const logWorkout: ToolDef = {
   name: "logWorkout",
   description:
-    "Registra en el historial un entreno YA realizado, sin necesidad de haberlo iniciado en la app. Úsala cuando el usuario diga que ha entrenado y quiera apuntarlo (por ejemplo 'marca el entreno de pecho como hecho'). Cada ejercicio se guarda como `sets` series iguales de `reps` repeticiones con `weightKg` kilos. Consulta antes getRoutine o searchExercise para obtener los exerciseId correctos, y pregunta al usuario los pesos y repeticiones si no los ha dicho.",
+    "Registra en el historial un entreno YA realizado, sin necesidad de haberlo iniciado en la app. Úsala cuando el usuario diga que ha entrenado y quiera apuntarlo. Para ejercicios con pesos distintos por serie (ej. '12 con 59 kg, 10 con 66 kg, 10 con 66 kg'), usa setDetails con una entrada por serie. Para series uniformes, usa sets+reps+weightKg. Consulta antes getRoutine o searchExercise para obtener los exerciseId correctos.",
   parameters: {
     type: "object",
     properties: {
@@ -226,14 +415,30 @@ const logWorkout: ToolDef = {
           type: "object",
           properties: {
             exerciseId: { type: "string", description: "Id del ejercicio." },
-            sets: { type: "number", description: "Número de series hechas." },
-            reps: { type: "number", description: "Repeticiones por serie." },
+            sets: {
+              type: "number",
+              description: "Número de series iguales (usa esto si todas las series tienen el mismo peso y reps).",
+            },
+            reps: { type: "number", description: "Repeticiones por serie (cuando todas son iguales)." },
             weightKg: {
               type: "number",
-              description: "Peso en kilos por serie (0 si es peso corporal).",
+              description: "Peso en kilos por serie (cuando todas son iguales). 0 si es peso corporal.",
+            },
+            setDetails: {
+              type: "array",
+              description:
+                "Usa esto en vez de sets/reps/weightKg cuando cada serie tiene peso o reps distintos. Una entrada por serie.",
+              items: {
+                type: "object",
+                properties: {
+                  reps: { type: "number", description: "Repeticiones de esta serie." },
+                  weightKg: { type: "number", description: "Peso en kg de esta serie. 0 si es peso corporal." },
+                },
+                required: ["reps", "weightKg"],
+              },
             },
           },
-          required: ["exerciseId", "sets", "reps", "weightKg"],
+          required: ["exerciseId"],
         },
       },
       durationSec: {
@@ -246,16 +451,18 @@ const logWorkout: ToolDef = {
   module: "training",
   kind: "client-action",
   sensitivity: "confirm",
-  // Sin esto la tarjeta de confirmacion enseñaba la `description` entera, que
-  // esta escrita para el modelo (habla de exerciseId, getRoutine…): el usuario
-  // veia un parrafo tecnico en vez de lo que va a guardar.
   summarize(args) {
     const raw = Array.isArray(args.exercises) ? args.exercises : [];
     const lineas = raw.map((e) => {
       const ex = e as Record<string, unknown>;
-      // Los exerciseId ya son legibles ("press-banca"); resolver el nombre real
-      // exigiria ir al repo de ejercicios, y `summarize` es sincrona.
       const nombre = String(ex.exerciseId ?? "?").replace(/-/g, " ");
+      // Si hay setDetails, mostramos el detalle de cada serie.
+      if (Array.isArray(ex.setDetails) && ex.setDetails.length > 0) {
+        const detalle = (ex.setDetails as { reps: number; weightKg: number }[])
+          .map((s, i) => `  Serie ${i + 1}: ${s.reps} reps × ${s.weightKg} kg`)
+          .join("\n");
+        return `• ${nombre}:\n${detalle}`;
+      }
       const kg = Number(ex.weightKg) || 0;
       return `• ${nombre}: ${ex.sets}×${ex.reps}${kg > 0 ? ` con ${kg} kg` : ""}`;
     });
@@ -263,20 +470,31 @@ const logWorkout: ToolDef = {
     return `Guardar «${titulo}» en tu historial:\n${lineas.join("\n")}`;
   },
   toAction(args) {
-    // Gemini a veces manda numeros como string; se normaliza aqui para que el
-    // cliente reciba siempre la forma tipada que declara NoaClientAction.
     const raw = Array.isArray(args.exercises) ? args.exercises : [];
     const exercises = raw
       .map((e) => {
         const ex = e as Record<string, unknown>;
+        const exerciseId = String(ex.exerciseId ?? "");
+        if (!exerciseId) return null;
+        // Formato detallado: una entrada por serie con pesos distintos.
+        if (Array.isArray(ex.setDetails) && ex.setDetails.length > 0) {
+          return {
+            exerciseId,
+            setDetails: (ex.setDetails as Record<string, unknown>[]).map((s) => ({
+              reps: clampInt(s.reps, 1, 1, 500),
+              weightKg: Math.max(0, Number(s.weightKg) || 0),
+            })),
+          };
+        }
+        // Formato simple: N series iguales.
         return {
-          exerciseId: String(ex.exerciseId ?? ""),
+          exerciseId,
           sets: clampInt(ex.sets, 1, 1, 50),
           reps: clampInt(ex.reps, 1, 1, 500),
           weightKg: Math.max(0, Number(ex.weightKg) || 0),
         };
       })
-      .filter((e) => e.exerciseId !== "");
+      .filter((e): e is NonNullable<typeof e> => e !== null);
 
     const durationSec =
       args.durationSec === undefined
@@ -289,6 +507,44 @@ const logWorkout: ToolDef = {
       exercises,
       durationSec,
     };
+  },
+};
+
+const deleteWorkoutSession: ToolDef = {
+  name: "deleteWorkoutSession",
+  description:
+    "Borra un entreno del historial (y todas sus series). Úsala solo si el usuario lo pide explícitamente (p.ej. 'borra el entreno de ayer' o 'ese entreno estaba mal, elimínalo'). Llama antes a getWorkoutHistory para obtener el id correcto de la sesión que quiere eliminar.",
+  parameters: {
+    type: "object",
+    properties: {
+      sessionId: {
+        type: "string",
+        description: "Id de la sesión a eliminar (obtenido de getWorkoutHistory).",
+      },
+      dayLabel: {
+        type: "string",
+        description: "Nombre del entreno, solo para mostrar en la confirmación.",
+      },
+    },
+    required: ["sessionId"],
+  },
+  module: "training",
+  kind: "write",
+  sensitivity: "confirm",
+  refetch: "training",
+  summarize(args) {
+    const label = typeof args.dayLabel === "string" && args.dayLabel ? args.dayLabel : "este entreno";
+    return `Eliminar «${label}» de tu historial (se borrarán todas sus series).`;
+  },
+  async handler(args, ctx: NoaToolContext) {
+    const sessionId = typeof args.sessionId === "string" ? args.sessionId.trim() : "";
+    if (!sessionId) throw new Error("sessionId requerido.");
+    const { error } = await ctx.supabase
+      .from("workout_sessions")
+      .delete()
+      .eq("id", sessionId);
+    if (error) throw new Error(error.message);
+    return { deleted: true, sessionId };
   },
 };
 
@@ -310,7 +566,7 @@ interface RoutineDayInput {
 const saveRoutine: ToolDef = {
   name: "saveRoutine",
   description:
-    "Guarda la rutina semanal COMPLETA (la reemplaza entera). Cada día lleva label, focus, weekdays (0=domingo … 6=sábado) y exercises con exerciseId (de searchExercise). Para modificar sin perder días, llama antes a getRoutine e incluye TODOS los días que quieras conservar.",
+    "Guarda la rutina semanal COMPLETA (la reemplaza entera). Cada día lleva label, focus, weekdays (0=domingo … 6=sábado) y exercises con exerciseId (de searchExercise o listExercisesByMuscle). IMPORTANTE: llama SIEMPRE a listExercisesByMuscle antes de crear una rutina desde cero, para elegir ejercicios reales del catálogo. Para modificar sin perder días, llama antes a getRoutine e incluye TODOS los días que quieras conservar.",
   parameters: {
     type: "object",
     properties: {
@@ -392,9 +648,12 @@ export const trainingModule: ToolModule = {
     getTrainingSummary,
     getRoutine,
     searchExercise,
+    getExerciseProgress,
+    listExercisesByMuscle,
     startWorkout,
     finishWorkout,
     logWorkout,
+    deleteWorkoutSession,
     saveRoutine,
   ],
   intentKeywords: [

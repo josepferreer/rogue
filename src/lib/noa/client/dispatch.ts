@@ -23,9 +23,10 @@ export interface DispatchDeps {
     dayLabel: string,
     exercises: {
       exerciseId: string;
-      sets: number;
-      reps: number;
-      weightKg: number;
+      sets?: number;
+      reps?: number;
+      weightKg?: number;
+      setDetails?: { reps: number; weightKg: number }[];
     }[],
     durationSec?: number,
   ) => void;

@@ -62,7 +62,7 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} ${jetbrainsMono.variable}`}
     >
-      <body className="antialiased">
+      <body className="antialiased" suppressHydrationWarning>
         {missingEnv.length > 0 ? (
           <SetupNotice missing={missingEnv} />
         ) : (

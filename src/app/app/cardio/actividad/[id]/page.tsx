@@ -13,6 +13,7 @@ import {
   useCardio,
   type Coordinate,
 } from "@/lib/store/cardio-store";
+import { RouteChart } from "@/components/cardio/route-chart";
 
 const MapView = dynamic(() => import("@/components/cardio/map-view"), {
   ssr: false,
@@ -189,6 +190,8 @@ export default function ActivityDetailsPage({
           </p>
         </div>
       </div>
+
+      <RouteChart coordinates={coordinates} />
     </div>
   );
 }

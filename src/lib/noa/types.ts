@@ -86,16 +86,21 @@ export type NoaClientAction =
   | { type: "finishWorkout" }
   /**
    * Registra un entreno YA hecho directamente en el historial, sin pasar por el
-   * mini-player. Cada entrada de `exercises` se expande a `sets` series iguales.
+   * mini-player. Soporta dos formatos por ejercicio:
+   * - Simple: sets + reps + weightKg (todas las series iguales).
+   * - Detallado: setDetails[] con {reps, weightKg} por cada serie individual.
    */
   | {
       type: "logWorkout";
       dayLabel: string;
       exercises: {
         exerciseId: string;
-        sets: number;
-        reps: number;
-        weightKg: number;
+        /** Usado si todas las series son iguales. */
+        sets?: number;
+        reps?: number;
+        weightKg?: number;
+        /** Usado cuando cada serie tiene peso/reps distintos. */
+        setDetails?: { reps: number; weightKg: number }[];
       }[];
       durationSec?: number;
     }

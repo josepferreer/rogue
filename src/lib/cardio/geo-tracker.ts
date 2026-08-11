@@ -15,6 +15,7 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 type BgLocation = {
   latitude: number;
   longitude: number;
+  altitude?: number | null;
   time?: number | null;
 };
 // El plugin nativo pone code = "NOT_AUTHORIZED" cuando le falta el permiso de
@@ -96,7 +97,7 @@ export async function openLocationSettings(): Promise<void> {
   }
 }
 
-export type GeoPosition = { lat: number; lng: number; timestamp: number };
+export type GeoPosition = { lat: number; lng: number; alt?: number; timestamp: number };
 export type GeoError = {
   code?: number;
   message: string;
@@ -133,6 +134,7 @@ export async function startGeoWatch(
           onPosition({
             lat: location.latitude,
             lng: location.longitude,
+            alt: location.altitude ?? undefined,
             timestamp: location.time ?? Date.now(),
           });
         }
@@ -153,6 +155,7 @@ export async function startGeoWatch(
       onPosition({
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
+        alt: pos.coords.altitude ?? undefined,
         timestamp: pos.timestamp,
       }),
     (err) =>

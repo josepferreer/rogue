@@ -17,6 +17,7 @@ import {
   cancelNoaReminder,
   scheduleNoaReminder,
 } from "@/lib/notifications/noa-reminders";
+import { getNoaKeyStatus } from "@/lib/noa/settings-actions";
 import type {
   NoaClientAction,
   NoaProposedAction,
@@ -69,6 +70,10 @@ export function Noa() {
   // se pinta hasta que el usuario la abre.
   const [turns, setTurns] = useState<NoaTurn[]>(loadTurns);
 
+  // null = todavía comprobando; false = sin clave; true = con clave.
+  // NOA permanece oculta hasta que la comprobación confirma que hay clave.
+  const [hasKey, setHasKey] = useState<boolean | null>(null);
+
   useEffect(() => {
     if (typeof sessionStorage === "undefined") return;
     try {
@@ -81,10 +86,20 @@ export function Noa() {
     }
   }, [turns]);
 
+  useEffect(() => {
+    let alive = true;
+    getNoaKeyStatus()
+      .then((s) => { if (alive) setHasKey(s.hasKey); })
+      .catch(() => { if (alive) setHasKey(false); });
+    return () => { alive = false; };
+  }, []);
+
   // Onboarding gestiona su propio layout sin navegación: NOA no pinta ahí.
   // Tampoco queremos pintar NOA mientras examinamos una ruta.
   if (pathname.startsWith("/app/onboarding") || pathname.startsWith("/app/cardio/actividad/")) return null;
   if (!portalTarget) return null;
+  // Sin clave de Gemini configurada, NOA no se muestra.
+  if (!hasKey) return null;
 
   return createPortal(
     open ? (
@@ -169,16 +184,28 @@ function NoaSheet({
         }
       },
       logWorkout: (dayLabel, exercises, durationSec) => {
-        // Una entrada por ejercicio se expande a `sets` series iguales: es lo
-        // que espera logSession, que trabaja siempre a nivel de serie.
-        const sets = exercises.flatMap((ex) =>
-          Array.from({ length: ex.sets }, () => ({
+        // Soporta dos formatos por ejercicio:
+        // - Simple: sets × reps × weightKg (todas las series iguales).
+        // - Detallado: setDetails[{reps, weightKg}] cuando cada serie tiene
+        //   pesos o repeticiones distintas (ej. series de calentamiento).
+        const sets = exercises.flatMap((ex) => {
+          const grupo = getExerciseInfo(ex.exerciseId).grupo;
+          if (Array.isArray(ex.setDetails) && ex.setDetails.length > 0) {
+            return ex.setDetails.map((s) => ({
+              exerciseId: ex.exerciseId,
+              grupo,
+              weightKg: s.weightKg,
+              reps: s.reps,
+            }));
+          }
+          // Formato simple: expande N series iguales.
+          return Array.from({ length: ex.sets ?? 1 }, () => ({
             exerciseId: ex.exerciseId,
-            grupo: getExerciseInfo(ex.exerciseId).grupo,
-            weightKg: ex.weightKg,
-            reps: ex.reps,
-          })),
-        );
+            grupo,
+            weightKg: ex.weightKg ?? 0,
+            reps: ex.reps ?? 0,
+          }));
+        });
         if (sets.length === 0) {
           notify("No he podido identificar los ejercicios del entreno.", "error");
           return;
