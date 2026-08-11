@@ -3,7 +3,7 @@
 import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { ArrowLeft, MapPin, Activity, Clock, Flame } from "lucide-react";
+import { ArrowLeft, MapPin, Activity, Clock, Flame, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { estimateKcal } from "@/lib/cardio/estimates";
@@ -40,6 +40,7 @@ export default function ActivityDetailsPage({
   const router = useRouter();
   const { history } = useCardio();
   const { profile } = useRogue();
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const session = useMemo(
     () => history.find((s) => s.id === id),
@@ -119,9 +120,26 @@ export default function ActivityDetailsPage({
 
       {/* Map container. Altura relativa a la pantalla (debajo sobraba hueco en
           moviles altos), con topes para que no se coma la vista en pantallas
-          bajas ni se estire de mas en desktop. */}
-      <div className="relative h-[46dvh] min-h-[300px] max-h-[520px] w-full overflow-hidden rounded-3xl border border-border shadow-sm">
+          bajas ni se estire de mas en desktop o pantalla completa. */}
+      <div
+        className={
+          isFullscreen
+            ? "fixed inset-0 z-50 h-screen w-screen bg-background overflow-hidden"
+            : "relative h-[46dvh] min-h-[300px] max-h-[520px] w-full overflow-hidden rounded-3xl border border-border shadow-sm"
+        }
+      >
         <MapView coordinates={coordinates} cleanOutliers />
+        <button
+          onClick={() => setIsFullscreen(!isFullscreen)}
+          className="absolute left-4 top-4 z-[350] flex size-10 items-center justify-center rounded-full bg-surface/90 hover:bg-surface shadow-md backdrop-blur-md border border-border active:scale-95 transition-transform"
+          aria-label={isFullscreen ? "Cerrar pantalla completa" : "Pantalla completa"}
+        >
+          {isFullscreen ? (
+            <Minimize2 className="size-5" />
+          ) : (
+            <Maximize2 className="size-5" />
+          )}
+        </button>
       </div>
 
       {/* Stats Grid */}
