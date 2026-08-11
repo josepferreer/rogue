@@ -128,18 +128,29 @@ export default function ActivityDetailsPage({
             : "relative h-[46dvh] min-h-[300px] max-h-[520px] w-full overflow-hidden rounded-3xl border border-border shadow-sm"
         }
       >
-        <MapView coordinates={coordinates} cleanOutliers />
-        <button
-          onClick={() => setIsFullscreen(!isFullscreen)}
-          className="absolute left-4 top-4 z-[350] flex size-10 items-center justify-center rounded-full bg-surface/90 hover:bg-surface shadow-md backdrop-blur-md border border-border active:scale-95 transition-transform"
-          aria-label={isFullscreen ? "Cerrar pantalla completa" : "Pantalla completa"}
-        >
-          {isFullscreen ? (
-            <Minimize2 className="size-5" />
-          ) : (
+        <MapView 
+          coordinates={coordinates} 
+          cleanOutliers 
+          topBar={
+            isFullscreen 
+              ? {
+                  title: "RUTA COMPLETADA",
+                  onAction: () => setIsFullscreen(false),
+                  actionIcon: <Minimize2 className="size-5" />,
+                  actionAriaLabel: "Cerrar pantalla completa"
+                }
+              : undefined
+          }
+        />
+        {!isFullscreen && (
+          <button
+            onClick={() => setIsFullscreen(true)}
+            className="absolute left-4 top-4 z-[350] flex size-10 items-center justify-center rounded-full bg-surface/90 hover:bg-surface shadow-md backdrop-blur-md border border-border active:scale-95 transition-transform"
+            aria-label="Pantalla completa"
+          >
             <Maximize2 className="size-5" />
-          )}
-        </button>
+          </button>
+        )}
       </div>
 
       {/* Stats Grid */}

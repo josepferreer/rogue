@@ -60,21 +60,15 @@ export function RouteTrackerModal() {
     <div className="fixed inset-0 z-50 bg-background overflow-hidden">
       {/* Map (Fondo completo) */}
       <div className="absolute inset-0 z-0">
-        <MapView coordinates={coordinates} />
-      </div>
-
-      {/* Top overlay */}
-      <div className="absolute inset-x-0 top-0 z-[400] flex items-start justify-between p-5 pt-[calc(env(safe-area-inset-top)+1rem)] bg-gradient-to-b from-background/80 via-background/40 to-transparent pointer-events-none">
-        <span className="pointer-events-auto rounded-full bg-surface/80 px-4 py-1.5 font-mono text-xs font-semibold tracking-widest backdrop-blur-md shadow-sm border border-border/40">
-          {isPaused ? "PAUSADO" : "GRABANDO RUTA"}
-        </span>
-        <button
-          onClick={minimize}
-          aria-label="Minimizar ruta"
-          className="pointer-events-auto flex size-10 items-center justify-center rounded-full bg-surface/80 hover:bg-surface shadow-sm backdrop-blur-md border border-border/40 transition-transform active:scale-95"
-        >
-          <Minimize2 className="size-5" />
-        </button>
+        <MapView 
+          coordinates={coordinates} 
+          topBar={{
+            title: isPaused ? "PAUSADO" : "GRABANDO RUTA",
+            onAction: minimize,
+            actionIcon: <Minimize2 className="size-5" />,
+            actionAriaLabel: "Minimizar ruta",
+          }}
+        />
       </div>
 
       {gpsError && (

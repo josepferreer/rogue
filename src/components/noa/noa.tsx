@@ -82,7 +82,8 @@ export function Noa() {
   }, [turns]);
 
   // Onboarding gestiona su propio layout sin navegación: NOA no pinta ahí.
-  if (pathname.startsWith("/app/onboarding")) return null;
+  // Tampoco queremos pintar NOA mientras examinamos una ruta.
+  if (pathname.startsWith("/app/onboarding") || pathname.startsWith("/app/cardio/actividad/")) return null;
   if (!portalTarget) return null;
 
   return createPortal(
