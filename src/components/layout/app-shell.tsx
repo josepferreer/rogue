@@ -1,14 +1,23 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
 import { BottomNav } from "./bottom-nav";
 import { Sidebar } from "./sidebar";
 import { TopBar } from "./top-bar";
 import { CardioMiniPlayer } from "@/components/cardio/cardio-mini-player";
-import { RouteTrackerModal } from "@/components/cardio/route-tracker-modal";
 import { WorkoutMiniPlayer } from "@/components/workout/workout-mini-player";
 import { WorkoutSessionModal } from "@/components/workout/workout-session-modal";
 import { NotificationStack } from "@/components/ui/notification-stack";
+
+// Carga dinámica para cortar la cadena de imports estáticos hacia maplibre-gl.
+// Si se importa directamente, Turbopack traza: layout(Server) → app-shell →
+// route-tracker-modal → map-view → maplibre-gl.mjs, y falla al analizar
+// el `new URL('./worker.mjs', import.meta.url)` de maplibre en build-time.
+const RouteTrackerModal = dynamic(
+  () => import("@/components/cardio/route-tracker-modal").then((m) => ({ default: m.RouteTrackerModal })),
+  { ssr: false }
+);
 
 /** Paginas que gestionan su propio layout completo (cabecera, scroll, ancho):
  *  no reciben el padding/max-width del AppShell ni la barra inferior. */

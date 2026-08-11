@@ -1,6 +1,6 @@
 // Service worker minimo de Rogue: habilita la instalacion como app y da un
 // fallback offline basico (cache "network-first" para navegaciones).
-const CACHE = "rogue-v4";
+const CACHE = "rogue-v6";
 const OFFLINE_URLS = [
   "/app",
   "/app/rutinas",

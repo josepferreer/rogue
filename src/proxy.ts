@@ -86,6 +86,6 @@ export const config = {
     // Excluimos assets estaticos (incluida cualquier ruta con extension de
     // imagen/fuente como /brand/*.png): si no, el guard de auth redirigiria
     // esas peticiones a /login y no cargarian, p.ej. el logo del propio login.
-    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icons/|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|woff2?|ttf)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icons/|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|woff2?|ttf|js|mjs|css|json)$).*)",
   ],
 };

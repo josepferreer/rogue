@@ -261,9 +261,9 @@ export default function CardioPage() {
               Aún no hay rutas guardadas.
             </div>
           ) : (
-            history.map((session) => (
+            history.map((session, idx) => (
               <div
-                key={session.id}
+                key={`${session.id}-${idx}`}
                 className="flex items-center rounded-3xl border border-border bg-surface transition-colors hover:bg-muted/40"
               >
                 <Link
