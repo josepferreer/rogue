@@ -195,6 +195,34 @@ const searchPantry: ToolDef = {
   },
 };
 
+const getPantryInventory: ToolDef = {
+  name: "getPantryInventory",
+  description:
+    "Obtiene TODOS los alimentos y platos registrados en la despensa del usuario. Úsala cuando el usuario te pida sugerencias de comidas o recetas basadas en lo que tiene en casa. Combínala con getNutritionDay para saber qué macros le faltan y sugerirle una receta que le ayude a cuadrar.",
+  parameters: { type: "object", properties: {} },
+  module: "nutrition",
+  kind: "read",
+  sensitivity: "safe",
+  async handler(_args, ctx: NoaToolContext) {
+    const { data, error } = await ctx.supabase
+      .from("pantry_foods")
+      .select("id, name, kcal, protein, carbs, fat, serving_g")
+      .order("name")
+      .limit(100);
+
+    if (error) throw new Error(error.message);
+
+    return {
+      alimentos: (data ?? []).map((a) => ({
+        pantryFoodId: a.id,
+        name: a.name,
+        por100g: { kcal: num(a.kcal), protein: num(a.protein), carbs: num(a.carbs), fat: num(a.fat) },
+        racionG: num(a.serving_g) || null,
+      })),
+    };
+  },
+};
+
 const searchFoodDatabase: ToolDef = {
   name: "searchFoodDatabase",
   description:
@@ -897,6 +925,7 @@ export const nutritionModule: ToolModule = {
     getMealEntries,
     getNutritionGoals,
     searchPantry,
+    getPantryInventory,
     searchFoodDatabase,
     addMealEntries,
     markMealEaten,

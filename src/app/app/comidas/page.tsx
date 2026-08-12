@@ -12,6 +12,7 @@ import { NutritionGoalsModal } from "@/components/food/nutrition-goals-modal";
 import { PantryProvider, usePantry } from "@/lib/store/pantry-store";
 import { BarcodeScanner } from "@/components/food/barcode-scanner";
 import { useToast } from "@/components/ui/toast";
+import { WaterTracker } from "@/components/comidas/water-tracker";
 import { lookupBarcode, lookupErrorMessage } from "@/lib/food/lookup";
 import type { FoodProduct } from "@/lib/food/types";
 import {
@@ -196,6 +197,9 @@ export default function ComidasPage() {
           />
         </div>
       </div>
+
+      {/* Tracker de Agua Interactivo */}
+      <WaterTracker date={selected} />
 
       {/* Botones de acción (Escáner y Despensa) */}
       <PageActions setPantryOpen={setPantryOpen} />
