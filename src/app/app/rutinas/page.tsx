@@ -10,15 +10,18 @@ import { useWorkoutSession } from "@/lib/store/workout-session-store";
 import { WEEKDAY_LABELS, WEEKDAY_ORDER } from "@/lib/workout/types";
 import { cn } from "@/lib/utils";
 
-type EntrenoTab = "rutina" | "ejercicios";
+type EntrenoTab = "rutina" | "ejercicios" | "historial";
 
 const ENTRENO_TABS: { id: EntrenoTab; label: string }[] = [
   { id: "rutina", label: "Rutina" },
   { id: "ejercicios", label: "Ejercicios" },
+  { id: "historial", label: "Historial" },
 ];
 
 function parseTab(value: string | undefined): EntrenoTab {
-  return value === "ejercicios" ? "ejercicios" : "rutina";
+  if (value === "ejercicios") return "ejercicios";
+  if (value === "historial") return "historial";
+  return "rutina";
 }
 
 function RoutinePanel() {
@@ -128,6 +131,60 @@ function RoutinePanel() {
   );
 }
 
+function HistoryPanel() {
+  const { sessions } = useRogue();
+
+  if (sessions.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-3xl border border-border bg-surface py-12 text-center">
+        <div className="flex size-12 items-center justify-center rounded-full bg-muted">
+          <span className="font-mono text-xl opacity-30">0</span>
+        </div>
+        <div>
+          <p className="text-sm font-semibold">No hay entrenamientos guardados</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Tus sesiones completadas aparecerán aquí.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const sorted = [...sessions].sort((a, b) => b.dateISO.localeCompare(a.dateISO));
+
+  return (
+    <div className="flex flex-col gap-3">
+      {sorted.map((s) => {
+        const dateStr = new Date(s.dateISO).toLocaleDateString("es-ES", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+        return (
+          <PastelCard key={s.id} variant="neutral" className="flex flex-col gap-2">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-base font-semibold">{s.dayLabel}</p>
+                <p className="font-mono text-[11px] text-muted-foreground mt-0.5">
+                  {dateStr.toUpperCase()}
+                </p>
+              </div>
+              {s.durationSec !== undefined && (
+                <span className="rounded-full bg-muted px-2.5 py-1 font-mono text-[10px] font-medium text-muted-foreground">
+                  {Math.floor(s.durationSec / 60)} MIN
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {s.sets.length} {s.sets.length === 1 ? "serie registrada" : "series registradas"}
+            </p>
+          </PastelCard>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function EntrenoPage({
   searchParams,
 }: {
@@ -150,9 +207,9 @@ export default function EntrenoPage({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Entreno</h1>
           <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
-            {tab === "rutina"
-              ? `${routineDays.length} DÍAS`
-              : "BIBLIOTECA DE EJERCICIOS"}
+            {tab === "rutina" && `${routineDays.length} DÍAS`}
+            {tab === "ejercicios" && "BIBLIOTECA DE EJERCICIOS"}
+            {tab === "historial" && "HISTORIAL DE ENTRENAMIENTOS"}
           </p>
         </div>
         {tab === "rutina" && (
@@ -184,7 +241,9 @@ export default function EntrenoPage({
         ))}
       </div>
 
-      {tab === "rutina" ? <RoutinePanel /> : <LibraryPanel />}
+      {tab === "rutina" && <RoutinePanel />}
+      {tab === "ejercicios" && <LibraryPanel />}
+      {tab === "historial" && <HistoryPanel />}
     </div>
   );
 }

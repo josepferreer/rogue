@@ -35,13 +35,16 @@ import { cn, formatDurationLabel } from "@/lib/utils";
 const WEEKDAY_LETTERS = ["L", "M", "X", "J", "V", "S", "D"];
 
 function toKey(d: Date) {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function useLastSevenDays(sessions: WorkoutSession[]) {
   return useMemo(() => {
     const trainedKeys = new Set(
-      sessions.map((s) => new Date(s.dateISO).toISOString().slice(0, 10)),
+      sessions.map((s) => toKey(new Date(s.dateISO)))
     );
     const today = new Date();
     const days: { key: string; letter: string; num: number; trained: boolean; isToday: boolean; isFuture: boolean }[] = [];
@@ -141,7 +144,7 @@ function useSessionsByDay(sessions: WorkoutSession[]) {
   return useMemo(() => {
     const map = new Map<string, WorkoutSession[]>();
     for (const s of sessions) {
-      const key = new Date(s.dateISO).toISOString().slice(0, 10);
+      const key = toKey(new Date(s.dateISO));
       const list = map.get(key) ?? [];
       list.push(s);
       map.set(key, list);
@@ -153,7 +156,7 @@ function useSessionsByDay(sessions: WorkoutSession[]) {
 function useMonthDays(sessions: WorkoutSession[], year: number, month: number) {
   return useMemo(() => {
     const trainedKeys = new Set(
-      sessions.map((s) => new Date(s.dateISO).toISOString().slice(0, 10)),
+      sessions.map((s) => toKey(new Date(s.dateISO)))
     );
     const todayKey = toKey(new Date());
     const firstOfMonth = new Date(year, month, 1);
