@@ -137,26 +137,27 @@ export default function MapView({ coordinates, cleanOutliers = false, topBar }: 
     if (!map || !mapLoaded) return;
 
     const isDark = resolvedTheme === "dark";
-    const buildingColor = isDark ? "#334155" : "#94a3b8";
+    const buildingColor = isDark ? "#334155" : "#c8cdd6";
     const buildingOpacity = 1.0;
 
     // 1. Capa de Edificios 3D (Completamente opacos, sin transparencia)
     if (!map.getLayer("3d-buildings")) {
-      const layers = map.getStyle()?.layers || [];
-      let labelLayerId: string | undefined;
-      for (const layer of layers) {
-        if (layer.type === "symbol" && layer.layout && (layer.layout as Record<string, unknown>)["text-field"]) {
-          labelLayerId = layer.id;
-          break;
-        }
-      }
+      // Insertar la capa 3D justo encima de "building-top" (que existe en ambos
+      // estilos). En MapLibre el 2º arg de addLayer es "beforeId" = se inserta
+      // visualmente DEBAJO de esa capa, así que buscamos la capa que sigue a
+      // building-top para quedar por encima de los edificios planos.
+      const allLayers = map.getStyle()?.layers || [];
+      const buildingTopIdx = allLayers.findIndex((l) => l.id === "building-top");
+      const insertBefore: string | undefined =
+        buildingTopIdx >= 0 && buildingTopIdx + 1 < allLayers.length
+          ? allLayers[buildingTopIdx + 1].id
+          : undefined;
 
-      const styleSources = map.getStyle()?.sources;
-      const sourceName = styleSources?.openmaptiles
-        ? "openmaptiles"
-        : styleSources?.carto
-        ? "carto"
-        : undefined;
+      const styleSources = map.getStyle()?.sources ?? {};
+      const sourceName =
+        "openmaptiles" in styleSources ? "openmaptiles" :
+        "carto" in styleSources ? "carto" :
+        Object.entries(styleSources).find(([, s]) => (s as { type?: string }).type === "vector")?.[0];
 
       if (sourceName) {
         try {
@@ -185,7 +186,7 @@ export default function MapView({ coordinates, cleanOutliers = false, topBar }: 
                 "fill-extrusion-vertical-gradient": true,
               },
             },
-            labelLayerId
+            insertBefore
           );
         } catch {
           // Ignorar si la capa ya existe o el origen no la soporta
@@ -200,7 +201,21 @@ export default function MapView({ coordinates, cleanOutliers = false, topBar }: 
       );
     }
 
-    // 2. Capa de Ruta GPS (Polyline GeoJSON)
+    // 2. Zonas verdes (parques, reservas naturales, cementerios, estadios)
+    // Sobrescribimos el color pálido por defecto con un verde más vivo.
+    const greenColor = isDark ? "rgba(52, 78, 65, 0.85)" : "rgba(180, 213, 170, 0.85)";
+    const greenLayers = ["park_national_park", "park_nature_reserve", "landuse"];
+    for (const layerId of greenLayers) {
+      if (map.getLayer(layerId)) {
+        try {
+          map.setPaintProperty(layerId, "fill-color", greenColor);
+        } catch {
+          // Ignorar si la capa no soporta fill-color en este estilo
+        }
+      }
+    }
+
+
     const lineCoords = drawn.map((c) => [c.lng, c.lat]);
     const routeGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
       type: "Feature",
