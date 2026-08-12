@@ -137,7 +137,7 @@ export default function MapView({ coordinates, cleanOutliers = false, topBar }: 
     if (!map || !mapLoaded) return;
 
     const isDark = resolvedTheme === "dark";
-    const buildingColor = isDark ? "#334155" : "#cbd5e1";
+    const buildingColor = isDark ? "#334155" : "#94a3b8";
     const buildingOpacity = 1.0;
 
     // 1. Capa de Edificios 3D (Completamente opacos, sin transparencia)

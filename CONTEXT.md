@@ -5,7 +5,7 @@ React 19, TypeScript y Tailwind v4. Está en `C:\Users\Grupo Hogares\Desktop\rog
 
 ## Stack y convenciones
 - App Router con rutas: `/`, `/onboarding`, `/rutinas` (+ `/rutinas/editor`), `/biblioteca`
-  (+ `/biblioteca/[id]`), `/cardio` (+ `/cardio/actividad/[id]`), `/perfil`.
+  (+ `/biblioteca/[id]`), `/cardio` (+ `/cardio/actividad/[id]`), `/comidas`, `/perfil`.
 - Diseño mobile-first: un "shell" único (`src/components/layout/app-shell.tsx`)
   centra el contenido en `max-w-[440px]` en desktop y ocupa el ancho completo en
   móvil, simulando un frame de app nativa. Navegación inferior fija en
@@ -30,11 +30,14 @@ React 19, TypeScript y Tailwind v4. Está en `C:\Users\Grupo Hogares\Desktop\rog
   a secas). Nunca tocar el estilo de `bottom-nav.tsx`.
 - Drag-and-drop con `@dnd-kit/*` (core, sortable, modifiers, utilities) para
   reordenar tarjetas con soporte táctil real (usado en el editor de rutinas).
-- Mapa de cardio con `leaflet` / `react-leaflet` (`src/components/cardio/map-view.tsx`).
-  Teselas de CARTO (`basemaps.cartocdn.com`): es el único tercero que ve algo
-  de las rutas (la zona que miras), y debe salir en la política de privacidad.
-  **Pendiente: falta la atribución de OpenStreetMap/CARTO** — el mapa se pinta
-  con `attributionControl={false}` y la licencia ODbL la exige.
+- Mapa de cardio con **MapLibre GL** (`src/components/cardio/map-view.tsx`).
+  Motor WebGL sobre teselas vectoriales de CARTO (`basemaps.cartocdn.com`).
+  Soporta modo **2D y 2.5D** con edificios 3D (`fill-extrusion`) y toggle
+  persistido en `localStorage` (`rogue.mapMode`). La traza GPS se pinta como
+  polilínea GeoJSON azul neón con halo. El modo 2.5D inclina la cámara 55°.
+  CARTO es el único tercero que ve la zona que miras (debe figurar en la
+  política de privacidad). **Pendiente: falta la atribución de OpenStreetMap/CARTO**
+  — el mapa se pinta con `attributionControl: false` y la licencia ODbL la exige.
 - Estado global vía **React Context** (no Zustand, no librería externa):
   - `src/lib/store/rogue-store.tsx` — perfil, historial de sesiones
     (`WorkoutSession[]`), rutina (`routineDays`), `todayDay` calculado.
@@ -84,6 +87,9 @@ Auditoría crítica módulo a módulo. Tres pilares: **Entrenamientos**, **Cardi
   pila del botón atrás, descanso y peso editables + prellenado con la última
   sesión, guard de cambios sin guardar, agregados en Postgres
   (`workout_stats`) y ventana de historial de 1 año, timeout de carga.
+  **Añadido 12/08/2026:** pestaña **Historial** en `/rutinas` (junto a "Rutina"
+  y "Ejercicios") que lista las sesiones completadas ordenadas por fecha,
+  mostrando nombre del entreno, fecha, duración y número de series.
 - **Pilar 2 — Cardio: PARCIAL.** ~3,5 → ~6,5. Hecho: persistencia incremental
   durante la ruta (`upsert_cardio_progress`, envía solo puntos nuevos y es
   idempotente), listado sin la polilínea (se carga al abrir el detalle),
@@ -100,7 +106,7 @@ Auditoría crítica módulo a módulo. Tres pilares: **Entrenamientos**, **Cardi
   **Pendiente, decisión de producto:** tipo de actividad + elevación (sin tipo,
   el filtro de outliers a 28,8 km/h descarta la bici entera) y pasos/kcal, hoy
   estimados pero mostrados como cifras exactas.
-- **Pilar 3 — Nutrición: PARCIAL.** ~3,0 → ~5,5. Hecho: el escáner pasa por
+- **Pilar 3 — Nutrición: PARCIAL.** ~3,0 → ~6,0. Hecho: el escáner pasa por
   `/api/food/[barcode]` (sesión + límite + `fields=` + fallback kJ→kcal); antes
   cada pantalla llamaba a Open Food Facts directa y el proxy era código muerto.
   Criterio `eaten` unificado en las 4 pantallas (resumen, tarjetas, hoja de
@@ -127,10 +133,17 @@ Auditoría crítica módulo a módulo. Tres pilares: **Entrenamientos**, **Cardi
   no entra como "Desconocido" a 0 kcal: se avisa y no se cuenta. UI: selector
   de día y tarjetas de comida son `<button>` (`PastelCard as="button"`), y
   guardia contra doble pulsación al añadir al diario.
+  **Añadido 12/08/2026:** **Módulo de hidratación** (`WaterTracker`):
+  componente `src/components/comidas/water-tracker.tsx` integrado en
+  `/app/comidas`. Permite registrar vasos de agua por día, con objetivo
+  configurable, persistencia en Supabase (`water_log`) y visualización del
+  progreso diario. La migración `20260811172816_water_log.sql` añade la tabla.
   **Pendiente:** **no hay agregado en Postgres** para
   nutrición y de momento no hace falta: nada en la UI necesita el histórico
   completo, sólo los días que se pintan. Si algún día hay pantalla de
   estadísticas de nutrición, ahí sí.
+  **Pendiente:** integrar el WaterTracker en NOA (el asistente de IA) para que
+  pueda leer y registrar agua via chat/voz.
   **Decisiones de producto, ya cerradas (06/08/2026):**
   - El semáforo de color es **siempre Nutri-Score** de OFF. Se eliminó
     `estimateHealthScore` (umbrales inventados de kcal/grasa que se pintaban
@@ -202,11 +215,30 @@ eliminaron 4 columnas huérfanas de `profiles` (`share_ranks`, `rank_tier`,
 `rank_division`, `rank_updated_at`) — ver
 `supabase/migrations/20260805_remove_ranks.sql`.
 
-Antes de eso se rediseñó la home (`src/app/page.tsx`): la tarjeta "hoy" es ahora un
-carrusel de scroll nativo (scroll-snap, no drag manual) de 2 páginas — "Hoy"
-(entreno del día) y "Calendario" (últimos 7 días / mes completo desplegable
-con `ResizeObserver` ajustando la altura del contenedor dinámicamente). El
-calendario mensual distingue días entrenados (círculo negro), hoy sin
+Antes de eso se rediseñó la home (`src/app/app/page.tsx`): la tarjeta "hoy" es ahora un
+carrusel de scroll nativo (scroll-snap, no drag manual) de 3 páginas — "Hoy"
+(entreno del día), "Volumen Semanal" y "Calendario" (últimos 7 días / mes completo
+desplegable con `ResizeObserver` ajustando la altura del contenedor dinámicamente).
+El calendario mensual distingue días entrenados (círculo negro), hoy sin
 entrenar (anillo), pasado sin entrenar (gris) y futuro (muy atenuado), y al
 tocar un día entrenado muestra un panel con detalle de esa sesión (grupo
 muscular, series, volumen).
+
+## Cambios 12/08/2026
+
+- **Bug fix — Zona horaria en el calendario de la home.** La función `toKey(d: Date)`
+  usaba `d.toISOString().slice(0, 10)` que devuelve UTC, causando que un
+  entrenamiento registrado al final del día (ej. las 23:xx en España) apareciera
+  en el día siguiente en el calendario expandido. Corregido usando getters locales
+  (`getFullYear`, `getMonth`, `getDate`) en `toKey`, `useLastSevenDays`,
+  `useSessionsByDay` y `useMonthDays` en `src/app/app/page.tsx`.
+
+- **Historial de entrenamientos en Rutinas.** Nueva pestaña "Historial" en
+  `/app/rutinas` (junto a "Rutina" y "Ejercicios"). El componente `HistoryPanel`
+  lee las sesiones de `useRogue()` y las lista ordenadas de más reciente a más
+  antigua, mostrando: nombre del entreno (`dayLabel`), fecha formateada, duración
+  en minutos y número de series registradas. Estado vacío si no hay sesiones.
+
+- **Bug fix — Prop `selectedDate` en WaterTracker.** La variable de estado que
+  guarda el día seleccionado en `/app/comidas/page.tsx` se llama `selected`, pero
+  se pasaba al componente como `selectedDate`. Corregido a `date={selected}`.
