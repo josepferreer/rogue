@@ -3,7 +3,7 @@
 import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { ArrowLeft, MapPin, Activity, Clock, Flame, Maximize2, Minimize2, Route, Check } from "lucide-react";
+import { ArrowLeft, MapPin, Activity, Clock, Flame, Maximize2, Minimize2, Route, Check, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { estimateKcal } from "@/lib/cardio/estimates";
@@ -41,7 +41,7 @@ export default function ActivityDetailsPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { history } = useCardio();
+  const { history, startTracking, isTracking } = useCardio();
   const { profile } = useRogue();
   const { notify } = useToast();
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -109,6 +109,16 @@ export default function ActivityDetailsPage({
   }).format(new Date(session.dateISO));
 
   const canSaveRoute = coordinates.length >= 2;
+
+  function repeatRoute() {
+    if (coordinates.length < 2) return;
+    if (isTracking) {
+      notify("Ya tienes un cardio en marcha. Termínalo antes de repetir una ruta.", "info");
+      return;
+    }
+    // Repetir directamente esta actividad, sin necesidad de guardarla antes.
+    startTracking(undefined, coordinates);
+  }
 
   async function saveAsRoute() {
     if (!session || coordinates.length < 2 || savingRoute) return;
@@ -256,10 +266,16 @@ export default function ActivityDetailsPage({
             </div>
           </div>
         ) : (
-          <Button variant="secondary" fullWidth onClick={() => setSaveOpen(true)}>
-            <Route className="size-4" />
-            Guardar como ruta
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button fullWidth onClick={repeatRoute} className="py-4 text-base font-semibold">
+              <Play className="size-5 fill-current" />
+              Repetir esta ruta
+            </Button>
+            <Button variant="secondary" fullWidth onClick={() => setSaveOpen(true)}>
+              <Route className="size-4" />
+              Guardar como ruta
+            </Button>
+          </div>
         ))}
     </div>
   );

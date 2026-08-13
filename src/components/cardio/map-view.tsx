@@ -74,8 +74,14 @@ export default function MapView({ coordinates, cleanOutliers = false, ghostRoute
     // de forma relativa a la ruta del App Router (/app/cardio/actividad/...).
     maplibregl.config.WORKER_URL = "/maplibre-gl-worker.mjs";
 
-    const initialCenter: [number, number] =
-      drawn.length > 0 ? [drawn[0].lng, drawn[0].lat] : [-3.7038, 40.4168];
+    // Centro inicial: primer punto de la traza en vivo; si no hay, el inicio de
+    // la ruta fantasma; y solo si tampoco, Madrid. Se calcula con lo que haya en
+    // el momento de crear el mapa (una sola vez).
+    const centerSource =
+      drawn.length > 0 ? drawn[0] : ghostRoute && ghostRoute.length > 0 ? ghostRoute[0] : null;
+    const initialCenter: [number, number] = centerSource
+      ? [centerSource.lng, centerSource.lat]
+      : [-3.7038, 40.4168];
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
@@ -96,6 +102,10 @@ export default function MapView({ coordinates, cleanOutliers = false, ghostRoute
           mapRef.current.resize();
         }
       });
+      // Reajuste diferido: en montajes TARDÍOS (p.ej. al abrir una ruta guardada,
+      // cuyo MapView aparece tras cargar los datos) el contenedor puede no tener
+      // aún su tamaño final al crear el mapa, y sin esto el mapa queda en blanco.
+      setTimeout(() => mapRef.current?.resize(), 200);
     });
 
     // Redimensionar automáticamente si cambia el tamaño del contenedor (SPA, modales, etc.)
@@ -269,6 +279,20 @@ export default function MapView({ coordinates, cleanOutliers = false, ghostRoute
             "circle-stroke-color": "#ffffff",
           },
         });
+
+        // Encuadre inmediato al dibujar la ruta por primera vez cuando no hay
+        // traza en vivo (inspección de una ruta guardada): así se ve entera y
+        // no se queda en el centro por defecto.
+        if (coordinates.length === 0) {
+          const b = ghostRoute.reduce(
+            (acc, c) => acc.extend([c.lng, c.lat]),
+            new maplibregl.LngLatBounds(
+              [ghostRoute[0].lng, ghostRoute[0].lat],
+              [ghostRoute[0].lng, ghostRoute[0].lat],
+            ),
+          );
+          map.fitBounds(b, { padding: 50, duration: 0 });
+        }
       }
     }
 

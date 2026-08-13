@@ -73,9 +73,13 @@ export type CardioContextValue = {
   gpsError: string | null;
   /** El error de GPS es por falta de permiso: la UI ofrece abrir ajustes. */
   gpsNeedsSettings: boolean;
+  /** Ruta que se está siguiendo (modo repetir), para pintarla de fondo; vacía
+   *  en una ruta libre. */
+  followRoute: Coordinate[];
   /** Inicia el tracking. Con `routeId`, la sesión resultante se marca como
-   *  seguimiento de esa ruta guardada (queda enlazada en el historial). */
-  startTracking: (routeId?: string) => void;
+   *  seguimiento de esa ruta guardada; con `ghostRoute`, se pinta esa ruta de
+   *  fondo para seguirla. */
+  startTracking: (routeId?: string, ghostRoute?: Coordinate[]) => void;
   pauseTracking: () => void;
   resumeTracking: () => void;
   stopTracking: () => void;
@@ -249,6 +253,9 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
   const [coordinates, setCoordinates] = useState<Coordinate[]>([]);
   const [distanceKm, setDistanceKm] = useState(0);
   const [durationSec, setDurationSec] = useState(0);
+  /** Ruta "fantasma" a seguir (modo repetir): la pinta de fondo la pantalla de
+   *  tracking. Vacía = ruta libre. */
+  const [followRoute, setFollowRoute] = useState<Coordinate[]>([]);
   const [history, setHistory] = useState<CardioSession[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
@@ -517,8 +524,9 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     });
   }, [isTracking, coordinates, distanceKm, isPaused]);
 
-  const startTracking = useCallback((routeId?: string) => {
+  const startTracking = useCallback((routeId?: string, ghostRoute?: Coordinate[]) => {
     followRouteIdRef.current = routeId ?? null;
+    setFollowRoute(ghostRoute ?? []);
     setIsTracking(true);
     setIsPaused(false);
     setIsMinimized(false);
@@ -569,6 +577,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     setIsTracking(false);
     setIsPaused(false);
     setIsMinimized(false);
+    setFollowRoute([]);
     setGpsError(null);
     setGpsNeedsSettings(false);
     releaseWakeLock();
@@ -740,6 +749,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
       coordinates,
       distanceKm,
       durationSec,
+      followRoute,
       history,
       gpsError,
       gpsNeedsSettings,
@@ -761,6 +771,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
       coordinates,
       distanceKm,
       durationSec,
+      followRoute,
       history,
       gpsError,
       gpsNeedsSettings,

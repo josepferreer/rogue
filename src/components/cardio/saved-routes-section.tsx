@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Route, Trash2, Pencil, Play } from "lucide-react";
+import { Route, Trash2, Pencil } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -77,39 +77,40 @@ export function SavedRoutesSection() {
             key={r.id}
             className="flex items-center rounded-3xl border border-border bg-surface transition-colors hover:bg-muted/40"
           >
-            <div className="flex min-w-0 flex-1 items-center gap-4 p-4">
-              <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
-                <Route className="size-5" />
-              </span>
-              <div className="min-w-0 flex-1">
-                {editingId === r.id ? (
-                  <input
-                    autoFocus
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    onBlur={() => commitRename(r.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") commitRename(r.id);
-                      if (e.key === "Escape") setEditingId(null);
-                    }}
-                    className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm outline-none focus:border-foreground"
-                  />
-                ) : (
-                  <p className="truncate text-sm font-semibold">{r.name}</p>
-                )}
-                <p className="mt-0.5 font-mono text-xs text-muted-foreground">
-                  {r.distanceKm.toFixed(2)} km
-                  {r.elevationGainM != null ? ` · ${r.elevationGainM} m D+` : ""}
-                </p>
+            {editingId === r.id ? (
+              <div className="flex min-w-0 flex-1 items-center gap-4 p-4">
+                <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                  <Route className="size-5" />
+                </span>
+                <input
+                  autoFocus
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onBlur={() => commitRename(r.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitRename(r.id);
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                  className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm outline-none focus:border-foreground"
+                />
               </div>
-            </div>
-            <Link
-              href={`/app/cardio/seguir/${r.id}`}
-              aria-label="Repetir ruta en seguimiento"
-              className="flex size-10 shrink-0 items-center justify-center rounded-full text-blue-600 transition-colors hover:bg-blue-500/10 dark:text-blue-400"
-            >
-              <Play className="size-5 fill-current" />
-            </Link>
+            ) : (
+              <Link
+                href={`/app/cardio/ruta/${r.id}`}
+                className="flex min-w-0 flex-1 items-center gap-4 p-4 active:bg-muted"
+              >
+                <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                  <Route className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{r.name}</p>
+                  <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                    {r.distanceKm.toFixed(2)} km
+                    {r.elevationGainM != null ? ` · ${r.elevationGainM} m D+` : ""}
+                  </p>
+                </div>
+              </Link>
+            )}
             <button
               type="button"
               onClick={() => {

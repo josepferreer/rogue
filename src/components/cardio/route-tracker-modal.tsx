@@ -37,6 +37,7 @@ export function RouteTrackerModal() {
     coordinates,
     distanceKm,
     durationSec,
+    followRoute,
     gpsError,
     gpsNeedsSettings,
     pauseTracking,
@@ -60,10 +61,11 @@ export function RouteTrackerModal() {
     <div className="fixed inset-0 z-50 bg-background overflow-hidden">
       {/* Map (Fondo completo) */}
       <div className="absolute inset-0 z-0">
-        <MapView 
-          coordinates={coordinates} 
+        <MapView
+          coordinates={coordinates}
+          ghostRoute={followRoute.length > 0 ? followRoute : undefined}
           topBar={{
-            title: isPaused ? "PAUSADO" : "GRABANDO RUTA",
+            title: isPaused ? "PAUSADO" : followRoute.length > 0 ? "SIGUIENDO RUTA" : "GRABANDO RUTA",
             onAction: minimize,
             actionIcon: <Minimize2 className="size-5" />,
             actionAriaLabel: "Minimizar ruta",
