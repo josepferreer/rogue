@@ -73,7 +73,9 @@ export type CardioContextValue = {
   gpsError: string | null;
   /** El error de GPS es por falta de permiso: la UI ofrece abrir ajustes. */
   gpsNeedsSettings: boolean;
-  startTracking: () => void;
+  /** Inicia el tracking. Con `routeId`, la sesión resultante se marca como
+   *  seguimiento de esa ruta guardada (queda enlazada en el historial). */
+  startTracking: (routeId?: string) => void;
   pauseTracking: () => void;
   resumeTracking: () => void;
   stopTracking: () => void;
@@ -331,6 +333,9 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
   // ahora la fila existe en servidor desde el primer volcado.
   const activeIdRef = useRef<string | null>(null);
   const activeDateRef = useRef<string | null>(null);
+  /** Ruta que se está siguiendo (modo "repetir ruta"); null en una ruta libre.
+   *  Al finalizar, la sesión guardada se marca con este `route_id`. */
+  const followRouteIdRef = useRef<string | null>(null);
   /** Puntos ya confirmados en servidor, para mandar solo los nuevos. */
   const storedLenRef = useRef(0);
   const flushingRef = useRef(false);
@@ -512,7 +517,8 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     });
   }, [isTracking, coordinates, distanceKm, isPaused]);
 
-  const startTracking = useCallback(() => {
+  const startTracking = useCallback((routeId?: string) => {
+    followRouteIdRef.current = routeId ?? null;
     setIsTracking(true);
     setIsPaused(false);
     setIsMinimized(false);
@@ -573,8 +579,10 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     const id = activeIdRef.current;
     const dateISO = activeDateRef.current ?? new Date().toISOString();
     const storedLen = storedLenRef.current;
+    const followRouteId = followRouteIdRef.current;
     activeIdRef.current = null;
     activeDateRef.current = null;
+    followRouteIdRef.current = null;
     storedLenRef.current = 0;
 
     if (id && (finalDistance > 0 || finalDuration > 10)) {
@@ -603,6 +611,16 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
             p_new_points: finalCoordinates.slice(storedLen),
           },
         });
+        // Si era un seguimiento de ruta, se marca la sesión con su route_id. Va
+        // DESPUÉS del upsert (la cola es FIFO), así que la fila ya existe.
+        if (followRouteId) {
+          syncWrite("el enlace de la ruta", {
+            kind: "update",
+            table: "cardio_sessions",
+            values: { route_id: followRouteId },
+            match: { id, user_id: userId },
+          });
+        }
       }
     } else if (id && userIdRef.current && storedLen > 0) {
       // Ruta descartada por insignificante pero con volcados ya en servidor:

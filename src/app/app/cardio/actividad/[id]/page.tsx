@@ -3,7 +3,7 @@
 import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { ArrowLeft, MapPin, Activity, Clock, Flame, Maximize2, Minimize2 } from "lucide-react";
+import { ArrowLeft, MapPin, Activity, Clock, Flame, Maximize2, Minimize2, Route, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { estimateKcal } from "@/lib/cardio/estimates";
@@ -14,6 +14,8 @@ import {
   type Coordinate,
 } from "@/lib/store/cardio-store";
 import { RouteChart } from "@/components/cardio/route-chart";
+import { useToast } from "@/components/ui/toast";
+import { createRoute } from "@/lib/cardio/saved-routes";
 
 const MapView = dynamic(() => import("@/components/cardio/map-view"), {
   ssr: false,
@@ -41,7 +43,11 @@ export default function ActivityDetailsPage({
   const router = useRouter();
   const { history } = useCardio();
   const { profile } = useRogue();
+  const { notify } = useToast();
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [routeName, setRouteName] = useState("");
+  const [savingRoute, setSavingRoute] = useState(false);
 
   const session = useMemo(
     () => history.find((s) => s.id === id),
@@ -101,6 +107,34 @@ export default function ActivityDetailsPage({
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(session.dateISO));
+
+  const canSaveRoute = coordinates.length >= 2;
+
+  async function saveAsRoute() {
+    if (!session || coordinates.length < 2 || savingRoute) return;
+    setSavingRoute(true);
+    try {
+      const fallbackName = `Ruta · ${new Intl.DateTimeFormat("es-ES", {
+        day: "numeric",
+        month: "short",
+      }).format(new Date(session.dateISO))}`;
+      await createRoute({
+        name: routeName.trim() || fallbackName,
+        coordinates,
+        distanceKm: session.distanceKm,
+        source: "activity",
+        originSessionId: session.id,
+      });
+      notify("Ruta guardada en «Mis rutas».", "success");
+      setSaveOpen(false);
+      setRouteName("");
+    } catch (err) {
+      console.error("No se pudo guardar la ruta:", err);
+      notify("No se pudo guardar la ruta.", "error");
+    } finally {
+      setSavingRoute(false);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6 pt-2 pb-8">
@@ -192,6 +226,41 @@ export default function ActivityDetailsPage({
       </div>
 
       <RouteChart coordinates={coordinates} />
+
+      {/* Guardar esta actividad como ruta reutilizable (para repetirla luego). */}
+      {canSaveRoute &&
+        (saveOpen ? (
+          <div className="flex flex-col gap-3 rounded-3xl border border-border bg-surface p-4">
+            <p className="text-sm font-medium">Guardar como ruta</p>
+            <input
+              value={routeName}
+              onChange={(e) => setRouteName(e.target.value)}
+              placeholder="Nombre de la ruta (opcional)"
+              className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-foreground"
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={() => {
+                  setSaveOpen(false);
+                  setRouteName("");
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button fullWidth onClick={saveAsRoute} disabled={savingRoute}>
+                <Check className="size-4" />
+                {savingRoute ? "Guardando…" : "Guardar ruta"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button variant="secondary" fullWidth onClick={() => setSaveOpen(true)}>
+            <Route className="size-4" />
+            Guardar como ruta
+          </Button>
+        ))}
     </div>
   );
 }

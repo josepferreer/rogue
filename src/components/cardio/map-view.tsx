@@ -13,6 +13,9 @@ interface MapViewProps {
   /** Descarta los saltos imposibles del GPS antes de dibujar. Para rutas ya
    *  terminadas; en el seguimiento en vivo se pinta la traza tal cual llega. */
   cleanOutliers?: boolean;
+  /** Ruta "fantasma" a seguir (modo repetir): se pinta tenue de fondo, con
+   *  marcadores de inicio/fin, y la traza en vivo la va completando encima. */
+  ghostRoute?: Coordinate[];
   topBar?: {
     title: string;
     onAction: () => void;
@@ -23,7 +26,7 @@ interface MapViewProps {
 
 type MapMode = "2d" | "2.5d";
 
-export default function MapView({ coordinates, cleanOutliers = false, topBar }: MapViewProps) {
+export default function MapView({ coordinates, cleanOutliers = false, ghostRoute, topBar }: MapViewProps) {
   const { resolvedTheme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -216,6 +219,59 @@ export default function MapView({ coordinates, cleanOutliers = false, topBar }: 
     }
 
 
+    // Ruta "fantasma" a seguir: se dibuja ANTES que la traza en vivo para que
+    // quede por debajo, y la traza real la va "completando" al avanzar.
+    if (ghostRoute && ghostRoute.length >= 2) {
+      const ghostGeo: GeoJSON.Feature<GeoJSON.LineString> = {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "LineString",
+          coordinates: ghostRoute.map((c) => [c.lng, c.lat]),
+        },
+      };
+      const first = ghostRoute[0];
+      const last = ghostRoute[ghostRoute.length - 1];
+      const endsGeo: GeoJSON.FeatureCollection<GeoJSON.Point> = {
+        type: "FeatureCollection",
+        features: [
+          { type: "Feature", properties: { role: "start" }, geometry: { type: "Point", coordinates: [first.lng, first.lat] } },
+          { type: "Feature", properties: { role: "end" }, geometry: { type: "Point", coordinates: [last.lng, last.lat] } },
+        ],
+      };
+
+      if (map.getSource("ghost-source")) {
+        (map.getSource("ghost-source") as maplibregl.GeoJSONSource).setData(ghostGeo);
+        (map.getSource("ghost-ends-source") as maplibregl.GeoJSONSource)?.setData(endsGeo);
+      } else {
+        map.addSource("ghost-source", { type: "geojson", data: ghostGeo });
+        map.addLayer({
+          id: "ghost-line",
+          type: "line",
+          source: "ghost-source",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: {
+            "line-color": isDark ? "#64748b" : "#94a3b8",
+            "line-width": 6,
+            "line-opacity": 0.55,
+            "line-dasharray": [1, 1.6],
+          },
+        });
+        map.addSource("ghost-ends-source", { type: "geojson", data: endsGeo });
+        map.addLayer({
+          id: "ghost-ends",
+          type: "circle",
+          source: "ghost-ends-source",
+          paint: {
+            "circle-radius": 8,
+            "circle-color": ["match", ["get", "role"], "start", "#22c55e", "end", "#ef4444", "#888888"],
+            "circle-stroke-width": 3,
+            "circle-stroke-color": "#ffffff",
+          },
+        });
+      }
+    }
+
     const lineCoords = drawn.map((c) => [c.lng, c.lat]);
     const routeGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
       type: "Feature",
@@ -317,7 +373,23 @@ export default function MapView({ coordinates, cleanOutliers = false, topBar }: 
         },
       });
     }
-  }, [coordinates, drawn, mapLoaded, mapMode, resolvedTheme]);
+  }, [coordinates, drawn, ghostRoute, mapLoaded, mapMode, resolvedTheme]);
+
+  // Modo seguimiento: al cargar (aún sin puntos en vivo), encuadra la ruta
+  // fantasma entera para que el usuario vea lo que va a recorrer.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || !ghostRoute || ghostRoute.length < 2) return;
+    if (coordinates.length > 0) return; // ya está corriendo: manda la cámara en vivo
+    const bounds = ghostRoute.reduce(
+      (b, c) => b.extend([c.lng, c.lat]),
+      new maplibregl.LngLatBounds(
+        [ghostRoute[0].lng, ghostRoute[0].lat],
+        [ghostRoute[0].lng, ghostRoute[0].lat],
+      ),
+    );
+    map.fitBounds(bounds, { padding: 50, duration: 800 });
+  }, [ghostRoute, coordinates.length, mapLoaded]);
 
   // Actualización de inclinación y vista al cambiar mapMode
   useEffect(() => {

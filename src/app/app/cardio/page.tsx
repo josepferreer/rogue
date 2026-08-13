@@ -21,6 +21,7 @@ import { useToast } from "@/components/ui/toast";
 import { useCardio } from "@/lib/store/cardio-store";
 import { estimateKcal, estimateSteps } from "@/lib/cardio/estimates";
 import { useRogue } from "@/lib/store/rogue-store";
+import { SavedRoutesSection } from "@/components/cardio/saved-routes-section";
 
 /** Zancada media (m) para estimar pasos desde la distancia recorrida.
  *  La web no tiene acceso al podometro del telefono, asi que los pasos se
@@ -207,7 +208,7 @@ export default function CardioPage() {
       <div className="flex justify-center">
         <Button
           fullWidth
-          onClick={isTracking ? maximize : startTracking}
+          onClick={isTracking ? maximize : () => startTracking()}
           className="px-6 py-4 text-base font-semibold shadow-lg"
         >
           <Play className="size-5 fill-current" />
@@ -249,6 +250,9 @@ export default function CardioPage() {
       </div>
 
 
+
+      {/* Rutas reutilizables (guardadas desde una actividad o importadas). */}
+      <SavedRoutesSection />
 
       {/* History section */}
       <div className="flex flex-col gap-2">
