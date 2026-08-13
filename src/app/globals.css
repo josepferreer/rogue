@@ -163,3 +163,21 @@ body {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ─── Escáner de código de barras (nativo, @capacitor-mlkit) ───────────────
+   En Android la cámara se pinta DETRÁS del WebView. Para verla hay que volver
+   transparente el WebView (html/body) y ocultar toda la app, dejando visible
+   solo el overlay del escáner (`.barcode-scanner-ui`). Sin esto la cámara
+   queda tapada por la página opaca y parece que "no se abre". La clase la pone
+   y la quita el componente BarcodeScanner solo durante el escaneo nativo. */
+html.barcode-scanner-active,
+body.barcode-scanner-active {
+  background: transparent !important;
+}
+body.barcode-scanner-active {
+  visibility: hidden;
+}
+body.barcode-scanner-active .barcode-scanner-ui,
+body.barcode-scanner-active .barcode-scanner-ui * {
+  visibility: visible;
+}

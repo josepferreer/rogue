@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Keyboard, X } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { BarcodeScanner as NativeScanner, BarcodeFormat } from "@capacitor-mlkit/barcode-scanning";
+import type { BrowserMultiFormatReader } from "@zxing/library";
 
 // Tipado minimo de la API nativa BarcodeDetector (aun no esta en lib.dom).
 type DetectedBarcode = { rawValue: string };
@@ -16,6 +17,18 @@ declare global {
       new (opts?: { formats?: string[] }): BarcodeDetectorLike;
     };
   }
+}
+
+/**
+ * Vuelve transparente el WebView (html+body) mientras escanea en nativo, para
+ * que se vea la cámara que el plugin ML Kit pinta DETRÁS. El CSS asociado
+ * (globals.css: `.barcode-scanner-active`) oculta la app y deja visible solo el
+ * overlay `.barcode-scanner-ui`. Se quita siempre al terminar o al fallar.
+ */
+function toggleScannerTransparency(active: boolean): void {
+  const method = active ? "add" : "remove";
+  document.documentElement.classList[method]("barcode-scanner-active");
+  document.body.classList[method]("barcode-scanner-active");
 }
 
 export function BarcodeScanner({
@@ -52,7 +65,7 @@ export function BarcodeScanner({
 
     let active = true;
     let raf = 0;
-    let zxingReader: any = null;
+    let zxingReader: BrowserMultiFormatReader | null = null;
 
     const startNativeScanner = async () => {
       try {
@@ -76,7 +89,7 @@ export function BarcodeScanner({
           }
         });
 
-        document.body.classList.add("barcode-scanner-active");
+        toggleScannerTransparency(true);
         await NativeScanner.startScan({
           formats: [BarcodeFormat.Ean13, BarcodeFormat.Ean8, BarcodeFormat.UpcA, BarcodeFormat.UpcE],
         });
@@ -84,10 +97,11 @@ export function BarcodeScanner({
         return () => {
           listener.remove();
           NativeScanner.stopScan();
-          document.body.classList.remove("barcode-scanner-active");
+          toggleScannerTransparency(false);
         };
       } catch (err) {
         console.error("Native Scanner error:", err);
+        toggleScannerTransparency(false);
         setManual(true);
         setHint("Error al iniciar el escáner nativo.");
       }
@@ -148,7 +162,7 @@ export function BarcodeScanner({
           zxingReader = new BrowserMultiFormatReader(hints);
 
           const scanSoftware = async () => {
-            if (!active || !videoRef.current) return;
+            if (!active || !videoRef.current || !zxingReader) return;
             try {
               const result = await zxingReader.decodeFromVideoElement(videoRef.current);
               if (result && result.getText()) {
@@ -183,6 +197,9 @@ export function BarcodeScanner({
       active = false;
       if (isNative) {
         cleanup?.();
+        // Red de seguridad: si el escáner falló antes de devolver su cleanup,
+        // la clase podría haber quedado puesta y la app invisible.
+        toggleScannerTransparency(false);
       } else {
         cancelAnimationFrame(raf);
         if (zxingReader) zxingReader.reset();
@@ -192,7 +209,11 @@ export function BarcodeScanner({
   }, [manual, isNative]);
 
   return (
-    <div className="fixed inset-0 z-[80] flex flex-col bg-black pt-[env(safe-area-inset-top)]">
+    <div
+      className={`barcode-scanner-ui fixed inset-0 z-[80] flex flex-col pt-[env(safe-area-inset-top)] ${
+        isNative ? "bg-transparent" : "bg-black"
+      }`}
+    >
       <header className="flex shrink-0 items-center justify-between px-4 py-3 pt-8">
         <button
           type="button"
