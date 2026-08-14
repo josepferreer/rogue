@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMeals, type NutritionGoals } from "@/lib/store/meals-store";
+import { usePresence, type PresenceState } from "@/lib/use-presence";
 
 const subscribeNever = () => () => {};
 
@@ -14,13 +15,15 @@ type Props = { open: boolean; onClose: () => void };
  *  nutrition_goals via setGoals; hasta ahora no habia forma de cambiarlos. */
 export function NutritionGoalsModal({ open, onClose }: Props) {
   const { goals, setGoals } = useMeals();
-  const mounted = useSyncExternalStore(
+  const hidratado = useSyncExternalStore(
     subscribeNever,
     () => true,
     () => false,
   );
+  // Mantiene la hoja montada mientras baja al cerrarse.
+  const { mounted, state } = usePresence(open);
 
-  if (!open || !mounted) return null;
+  if (!mounted || !hidratado) return null;
   const portalTarget = document.getElementById("app-shell");
   if (!portalTarget) return null;
 
@@ -28,6 +31,7 @@ export function NutritionGoalsModal({ open, onClose }: Props) {
     // GoalsSheet se monta de cero en cada apertura: el borrador se inicializa
     // desde los objetivos actuales sin efectos.
     <GoalsSheet
+      state={state}
       goals={goals}
       onSave={(next) => {
         setGoals(next);
@@ -50,10 +54,12 @@ function GoalsSheet({
   goals,
   onSave,
   onClose,
+  state,
 }: {
   goals: NutritionGoals;
   onSave: (next: NutritionGoals) => void;
   onClose: () => void;
+  state: PresenceState;
 }) {
   const [draft, setDraft] = useState<Record<keyof NutritionGoals, string>>(() => ({
     kcal: String(goals.kcal),
@@ -79,11 +85,12 @@ function GoalsSheet({
 
   return (
     <div
-      className="absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
+      className="overlay-anim absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
+      data-state={state}
       style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
-      <div className="w-full md:max-w-lg">
+      <div className="sheet-anim w-full md:max-w-lg" data-state={state}>
         <div
           className="flex flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:rounded-3xl"
           onClick={(e) => e.stopPropagation()}

@@ -24,6 +24,7 @@ import {
 } from "@/lib/store/meals-store";
 import { cn } from "@/lib/utils";
 import { useAppShellPortal } from "@/lib/use-app-shell-portal";
+import { usePresence } from "@/lib/use-presence";
 
 const MEAL_META: Record<
   MealType,
@@ -297,6 +298,15 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
   const [loading, setLoading] = useState(false);
   const portalTarget = useAppShellPortal();
 
+  // Aquí "abierto" es tener producto, y al cerrar pasa a null: durante los
+  // 260 ms de la animación de salida la hoja sigue en pantalla y reventaría al
+  // leer `scannedProduct.name`. Se guarda el último producto mostrado y se
+  // pinta ese mientras se va. Derivado en el render, no en un efecto (si no,
+  // habría un pintado con la hoja ya vacía).
+  const { mounted: sheetMounted, state: sheetState } = usePresence(!!scannedProduct);
+  const [shownProduct, setShownProduct] = useState<FoodProduct | null>(scannedProduct);
+  if (scannedProduct && scannedProduct !== shownProduct) setShownProduct(scannedProduct);
+
   // El codigo de barras se resuelve SIEMPRE en el servidor (`/api/food/...`):
   // sesion, limite de peticiones y solo los campos que usamos.
   const handleScan = async (barcode: string) => {
@@ -376,24 +386,25 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
         </button>
       </div>
 
-      {scannedProduct && portalTarget && createPortal(
+      {sheetMounted && shownProduct && portalTarget && createPortal(
         <div
-          className="absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
+          className="overlay-anim absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
+          data-state={sheetState}
           style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
           onClick={() => setScannedProduct(null)}
         >
-          <div className="w-full md:max-w-lg">
+          <div className="sheet-anim w-full md:max-w-lg" data-state={sheetState}>
             <div
               className="flex flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:rounded-3xl"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-5 pb-3 pt-4">
                 <div className="flex flex-col gap-1 min-w-0">
-                  <p className="font-semibold line-clamp-1">{scannedProduct.name}</p>
-                  {scannedProduct.brand && (
-                    <p className="text-xs text-muted-foreground line-clamp-1">{scannedProduct.brand}</p>
+                  <p className="font-semibold line-clamp-1">{shownProduct.name}</p>
+                  {shownProduct.brand && (
+                    <p className="text-xs text-muted-foreground line-clamp-1">{shownProduct.brand}</p>
                   )}
-                  {scannedProduct.isReadyMeal && (
+                  {shownProduct.isReadyMeal && (
                     <span className="w-fit rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-foreground">
                       Producto listo
                     </span>
@@ -412,52 +423,52 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
               <div className="px-5 pb-5 flex flex-col gap-4">
                 <div className="flex gap-5 text-sm">
                   <div className="flex flex-col">
-                    <span className="font-semibold">{scannedProduct.kcal100 ?? "—"}</span>
+                    <span className="font-semibold">{shownProduct.kcal100 ?? "—"}</span>
                     <span className="text-[10px] text-muted-foreground">Kcal/100g</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="font-semibold">{scannedProduct.protein100 ?? 0}g</span>
+                    <span className="font-semibold">{shownProduct.protein100 ?? 0}g</span>
                     <span className="text-[10px] text-muted-foreground">Proteína</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="font-semibold">{scannedProduct.carbs100 ?? 0}g</span>
+                    <span className="font-semibold">{shownProduct.carbs100 ?? 0}g</span>
                     <span className="text-[10px] text-muted-foreground">Carbos</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="font-semibold">{scannedProduct.fat100 ?? 0}g</span>
+                    <span className="font-semibold">{shownProduct.fat100 ?? 0}g</span>
                     <span className="text-[10px] text-muted-foreground">Grasas</span>
                   </div>
                 </div>
 
-                {scannedProduct.kcal100 == null && (
+                {shownProduct.kcal100 == null && (
                   <p className="text-[11px] text-muted-foreground">
                     Open Food Facts no declara las calorías de este producto. Se
                     guardará a 0 kcal: edítalo en la despensa.
                   </p>
                 )}
 
-                {scannedProduct.nutriscore && (
+                {shownProduct.nutriscore && (
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">Nutriscore:</span>
                     <span className={cn(
                       "px-2 py-0.5 rounded-md text-[10px] font-bold text-white uppercase",
-                      scannedProduct.healthScore === "green" ? "bg-green-500" :
-                      scannedProduct.healthScore === "yellow" ? "bg-yellow-400 text-yellow-900" :
-                      scannedProduct.healthScore === "orange" ? "bg-orange-500" :
+                      shownProduct.healthScore === "green" ? "bg-green-500" :
+                      shownProduct.healthScore === "yellow" ? "bg-yellow-400 text-yellow-900" :
+                      shownProduct.healthScore === "orange" ? "bg-orange-500" :
                       "bg-red-500"
                     )}>
-                      {scannedProduct.nutriscore}
+                      {shownProduct.nutriscore}
                     </span>
                   </div>
                 )}
 
-                {scannedProduct.ingredients.length > 0 && (
+                {shownProduct.ingredients.length > 0 && (
                   <div className="flex flex-col gap-1.5">
                     <p className="font-mono text-[11px] tracking-[0.2em] text-muted-foreground">
-                      INGREDIENTES{scannedProduct.servingG > 0 && ` · RACIÓN ${scannedProduct.servingG} G`}
+                      INGREDIENTES{shownProduct.servingG > 0 && ` · RACIÓN ${shownProduct.servingG} G`}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
-                      {scannedProduct.ingredients.map((ing, i) => (
+                      {shownProduct.ingredients.map((ing, i) => (
                         <span
                           key={i}
                           className="rounded-full bg-surface border border-border px-2.5 py-1 text-[11px] text-muted-foreground"
@@ -478,7 +489,7 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
                 {/* La opcion sugerida por la deteccion va primero/destacada; la
                     otra queda como alternativa por si el usuario discrepa. */}
                 <div className="flex flex-col gap-2">
-                  {scannedProduct.isReadyMeal ? (
+                  {shownProduct.isReadyMeal ? (
                     <>
                       <Button fullWidth onClick={saveAsPlato}>
                         Guardar como plato listo

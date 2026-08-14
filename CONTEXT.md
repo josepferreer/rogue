@@ -19,6 +19,41 @@ React 19, TypeScript y Tailwind v4. Está en `C:\Users\Grupo Hogares\Desktop\rog
   se montan en el mismo commit y el nodo aún no está en el DOM, así que el
   destino quedaba a null para siempre y el modal no abría en carga directa de
   la ruta (entrando por un link sí, y por eso pasaba desapercibido).
+- **Movimiento: todo con CSS**, sin librería de animación y sin la View
+  Transitions API (solo la tienen los WebView Chromium; se vería distinto en el
+  APK y en un Safari). Las animaciones viven en `globals.css`:
+  - `.page-transition` — entrada de página (fade + 8px), la aplica
+    `src/components/layout/page-transition.tsx` con `key={pathname}`. Su
+    `animation-fill-mode` DEBE ser `backwards`: con `both`, el `transform` del
+    último frame se queda y el elemento pasa a ser bloque contenedor de sus
+    descendientes `position: fixed` (rompería el mapa a pantalla completa de
+    `/app/cardio/actividad/[id]`).
+  - `.overlay-anim` + `.sheet-anim` / `.dialog-anim` — modales y hojas. El
+    contenedor lleva `overlay-anim`, el panel `sheet-anim` (sube desde abajo en
+    móvil, escala en escritorio) o `dialog-anim` (los que ya nacen centrados,
+    como `ConfirmDialog`). Ambos necesitan `data-state={state}`, que en
+    `closing` cambia a los keyframes `*-out`. Tienen que ser keyframes PROPIOS,
+    no `animation-direction: reverse` sobre los de entrada: cambiar la dirección
+    no rearranca una animación ya terminada (y al cerrar, la de entrada terminó
+    hace rato), así que el panel saltaba a invisible y se quedaba esperando.
+    Solo cambiar `animation-name` la rearranca.
+  - Para que la salida se vea, el modal usa `usePresence(open)`
+    (`src/lib/use-presence.ts`) y cambia su guard de `if (!open)` a
+    `if (!mounted)`: mantiene el panel montado 260 ms más. El hook deriva
+    `closing` DURANTE el render, nunca en un efecto: un efecto corre después del
+    commit, así que quedaba un pintado intermedio con `mounted` en false — el
+    panel se desmontaba y se volvía a montar, y eso se veía como un parpadeo al
+    cerrar. Al reabrir cancela el `closing`, si no el panel se queda invisible.
+  - Lo llevan los 13 overlays de la app. Si añades otro, ponle las clases: la
+    coherencia es el objetivo. Quedan FUERA a propósito las pantallas completas
+    que no son modales (`route-tracker-modal`, la sesión de entreno y el mapa a
+    pantalla completa de una actividad) y sobre todo `barcode-scanner`, que NO
+    debe animarse: juega con la transparencia del WebView para dejar ver la
+    cámara nativa que hay detrás.
+  - `<Skeleton>` (`src/components/ui/skeleton.tsx`) en vez de "Cargando…"
+    suelto: el texto centrado no ocupa el alto del contenido real y la página
+    saltaba al resolver el fetch.
+  - Hay un bloque `prefers-reduced-motion` global que reduce todo a 0.01 ms.
 - Theming con variables CSS en `src/app/globals.css` (`--background`, `--surface`,
   `--muted`, `--border`, con variantes light/dark). `bg-surface` es blanco puro:
   solo contrasta sobre `bg-background` (gris), nunca lo uses relleno sobre
@@ -38,6 +73,15 @@ React 19, TypeScript y Tailwind v4. Está en `C:\Users\Grupo Hogares\Desktop\rog
   CARTO es el único tercero que ve la zona que miras (debe figurar en la
   política de privacidad). **Pendiente: falta la atribución de OpenStreetMap/CARTO**
   — el mapa se pinta con `attributionControl: false` y la licencia ODbL la exige.
+- **Seguir una ruta guardada**: al repetir una ruta NO se pinta la traza en vivo
+  encima (serían dos líneas calcadas). Se pinta una sola polilínea, la de la
+  ruta, en dos capas: el tramo pendiente tenue y discontinuo y, encima, el ya
+  completado en verde. El corte lo calcula `src/lib/cardio/route-progress.ts`
+  (`computeRouteProgress`), una función pura sobre la traza entera: no arranca
+  hasta que el GPS entra en un radio de 35 m del inicio, solo avanza hacia
+  delante y busca en una ventana hacia delante que se ensancha con el salto del
+  GPS (para reengancharse tras un hueco sin saltar al tramo de vuelta en rutas
+  circulares). A más de 45 m de la línea marca `offRoute` y no avanza.
 - Estado global vía **React Context** (no Zustand, no librería externa):
   - `src/lib/store/rogue-store.tsx` — perfil, historial de sesiones
     (`WorkoutSession[]`), rutina (`routineDays`), `todayDay` calculado.

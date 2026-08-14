@@ -164,6 +164,158 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ─── Movimiento: transiciones de página y esqueletos ──────────────────────
+   Todo en CSS a propósito. La View Transitions API daría cross-fade real y
+   shared elements, pero solo la tienen los WebView Chromium: en el APK se
+   vería una cosa y en el Safari de un iPhone otra. Esto se comporta igual en
+   todas partes y no depende de ninguna API experimental.
+
+   Duraciones: 160-220 ms. Por debajo no se percibe, por encima la app se
+   siente lenta — y una app de entreno se usa con prisa y a una mano. */
+
+/* Entrada de página. Solo entrada: animar la SALIDA exige retener el árbol
+   viejo mientras monta el nuevo, y eso ya no es CSS (o es View Transitions o
+   es una librería). Con la entrada sola desaparece el corte en seco. */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* OJO con el fill-mode: tiene que ser `backwards`, NUNCA `both`/`forwards`.
+   Un elemento con `transform` (aunque sea translateY(0)) se convierte en el
+   bloque contenedor de sus descendientes `position: fixed`, que dejarían de
+   referirse al viewport. Con `both`, el transform del último frame se queda
+   pegado para siempre y rompe, por ejemplo, el mapa a pantalla completa de
+   /app/cardio/actividad/[id]. Con `backwards` el transform solo existe durante
+   los 200 ms de la entrada y después el elemento vuelve a su estilo normal. */
+.page-transition {
+  animation: page-in 200ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* ─── Modales, hojas y paneles ─────────────────────────────────────────────
+   Todos los overlays de la app comparten forma (`absolute inset-0` con el
+   panel abajo en móvil y centrado en escritorio) y ahora también movimiento:
+   NOA, la hoja de comidas, la despensa, el planificador, el selector de
+   ejercicios, los objetivos, la personalidad de NOA y el diálogo de confirmar.
+
+   Se anima el FONDO y el PANEL por separado, porque no hacen lo mismo: el
+   fondo funde y el panel entra desde abajo (en móvil) o escala (en escritorio,
+   donde no hay borde del que "subir"). La salida es la entrada al revés, con
+   `animation-direction: reverse`, y la dispara `usePresence` retrasando el
+   desmontaje. Sin eso el panel desaparecía de golpe, que se nota más que la
+   falta de animación al abrir. */
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dialog-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.overlay-anim {
+  animation: overlay-in 200ms ease-out backwards;
+}
+
+/* El panel sube desde el borde inferior: es una "hoja" pegada abajo. */
+.sheet-anim {
+  animation: sheet-in 260ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* En escritorio el panel está centrado y flotando: subir 100% lo traería desde
+   fuera de la pantalla, que se ve exagerado. Ahí escala. */
+@media (min-width: 768px) {
+  .sheet-anim {
+    animation: dialog-in 200ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+}
+
+/* Diálogos que YA nacen centrados en cualquier tamaño (confirmar). */
+.dialog-anim {
+  animation: dialog-in 200ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* Cierre.
+   Van con keyframes PROPIOS en vez de `animation-direction: reverse` sobre los
+   de entrada. Cambiar la dirección no reinicia una animación que ya ha
+   terminado — y cuando se cierra un panel, la de entrada acabó hace rato: se
+   quedaba en su último fotograma (invisible) al instante y el panel
+   desaparecía de golpe tras una espera muerta. Cambiar `animation-name` sí la
+   rearranca, que es lo único que lo consigue sin tocar el DOM.
+
+   `forwards` mantiene el último fotograma (invisible) durante el retardo de
+   desmontaje, para que no vuelva a verse justo antes de irse. Aquí no crea el
+   problema de bloque contenedor de `.page-transition`: el elemento se va del
+   DOM enseguida.
+
+   La curva es `ease-in` (arranca lento, acelera), al revés que la de entrada:
+   al salir, lo natural es que el panel coja velocidad al irse. */
+@keyframes overlay-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes sheet-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(100%); }
+}
+
+@keyframes dialog-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.96); }
+}
+
+.overlay-anim[data-state="closing"] {
+  animation: overlay-out 200ms ease-in forwards;
+}
+
+.sheet-anim[data-state="closing"] {
+  animation: sheet-out 240ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.dialog-anim[data-state="closing"] {
+  animation: dialog-out 180ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* Igual que en la entrada: centrado en escritorio, escala en vez de bajar.
+   Va DESPUÉS de la regla base a propósito — misma especificidad, gana la
+   última. */
+@media (min-width: 768px) {
+  .sheet-anim[data-state="closing"] {
+    animation: dialog-out 180ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+}
+
+/* Barrido del esqueleto de carga. Anima `transform`, no `background-position`:
+   así corre en el compositor y no repinta en cada frame (importante en los
+   móviles de gama baja donde ya va MapLibre por WebGL). */
+@keyframes skeleton-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+/* ─── Accesibilidad ────────────────────────────────────────────────────────
+   Si el sistema pide menos movimiento, se corta TODO: las animaciones de aquí
+   y las de Tailwind (animate-pulse, active:scale-*, transition-*). No se
+   desactivan del todo (`animation: none` rompe los que dependen del evento
+   `animationend`); se dejan en un frame instantáneo. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ─── Escáner de código de barras (nativo, @capacitor-mlkit) ───────────────
    En Android la cámara se pinta DETRÁS del WebView. Para verla hay que volver
    transparente el WebView (html/body) y ocultar toda la app, dejando visible

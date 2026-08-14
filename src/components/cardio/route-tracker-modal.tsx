@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useMemo } from "react";
 import {
   Minimize2,
   Play,
@@ -12,6 +13,8 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { useCardio } from "@/lib/store/cardio-store";
+import { cleanTrace } from "@/lib/cardio/clean-trace";
+import { computeRouteProgress } from "@/lib/cardio/route-progress";
 import { useBackButton } from "@/lib/use-back-button";
 
 const MapView = dynamic(() => import("./map-view"), {
@@ -50,7 +53,20 @@ export function RouteTrackerModal() {
   // "Atrás" (APK/PWA) minimiza la ruta en vez de sacar la app al home.
   useBackButton(isTracking && !isMinimized, minimize);
 
+  // Progreso sobre la ruta que se sigue: cuánto de ella se ha completado ya.
+  // Es puro sobre la traza entera, así que no hace falta guardar estado.
+  const progress = useMemo(
+    () => computeRouteProgress(followRoute, cleanTrace(coordinates)),
+    [followRoute, coordinates]
+  );
+
   if (!isTracking || isMinimized) return null;
+
+  const followTitle = progress
+    ? progress.started
+      ? `RUTA ${Math.round(progress.ratio * 100)}%`
+      : "VE AL INICIO"
+    : "GRABANDO RUTA";
 
   const pace = distanceKm > 0 ? durationSec / 60 / distanceKm : 0;
   const paceMin = Math.floor(pace);
@@ -64,14 +80,26 @@ export function RouteTrackerModal() {
         <MapView
           coordinates={coordinates}
           ghostRoute={followRoute.length > 0 ? followRoute : undefined}
+          progress={progress}
           topBar={{
-            title: isPaused ? "PAUSADO" : followRoute.length > 0 ? "SIGUIENDO RUTA" : "GRABANDO RUTA",
+            title: isPaused ? "PAUSADO" : followTitle,
             onAction: minimize,
             actionIcon: <Minimize2 className="size-5" />,
             actionAriaLabel: "Minimizar ruta",
           }}
         />
       </div>
+
+      {!gpsError && progress?.started && progress.offRoute && (
+        <div className="absolute inset-x-5 top-[calc(env(safe-area-inset-top)+4.5rem)] z-[400] rounded-2xl bg-amber-500/90 px-4 py-3 text-white shadow-lg backdrop-blur-md border border-amber-400/30">
+          <div className="flex items-start gap-2">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+            <p className="text-xs leading-snug">
+              Te has salido de la ruta. Vuelve a ella para seguir completándola.
+            </p>
+          </div>
+        </div>
+      )}
 
       {gpsError && (
         <div className="absolute inset-x-5 top-[calc(env(safe-area-inset-top)+4.5rem)] z-[400] rounded-2xl bg-red-600/90 px-4 py-3 text-white shadow-lg backdrop-blur-md border border-red-500/30">

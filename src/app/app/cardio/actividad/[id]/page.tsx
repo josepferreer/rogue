@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ArrowLeft, MapPin, Activity, Clock, Flame, Maximize2, Minimize2, Route, Check, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
 import { estimateKcal } from "@/lib/cardio/estimates";
 import { useRogue } from "@/lib/store/rogue-store";
@@ -19,13 +20,7 @@ import { createRoute } from "@/lib/cardio/saved-routes";
 
 const MapView = dynamic(() => import("@/components/cardio/map-view"), {
   ssr: false,
-  loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-muted">
-      <p className="animate-pulse text-sm text-muted-foreground">
-        Cargando mapa...
-      </p>
-    </div>
-  ),
+  loading: () => <Skeleton className="h-full w-full rounded-none" />,
 });
 
 function formatTime(totalSeconds: number) {
@@ -267,9 +262,15 @@ export default function ActivityDetailsPage({
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            <Button fullWidth onClick={repeatRoute} className="py-4 text-base font-semibold">
+            {/* Con un cardio en marcha no se puede arrancar otro. */}
+            <Button
+              fullWidth
+              onClick={repeatRoute}
+              disabled={isTracking}
+              className="py-4 text-base font-semibold"
+            >
               <Play className="size-5 fill-current" />
-              Repetir esta ruta
+              {isTracking ? "Ya tienes un cardio en marcha" : "Repetir esta ruta"}
             </Button>
             <Button variant="secondary" fullWidth onClick={() => setSaveOpen(true)}>
               <Route className="size-4" />

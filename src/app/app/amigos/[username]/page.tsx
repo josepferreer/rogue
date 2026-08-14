@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, Dumbbell, Flame, Lock, Route } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   useFriends,
   type FriendProfileResult,
@@ -79,9 +80,11 @@ export default function FriendProfilePage() {
     return (
       <div className="flex flex-col gap-5 pt-2 pb-4">
         {header}
-        <p className="py-10 text-center text-sm text-muted-foreground">
-          Cargando…
-        </p>
+        <div className="flex flex-col items-center gap-3 pt-6">
+          <Skeleton className="size-20 rounded-full" />
+          <Skeleton className="h-4 w-36 rounded-lg" />
+          <Skeleton className="h-3 w-24 rounded-lg" />
+        </div>
       </div>
     );
   }

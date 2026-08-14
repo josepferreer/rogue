@@ -69,17 +69,35 @@ export function BarcodeScanner({
 
     const startNativeScanner = async () => {
       try {
+        const { supported: nativeSupported } = await NativeScanner.isSupported();
+        if (!nativeSupported) {
+          // Movil sin Google Play Services (ML Kit no existe): se cae al
+          // escaner web, que en el WebView de Capacitor tambien funciona.
+          await startWebScanner();
+          return;
+        }
+
         const { camera: currentCamera } = await NativeScanner.checkPermissions();
         if (currentCamera !== "granted") {
           const { camera } = await NativeScanner.requestPermissions();
           if (camera !== "granted") {
             setManual(true);
-            setHint("Permiso de cámara denegado.");
+            setHint("Permiso de cámara denegado. Actívalo en los ajustes de la app.");
             return;
           }
         }
 
-        await NativeScanner.installGoogleBarcodeScannerModule();
+        // El modulo se descarga de Google Play la primera vez. Si falla (sin
+        // red, sin Play Store) NO es fatal: en muchos moviles el escaneo tira
+        // igual con el modulo empaquetado, asi que solo se registra el aviso.
+        try {
+          const { available } = await NativeScanner.isGoogleBarcodeScannerModuleAvailable();
+          if (!available) await NativeScanner.installGoogleBarcodeScannerModule();
+        } catch (err) {
+          console.warn("No se pudo instalar el modulo de ML Kit:", err);
+        }
+
+        if (!active) return;
 
         const listener = await NativeScanner.addListener("barcodesScanned", (event) => {
           const barcode = event.barcodes[0];
@@ -89,16 +107,24 @@ export function BarcodeScanner({
           }
         });
 
+        const stopNative = () => {
+          listener.remove();
+          NativeScanner.stopScan();
+          toggleScannerTransparency(false);
+        };
+
+        // Desmontado mientras se registraba el listener: no llegar a arrancar.
+        if (!active) {
+          stopNative();
+          return;
+        }
+
         toggleScannerTransparency(true);
         await NativeScanner.startScan({
           formats: [BarcodeFormat.Ean13, BarcodeFormat.Ean8, BarcodeFormat.UpcA, BarcodeFormat.UpcE],
         });
 
-        return () => {
-          listener.remove();
-          NativeScanner.stopScan();
-          toggleScannerTransparency(false);
-        };
+        return stopNative;
       } catch (err) {
         console.error("Native Scanner error:", err);
         toggleScannerTransparency(false);

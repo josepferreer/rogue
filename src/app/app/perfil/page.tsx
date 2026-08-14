@@ -35,6 +35,7 @@ import { formatWeight } from "@/lib/units";
 import { getDisplayName, type Sex } from "@/lib/workout/types";
 import { cn } from "@/lib/utils";
 import { useAppShellPortal } from "@/lib/use-app-shell-portal";
+import { usePresence } from "@/lib/use-presence";
 
 const GOALS = ["Hipertrofia", "Fuerza", "Perder grasa", "Mantenerme"];
 
@@ -159,8 +160,9 @@ function EditIdentityModal({
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const portalTarget = useAppShellPortal();
+  const { mounted, state } = usePresence(open);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   async function save() {
     setSaving(true);
@@ -184,12 +186,14 @@ function EditIdentityModal({
 
   const content = (
     <div
-      className="absolute inset-0 z-[60] flex flex-col justify-end md:items-center md:justify-center"
+      className="overlay-anim absolute inset-0 z-[60] flex flex-col justify-end md:items-center md:justify-center"
+      data-state={state}
       style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       <div
-        className="flex w-full flex-col gap-4 rounded-t-3xl border border-border bg-surface p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:max-w-md md:rounded-3xl"
+        className="sheet-anim flex w-full flex-col gap-4 rounded-t-3xl border border-border bg-surface p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:max-w-md md:rounded-3xl"
+        data-state={state}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -295,17 +299,20 @@ function EditPhysicalModal({
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const portalTarget = useAppShellPortal();
+  const { mounted, state } = usePresence(open);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   const content = (
     <div
-      className="absolute inset-0 z-[60] flex flex-col justify-end md:items-center md:justify-center"
+      className="overlay-anim absolute inset-0 z-[60] flex flex-col justify-end md:items-center md:justify-center"
+      data-state={state}
       style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       <div
-        className="flex w-full flex-col gap-4 rounded-t-3xl border border-border bg-surface p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:max-w-md md:rounded-3xl"
+        className="sheet-anim flex w-full flex-col gap-4 rounded-t-3xl border border-border bg-surface p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:max-w-md md:rounded-3xl"
+        data-state={state}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">

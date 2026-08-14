@@ -7,6 +7,7 @@ import { Check, Send, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { useAppShellPortal } from "@/lib/use-app-shell-portal";
+import { usePresence, type PresenceState } from "@/lib/use-presence";
 import { dispatchNoaAction } from "@/lib/noa/client/dispatch";
 import { Markdown } from "@/lib/noa/client/markdown";
 import { useMeals } from "@/lib/store/meals-store";
@@ -58,6 +59,7 @@ function loadTurns(): NoaTurn[] {
 
 export function Noa() {
   const [open, setOpen] = useState(false);
+  const { mounted, state } = usePresence(open);
   const portalTarget = useAppShellPortal();
   const pathname = usePathname();
 
@@ -102,8 +104,11 @@ export function Noa() {
   if (!hasKey) return null;
 
   return createPortal(
-    open ? (
+    // `mounted`, no `open`: la hoja sigue montada mientras se cierra, para que
+    // le dé tiempo a bajar. El botón flotante vuelve cuando ya se ha ido.
+    mounted ? (
       <NoaSheet
+        state={state}
         onClose={() => setOpen(false)}
         turns={turns}
         setTurns={setTurns}
@@ -124,10 +129,12 @@ export function Noa() {
 
 function NoaSheet({
   onClose,
+  state,
   turns,
   setTurns,
 }: {
   onClose: () => void;
+  state: PresenceState;
   turns: NoaTurn[];
   setTurns: React.Dispatch<React.SetStateAction<NoaTurn[]>>;
 }) {
@@ -135,7 +142,11 @@ function NoaSheet({
   const { notify } = useToast();
   const { reload: reloadMeals } = useMeals();
   const { reloadRoutine, reloadProfile, routineDays, logSession } = useRogue();
-  const { startTracking, reloadHistory: reloadCardio } = useCardio();
+  const {
+    startTracking,
+    isTracking: isCardioTracking,
+    reloadHistory: reloadCardio,
+  } = useCardio();
   const { start: startSession, finish: finishSession } = useWorkoutSession();
   const [pending, setPending] = useState<NoaProposedAction[]>([]);
   const [input, setInput] = useState("");
@@ -214,6 +225,14 @@ function NoaSheet({
         notify(`Entreno "${dayLabel}" guardado en tu historial.`, "success");
       },
       startCardio: () => {
+        // Solo puede haber un cardio a la vez: si ya hay uno, se lleva al
+        // usuario a él en vez de arrancar otro (que borraría lo grabado).
+        if (isCardioTracking) {
+          notify("Ya tienes un cardio en marcha.", "info");
+          onClose();
+          router.push("/app/cardio");
+          return;
+        }
         startTracking();
         onClose();
         router.push("/app/cardio");
@@ -356,12 +375,14 @@ function NoaSheet({
 
   return (
     <div
-      className="absolute inset-0 z-[70] flex flex-col justify-end md:items-center md:justify-center"
+      className="overlay-anim absolute inset-0 z-[70] flex flex-col justify-end md:items-center md:justify-center"
+      data-state={state}
       style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       <div
-        className="flex h-[80%] w-full flex-col rounded-t-3xl border border-border bg-surface md:max-w-md md:rounded-3xl"
+        className="sheet-anim flex h-[80%] w-full flex-col rounded-t-3xl border border-border bg-surface md:max-w-md md:rounded-3xl"
+        data-state={state}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-5 py-4">

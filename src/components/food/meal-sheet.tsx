@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { X, Plus, Trash2, Search, Pencil, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppShellPortal } from "@/lib/use-app-shell-portal";
+import { usePresence } from "@/lib/use-presence";
 import { useEscapeToClose } from "@/lib/use-escape-to-close";
 import { Button } from "@/components/ui/button";
 import { usePantry, platoMacros, isReadyPlato } from "@/lib/store/pantry-store";
@@ -38,6 +39,7 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
   const { alimentos, platos, hydrated: pantryHydrated, loadError, reload } = usePantry();
   const { entriesForDay, addEntry, removeEntry, updateEntryQuantity, updateEntry } = useMeals();
   const portalTarget = useAppShellPortal();
+  const { mounted, state } = usePresence(open);
   useEscapeToClose(open, onClose);
   const { notify } = useToast();
   const [view, setView] = useState<"list" | "add">("list");
@@ -160,15 +162,16 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
     setView("list"); setSearch("");
   };
 
-  if (!open || !portalTarget) return null;
+  if (!mounted || !portalTarget) return null;
 
   const content = (
     <div
-      className="absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
+      className="overlay-anim absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
+      data-state={state}
       style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
-      <div className="w-full md:max-w-lg">
+      <div className="sheet-anim w-full md:max-w-lg" data-state={state}>
         <div
           className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:max-h-[80dvh] md:rounded-3xl"
           onClick={e => e.stopPropagation()}

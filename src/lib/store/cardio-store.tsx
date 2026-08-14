@@ -190,6 +190,11 @@ type ActiveSnapshot = {
   dateISO?: string;
   /** Puntos ya confirmados en servidor. */
   storedLen?: number;
+  /** Ruta que se estaba siguiendo, si la habia. Sin esto, al recuperar la
+   *  sesion el seguimiento se degradaba a ruta libre: desaparecia la linea de
+   *  referencia y su progreso en verde, y la sesion se guardaba sin `route_id`. */
+  followRouteId?: string | null;
+  followRoute?: Coordinate[];
 };
 
 /** Cada cuanto se vuelca el progreso de la ruta a Supabase. */
@@ -343,6 +348,9 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
   /** Ruta que se está siguiendo (modo "repetir ruta"); null en una ruta libre.
    *  Al finalizar, la sesión guardada se marca con este `route_id`. */
   const followRouteIdRef = useRef<string | null>(null);
+  /** Copia síncrona de `isTracking`: `startTracking` tiene que poder rechazar un
+   *  segundo arranque en el mismo tick, antes de que React repinte. */
+  const isTrackingRef = useRef(false);
   /** Puntos ya confirmados en servidor, para mandar solo los nuevos. */
   const storedLenRef = useRef(0);
   const flushingRef = useRef(false);
@@ -521,10 +529,20 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
       sessionId: activeIdRef.current ?? undefined,
       dateISO: activeDateRef.current ?? undefined,
       storedLen: storedLenRef.current,
+      followRouteId: followRouteIdRef.current,
+      followRoute,
     });
-  }, [isTracking, coordinates, distanceKm, isPaused]);
+  }, [isTracking, coordinates, distanceKm, isPaused, followRoute]);
 
   const startTracking = useCallback((routeId?: string, ghostRoute?: Coordinate[]) => {
+    // Red de seguridad contra un segundo arranque (doble toque, otra pantalla,
+    // una accion de NOA...). Sin esto no se abrian "dos rutas": se BORRABA la
+    // que estaba en marcha — coordenadas, distancia y id de sesion a cero — y
+    // lo grabado hasta entonces quedaba huerfano. La UI ademas desactiva los
+    // botones de arranque, pero la garantia tiene que estar aqui.
+    if (isTrackingRef.current) return;
+    isTrackingRef.current = true;
+
     followRouteIdRef.current = routeId ?? null;
     setFollowRoute(ghostRoute ?? []);
     setIsTracking(true);
@@ -574,6 +592,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     const finalDistance = distanceKmRef.current;
     accumulatedSecRef.current = 0;
     runningSinceRef.current = null;
+    isTrackingRef.current = false;
     setIsTracking(false);
     setIsPaused(false);
     setIsMinimized(false);
@@ -691,6 +710,8 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     activeIdRef.current = snap.sessionId ?? crypto.randomUUID();
     activeDateRef.current = snap.dateISO ?? new Date().toISOString();
     storedLenRef.current = snap.storedLen ?? 0;
+    followRouteIdRef.current = snap.followRouteId ?? null;
+    isTrackingRef.current = true;
     // Hidratacion unica desde localStorage tras el montaje (protegida por
     // recoveredRef). Va en efecto a proposito: en el initializer romperia la
     // hidratacion SSR al no existir localStorage en servidor.
@@ -698,6 +719,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     setCoordinates(snap.coordinates);
     setDistanceKm(snap.distanceKm);
     setDurationSec(duration);
+    setFollowRoute(snap.followRoute ?? []);
     setIsPaused(true);
     setIsMinimized(true);
     setIsTracking(true);

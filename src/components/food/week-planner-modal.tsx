@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { X, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppShellPortal } from "@/lib/use-app-shell-portal";
+import { usePresence } from "@/lib/use-presence";
 import { useEscapeToClose } from "@/lib/use-escape-to-close";
 import { useMeals, type MealType, MEAL_TYPES, dayKey, splitMacros } from "@/lib/store/meals-store";
 import { MealSheet } from "@/components/food/meal-sheet";
@@ -38,6 +39,7 @@ type Props = {
 export function WeekPlannerModal({ open, onClose, initialDate }: Props) {
   const { entriesForDay, ensureLoadedFrom, loadingOlder } = useMeals();
   const portalTarget = useAppShellPortal();
+  const { mounted, state } = usePresence(open);
   useEscapeToClose(open, onClose);
   const [monday, setMonday] = useState<Date>(() => getMondayOf(initialDate));
   const [sheetTarget, setSheetTarget] = useState<{ date: string; mealType: MealType; mealLabel: string } | null>(null);
@@ -60,16 +62,17 @@ export function WeekPlannerModal({ open, onClose, initialDate }: Props) {
   const endDate = new Date(monday.getTime() + 6 * 86400000);
   const rangeLabel = `${monday.getDate()}/${monday.getMonth() + 1} – ${endDate.getDate()}/${endDate.getMonth() + 1}`;
 
-  if (!open || !portalTarget) return null;
+  if (!mounted || !portalTarget) return null;
 
   const content = (
     <>
       <div
-        className="absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
+        className="overlay-anim absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
+        data-state={state}
         style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
         onClick={onClose}
       >
-        <div className="w-full px-5 md:w-full md:max-w-2xl md:px-0">
+        <div className="sheet-anim w-full px-5 md:w-full md:max-w-2xl md:px-0" data-state={state}>
           <div
             className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:max-h-[85dvh] md:rounded-3xl"
             onClick={e => e.stopPropagation()}

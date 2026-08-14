@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import {
   useFriends,
@@ -193,9 +194,19 @@ export default function AmigosPage({
       </div>
 
       {!hydrated ? (
-        <p className="py-10 text-center text-sm text-muted-foreground">
-          Cargando…
-        </p>
+        // Filas con la silueta de PersonRow (avatar + dos líneas), para que la
+        // lista real aparezca en su sitio en vez de empujar el layout.
+        <div className="flex flex-col gap-2.5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex items-center gap-3 rounded-3xl border border-border bg-surface p-3">
+              <Skeleton className="size-11 shrink-0 rounded-full" />
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <Skeleton className="h-3.5 w-32 rounded-lg" />
+                <Skeleton className="h-3 w-20 rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <>
           {/* ── Amigos ────────────────────────────────────────────────── */}

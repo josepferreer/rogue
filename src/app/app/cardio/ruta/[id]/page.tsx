@@ -5,17 +5,14 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ArrowLeft, MapPin, Mountain, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useCardio } from "@/lib/store/cardio-store";
 import { fetchRoute, type SavedRouteFull } from "@/lib/cardio/saved-routes";
 import { useToast } from "@/components/ui/toast";
 
 const MapView = dynamic(() => import("@/components/cardio/map-view"), {
   ssr: false,
-  loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-muted">
-      <p className="animate-pulse text-sm text-muted-foreground">Cargando mapa...</p>
-    </div>
-  ),
+  loading: () => <Skeleton className="h-full w-full rounded-none" />,
 });
 
 export default function SavedRouteDetailPage({
@@ -43,10 +40,24 @@ export default function SavedRouteDetailPage({
     };
   }, [id]);
 
+  // Esqueleto con la MISMA silueta que el contenido real (cabecera, mapa, dos
+  // tarjetas y CTA): al llegar los datos nada se mueve de sitio.
   if (route === "loading") {
     return (
-      <div className="flex justify-center pt-24">
-        <p className="animate-pulse text-sm text-muted-foreground">Cargando ruta…</p>
+      <div className="flex flex-col gap-6 pt-2 pb-8">
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-10 shrink-0 rounded-full" />
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <Skeleton className="h-5 w-40 rounded-lg" />
+            <Skeleton className="h-3 w-24 rounded-lg" />
+          </div>
+        </div>
+        <Skeleton className="h-[46dvh] max-h-[520px] min-h-[300px] w-full rounded-3xl" />
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="h-[7.5rem] rounded-3xl" />
+          <Skeleton className="h-[7.5rem] rounded-3xl" />
+        </div>
+        <Skeleton className="h-[3.75rem] w-full rounded-full" />
       </div>
     );
   }
@@ -113,9 +124,16 @@ export default function SavedRouteDetailPage({
         </div>
       </div>
 
-      <Button fullWidth onClick={repeat} className="py-4 text-base font-semibold shadow-lg">
+      {/* Con un cardio en marcha no se puede arrancar otro: solo hay una sesión
+          de tracking, y arrancar de nuevo tiraría lo grabado. */}
+      <Button
+        fullWidth
+        onClick={repeat}
+        disabled={isTracking}
+        className="py-4 text-base font-semibold shadow-lg"
+      >
         <Play className="size-5 fill-current" />
-        Repetir esta ruta
+        {isTracking ? "Ya tienes un cardio en marcha" : "Repetir esta ruta"}
       </Button>
 
       <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">

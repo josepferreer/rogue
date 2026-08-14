@@ -6,6 +6,7 @@ import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppShellPortal } from "@/lib/use-app-shell-portal";
 import { useEscapeToClose } from "@/lib/use-escape-to-close";
+import { usePresence, type PresenceState } from "@/lib/use-presence";
 import {
   DEFAULT_PERSONALITY,
   LENGTH_OPTIONS,
@@ -34,16 +35,23 @@ const NICKNAME_DEBOUNCE_MS = 600;
  */
 export function NoaPersonalityModal({ open, onClose }: Props) {
   const portalTarget = useAppShellPortal();
+  const { mounted, state } = usePresence(open);
   useEscapeToClose(open, onClose);
 
-  if (!open || !portalTarget) return null;
+  if (!mounted || !portalTarget) return null;
   // La hoja se monta de cero en cada apertura (mismo patron que
   // nutrition-goals-modal): asi lee los ajustes al montar, sin reiniciar
   // estado a mano desde un efecto.
-  return createPortal(<PersonalitySheet onClose={onClose} />, portalTarget);
+  return createPortal(<PersonalitySheet state={state} onClose={onClose} />, portalTarget);
 }
 
-function PersonalitySheet({ onClose }: { onClose: () => void }) {
+function PersonalitySheet({
+  onClose,
+  state,
+}: {
+  onClose: () => void;
+  state: PresenceState;
+}) {
   const [value, setValue] = useState<NoaPersonality>(DEFAULT_PERSONALITY);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -102,11 +110,12 @@ function PersonalitySheet({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="absolute inset-0 z-[60] flex flex-col justify-end md:items-center md:justify-center"
+      className="overlay-anim absolute inset-0 z-[60] flex flex-col justify-end md:items-center md:justify-center"
+      data-state={state}
       style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
-      <div className="w-full md:max-w-md">
+      <div className="sheet-anim w-full md:max-w-md" data-state={state}>
         <div
           className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-surface md:max-h-[85dvh] md:rounded-3xl"
           onClick={(e) => e.stopPropagation()}

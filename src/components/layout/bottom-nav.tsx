@@ -42,18 +42,34 @@ export function BottomNav() {
               replace
               aria-label={item.label}
               className={cn(
-                "flex items-center justify-center gap-1 rounded-full px-3.5 py-3.5 transition-colors",
+                "flex items-center justify-center rounded-full px-3.5 py-3.5 transition-colors",
                 active
                   ? "bg-accent/15 text-accent"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Icon className="size-5" strokeWidth={active ? 2.25 : 1.75} />
-              {active && (
-                <span className="text-xs font-medium leading-none">
-                  {item.label}
-                </span>
-              )}
+              <Icon className="size-5 shrink-0" strokeWidth={active ? 2.25 : 1.75} />
+              {/* La etiqueta se renderiza SIEMPRE y se colapsa con `max-width`.
+                  Montándola y desmontándola no hay nada que animar: el ancho de
+                  la píldora pegaba un salto seco en cada navegación.
+
+                  `max-width` y no `grid-template-columns` (que daría el ancho
+                  exacto): la interpolación de las pistas de grid es reciente y
+                  no la tienen todos los motores, y esto tiene que verse igual en
+                  el WebView del APK que en un Safari viejo. El tope, 6rem, está
+                  muy por encima de la etiqueta más ancha ("Comidas", 54 px), así
+                  que no recorta ni con el texto del sistema agrandado; a cambio
+                  la etiqueta llega a su ancho final algo antes de que termine la
+                  transición, que no se nota. */}
+              <span
+                className={cn(
+                  "overflow-hidden whitespace-nowrap text-xs font-medium leading-none",
+                  "transition-[max-width,opacity,padding] duration-200 ease-out",
+                  active ? "max-w-24 pl-1 opacity-100" : "max-w-0 pl-0 opacity-0"
+                )}
+              >
+                {item.label}
+              </span>
             </Link>
           );
         })}

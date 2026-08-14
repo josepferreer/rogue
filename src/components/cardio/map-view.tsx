@@ -7,15 +7,19 @@ import { useTheme } from "next-themes";
 import { Layers, Box } from "lucide-react";
 import type { Coordinate } from "@/lib/store/cardio-store";
 import { cleanTrace } from "@/lib/cardio/clean-trace";
+import type { RouteProgress } from "@/lib/cardio/route-progress";
 
 interface MapViewProps {
   coordinates: Coordinate[];
   /** Descarta los saltos imposibles del GPS antes de dibujar. Para rutas ya
    *  terminadas; en el seguimiento en vivo se pinta la traza tal cual llega. */
   cleanOutliers?: boolean;
-  /** Ruta "fantasma" a seguir (modo repetir): se pinta tenue de fondo, con
-   *  marcadores de inicio/fin, y la traza en vivo la va completando encima. */
+  /** Ruta a seguir (modo repetir): es la ÚNICA línea que se pinta. Empieza
+   *  tenue y se va coloreando de verde según el progreso; la traza en vivo NO
+   *  se dibuja encima para no superponer dos rutas. */
   ghostRoute?: Coordinate[];
+  /** Progreso sobre `ghostRoute` (de `computeRouteProgress`). */
+  progress?: RouteProgress | null;
   topBar?: {
     title: string;
     onAction: () => void;
@@ -26,7 +30,13 @@ interface MapViewProps {
 
 type MapMode = "2d" | "2.5d";
 
-export default function MapView({ coordinates, cleanOutliers = false, ghostRoute, topBar }: MapViewProps) {
+export default function MapView({
+  coordinates,
+  cleanOutliers = false,
+  ghostRoute,
+  progress,
+  topBar,
+}: MapViewProps) {
   const { resolvedTheme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -50,6 +60,9 @@ export default function MapView({ coordinates, cleanOutliers = false, ghostRoute
     () => (cleanOutliers && coordinates.length >= 2 ? cleanTrace(coordinates) : coordinates),
     [cleanOutliers, coordinates]
   );
+
+  /** Se está siguiendo una ruta guardada (hay línea de referencia que pintar). */
+  const followMode = !!ghostRoute && ghostRoute.length >= 2;
 
   const toggleMapMode = () => {
     const nextMode = mapMode === "2d" ? "2.5d" : "2d";
@@ -229,15 +242,24 @@ export default function MapView({ coordinates, cleanOutliers = false, ghostRoute
     }
 
 
-    // Ruta "fantasma" a seguir: se dibuja ANTES que la traza en vivo para que
-    // quede por debajo, y la traza real la va "completando" al avanzar.
-    if (ghostRoute && ghostRoute.length >= 2) {
+    // Ruta a seguir. Se pinta en DOS capas sobre la MISMA polilínea: el tramo
+    // pendiente tenue y, encima, el tramo ya completado en verde. Así la ruta
+    // "se rellena" al avanzar en vez de quedar una segunda línea superpuesta.
+    if (followMode && ghostRoute) {
       const ghostGeo: GeoJSON.Feature<GeoJSON.LineString> = {
         type: "Feature",
         properties: {},
         geometry: {
           type: "LineString",
           coordinates: ghostRoute.map((c) => [c.lng, c.lat]),
+        },
+      };
+      const doneGeo: GeoJSON.Feature<GeoJSON.LineString> = {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "LineString",
+          coordinates: (progress?.doneCoords ?? []).map((c) => [c.lng, c.lat]),
         },
       };
       const first = ghostRoute[0];
@@ -252,6 +274,7 @@ export default function MapView({ coordinates, cleanOutliers = false, ghostRoute
 
       if (map.getSource("ghost-source")) {
         (map.getSource("ghost-source") as maplibregl.GeoJSONSource).setData(ghostGeo);
+        (map.getSource("ghost-done-source") as maplibregl.GeoJSONSource)?.setData(doneGeo);
         (map.getSource("ghost-ends-source") as maplibregl.GeoJSONSource)?.setData(endsGeo);
       } else {
         map.addSource("ghost-source", { type: "geojson", data: ghostGeo });
@@ -267,6 +290,31 @@ export default function MapView({ coordinates, cleanOutliers = false, ghostRoute
             "line-dasharray": [1, 1.6],
           },
         });
+
+        // Tramo completado: mismo trazado, sólido y en verde, justo encima.
+        map.addSource("ghost-done-source", { type: "geojson", data: doneGeo });
+        map.addLayer({
+          id: "ghost-done-casing",
+          type: "line",
+          source: "ghost-done-source",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: {
+            "line-color": isDark ? "#166534" : "#86efac",
+            "line-width": 10,
+            "line-opacity": 0.5,
+          },
+        });
+        map.addLayer({
+          id: "ghost-done-line",
+          type: "line",
+          source: "ghost-done-source",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: {
+            "line-color": "#22c55e",
+            "line-width": 6,
+          },
+        });
+
         map.addSource("ghost-ends-source", { type: "geojson", data: endsGeo });
         map.addLayer({
           id: "ghost-ends",
@@ -274,7 +322,9 @@ export default function MapView({ coordinates, cleanOutliers = false, ghostRoute
           source: "ghost-ends-source",
           paint: {
             "circle-radius": 8,
-            "circle-color": ["match", ["get", "role"], "start", "#22c55e", "end", "#ef4444", "#888888"],
+            // El verde ya significa "tramo completado": el inicio va en azul
+            // para no leerse como parte del progreso.
+            "circle-color": ["match", ["get", "role"], "start", "#3b82f6", "end", "#ef4444", "#888888"],
             "circle-stroke-width": 3,
             "circle-stroke-color": "#ffffff",
           },
@@ -296,7 +346,10 @@ export default function MapView({ coordinates, cleanOutliers = false, ghostRoute
       }
     }
 
-    const lineCoords = drawn.map((c) => [c.lng, c.lat]);
+    // Traza en vivo (azul). SOLO en ruta libre: siguiendo una ruta guardada
+    // sería una segunda línea calcada sobre la primera, que es justo lo que se
+    // quiere evitar; ahí el avance se ve por el verde de la propia ruta.
+    const lineCoords = followMode ? [] : drawn.map((c) => [c.lng, c.lat]);
     const routeGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
       type: "Feature",
       properties: {},
@@ -306,7 +359,10 @@ export default function MapView({ coordinates, cleanOutliers = false, ghostRoute
       },
     };
 
-    if (map.getSource("route-source")) {
+    if (followMode) {
+      // Nada que pintar; si el modo cambió en caliente, vaciar la traza previa.
+      (map.getSource("route-source") as maplibregl.GeoJSONSource | undefined)?.setData(routeGeoJSON);
+    } else if (map.getSource("route-source")) {
       (map.getSource("route-source") as maplibregl.GeoJSONSource).setData(routeGeoJSON);
     } else {
       map.addSource("route-source", {
@@ -397,7 +453,7 @@ export default function MapView({ coordinates, cleanOutliers = false, ghostRoute
         },
       });
     }
-  }, [coordinates, drawn, ghostRoute, mapLoaded, mapMode, resolvedTheme]);
+  }, [coordinates, drawn, followMode, ghostRoute, mapLoaded, mapMode, progress, resolvedTheme]);
 
   // Modo seguimiento: al cargar (aún sin puntos en vivo), encuadra la ruta
   // fantasma entera para que el usuario vea lo que va a recorrer.

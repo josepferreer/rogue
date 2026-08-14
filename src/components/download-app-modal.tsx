@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Download, Smartphone, Share, Plus, X, Check } from "lucide-react";
+import { usePresence } from "@/lib/use-presence";
 
 /** URL del APK servido desde /public. Cambia por una release firmada o un
  *  enlace de GitHub Releases / CDN cuando distribuyas en serio. */
@@ -50,6 +51,7 @@ function detectPlatform(): Platform {
  */
 export function DownloadAppModal({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
+  const { mounted, state } = usePresence(open);
   const [platform] = useState<Platform>(() => detectPlatform());
   const [installed, setInstalled] = useState(() => isStandalone());
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
@@ -113,7 +115,7 @@ export function DownloadAppModal({ className }: { className?: string }) {
         Descargar app
       </button>
 
-      {open && (
+      {mounted && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
           role="dialog"
@@ -125,11 +127,15 @@ export function DownloadAppModal({ className }: { className?: string }) {
             type="button"
             aria-label="Cerrar"
             onClick={() => setOpen(false)}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            className="overlay-anim absolute inset-0 bg-black/40 backdrop-blur-sm"
+            data-state={state}
           />
 
           {/* Sheet / dialog */}
-          <div className="relative w-full max-w-md rounded-t-3xl border border-border bg-surface p-6 shadow-xl sm:rounded-3xl">
+          <div
+            className="sheet-anim relative w-full max-w-md rounded-t-3xl border border-border bg-surface p-6 shadow-xl sm:rounded-3xl"
+            data-state={state}
+          >
             <div className="mb-5 flex items-start justify-between">
               <div>
                 <h3 className="text-lg font-semibold tracking-tight">

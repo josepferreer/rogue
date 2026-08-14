@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { BottomNav } from "./bottom-nav";
+import { PageTransition } from "./page-transition";
 import { Sidebar } from "./sidebar";
 import { TopBar } from "./top-bar";
 import { CardioMiniPlayer } from "@/components/cardio/cardio-mini-player";
@@ -50,7 +51,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <>
             <TopBar />
             <main className="mx-auto w-full flex-1 overflow-y-auto px-5 pb-28 md:max-w-2xl md:pb-12">
-              {children}
+              <PageTransition>{children}</PageTransition>
             </main>
             <CardioMiniPlayer />
             <WorkoutMiniPlayer />

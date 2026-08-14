@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAppShellPortal } from "@/lib/use-app-shell-portal";
 import { useEscapeToClose } from "@/lib/use-escape-to-close";
+import { usePresence } from "@/lib/use-presence";
 
 type Props = {
   open: boolean;
@@ -171,18 +172,20 @@ export function ExerciseSelectorModal({
   );
 
   const portalTarget = useAppShellPortal();
+  const { mounted, state } = usePresence(open);
   useEscapeToClose(open, onClose);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   const content = (
     <div
-      className="absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
+      className="overlay-anim absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
+      data-state={state}
       style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       {/* Mismo margen lateral (px-5) que las tarjetas de contenido. */}
-      <div className="w-full md:max-w-lg">
+      <div className="sheet-anim w-full md:max-w-lg" data-state={state}>
         <div
           className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:max-h-[80dvh] md:rounded-3xl"
           onClick={(e) => e.stopPropagation()}

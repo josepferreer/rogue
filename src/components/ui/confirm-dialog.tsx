@@ -3,6 +3,7 @@
 import { createPortal } from "react-dom";
 import { useAppShellPortal } from "@/lib/use-app-shell-portal";
 import { useEscapeToClose } from "@/lib/use-escape-to-close";
+import { usePresence } from "@/lib/use-presence";
 
 type Props = {
   open: boolean;
@@ -25,13 +26,15 @@ export function ConfirmDialog({
   onCancel,
 }: Props) {
   const portalTarget = useAppShellPortal();
+  const { mounted, state } = usePresence(open);
   useEscapeToClose(open, onCancel);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   const content = (
     <div
-      className="absolute inset-0 z-[60] flex items-center justify-center px-8"
+      className="overlay-anim absolute inset-0 z-[60] flex items-center justify-center px-8"
+      data-state={state}
       style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
       onClick={onCancel}
     >
@@ -39,7 +42,8 @@ export function ConfirmDialog({
         role="alertdialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full rounded-3xl border border-border bg-surface p-5 shadow-2xl md:max-w-sm"
+        className="dialog-anim w-full rounded-3xl border border-border bg-surface p-5 shadow-2xl md:max-w-sm"
+        data-state={state}
         onClick={(e) => e.stopPropagation()}
       >
         <p className="text-base font-semibold">{title}</p>

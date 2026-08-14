@@ -41,6 +41,7 @@ import { PastelCard } from "@/components/ui/pastel-card";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
+import { usePresence } from "@/lib/use-presence";
 import { ExerciseSelectorModal } from "@/components/routines/exercise-selector-modal";
 import { getExerciseInfo, useRogue } from "@/lib/store/rogue-store";
 import { useWorkoutSession } from "@/lib/store/workout-session-store";
@@ -141,6 +142,14 @@ export function WorkoutSessionModal() {
     adjustRest,
     finish,
   } = useWorkoutSession();
+
+  // Aviso de descanso terminado. Como con la hoja del producto escaneado: al
+  // descartarlo la lista se vacia, y durante la animacion de salida el panel
+  // seguiria en pantalla pero sin nada dentro. Se conserva la ultima lista no
+  // vacia para pintarla mientras se va.
+  const { mounted: avisoMontado, state: avisoEstado } = usePresence(reminders.length > 0);
+  const [avisosVisibles, setAvisosVisibles] = useState(reminders);
+  if (reminders.length > 0 && reminders !== avisosVisibles) setAvisosVisibles(reminders);
 
   // Ejercicio que se esta sustituyendo (abre el selector).
   const [swapForExId, setSwapForExId] = useState<string | null>(null);
@@ -243,9 +252,15 @@ export function WorkoutSessionModal() {
   // ── Sesion activa ─────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background pt-[env(safe-area-inset-top)]">
-      {reminders.length > 0 && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/85 p-6 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-3xl border border-border bg-surface p-5">
+      {avisoMontado && avisosVisibles.length > 0 && (
+        <div
+          className="overlay-anim absolute inset-0 z-30 flex items-center justify-center bg-background/85 p-6 backdrop-blur-sm"
+          data-state={avisoEstado}
+        >
+          <div
+            className="dialog-anim w-full max-w-sm rounded-3xl border border-border bg-surface p-5"
+            data-state={avisoEstado}
+          >
             <div className="mb-3 flex items-center gap-2">
               <span className="flex size-9 items-center justify-center rounded-full bg-accent/15 text-accent">
                 <Bell className="size-4" />
@@ -253,7 +268,7 @@ export function WorkoutSessionModal() {
               <p className="text-base font-semibold">Recordatorio</p>
             </div>
             <div className="flex flex-col gap-2">
-              {reminders.map((r) => (
+              {avisosVisibles.map((r) => (
                 <div
                   key={r.exerciseId}
                   className="rounded-2xl bg-muted/60 px-3 py-2.5 text-sm"
