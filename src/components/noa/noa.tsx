@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/toast";
 import { useAppShellPortal } from "@/lib/use-app-shell-portal";
 import { usePresence, type PresenceState } from "@/lib/use-presence";
 import { dispatchNoaAction } from "@/lib/noa/client/dispatch";
+import { buildLiveContext } from "@/lib/noa/client/live-snapshot";
 import { Markdown } from "@/lib/noa/client/markdown";
 import { useMeals } from "@/lib/store/meals-store";
 import { getExerciseInfo, useRogue } from "@/lib/store/rogue-store";
@@ -118,7 +119,12 @@ export function Noa() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Abrir NOA"
-        className="absolute bottom-24 right-4 z-50 flex size-14 items-center justify-center rounded-full bg-foreground text-background shadow-lg transition-transform active:scale-95"
+        // z-[60], por encima del modal de entreno y del tracker de ruta (ambos
+        // z-50 y renderizados DESPUÉS que este portal, así que con el mismo z
+        // ganaban ellos). Con NOA debajo, el botón estaba en el DOM pero era
+        // inalcanzable justo cuando más sentido tiene: a mitad de entreno o de
+        // ruta. La hoja ya vivía en z-[70], o sea que solo faltaba el lanzador.
+        className="absolute bottom-24 right-4 z-[60] flex size-14 items-center justify-center rounded-full bg-foreground text-background shadow-lg transition-transform active:scale-95"
       >
         <Sparkles className="size-6" />
       </button>
@@ -142,12 +148,14 @@ function NoaSheet({
   const { notify } = useToast();
   const { reload: reloadMeals } = useMeals();
   const { reloadRoutine, reloadProfile, routineDays, logSession } = useRogue();
+  const cardio = useCardio();
   const {
     startTracking,
     isTracking: isCardioTracking,
     reloadHistory: reloadCardio,
-  } = useCardio();
-  const { start: startSession, finish: finishSession } = useWorkoutSession();
+  } = cardio;
+  const session = useWorkoutSession();
+  const { start: startSession, finish: finishSession } = session;
   const [pending, setPending] = useState<NoaProposedAction[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -156,6 +164,37 @@ function NoaSheet({
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [turns, pending]);
+
+  /**
+   * Foto de lo que el usuario tiene EN MARCHA, en el instante de mandar el
+   * mensaje. Viaja con cada turno porque el servidor no puede saberlo: el
+   * entreno abierto y la ruta grabándose viven en estos stores hasta que
+   * terminan. Es lo que permite preguntar «¿cómo lo llevo?» a mitad de serie o
+   * «¿cómo ves mi ritmo?» en medio de una carrera.
+   */
+  function liveNow() {
+    return buildLiveContext({
+      workout: {
+        active: session.active,
+        phase: session.phase,
+        day: session.day,
+        rows: session.rows,
+        unit: session.unit,
+        elapsedSec: session.elapsedSec,
+        restRemaining: session.restRemaining,
+        noteDrafts: session.noteDrafts,
+      },
+      cardio: {
+        isTracking: cardio.isTracking,
+        isPaused: cardio.isPaused,
+        distanceKm: cardio.distanceKm,
+        durationSec: cardio.durationSec,
+        coordinates: cardio.coordinates,
+        followRoute: cardio.followRoute,
+      },
+      exerciseName: (id) => getExerciseInfo(id).nombre,
+    });
+  }
 
   function dispatch(action: NoaClientAction) {
     dispatchNoaAction(action, {
@@ -285,6 +324,7 @@ function NoaSheet({
           history,
           clientDate: localDateKey(),
           clientNow: localNowISO(),
+          live: liveNow(),
         }),
       });
       // El engine ya devuelve 200 con un `reply` explicativo cuando algo falla
@@ -339,6 +379,7 @@ function NoaSheet({
           history: turns,
           clientDate: localDateKey(),
           clientNow: localNowISO(),
+          live: liveNow(),
         }),
       });
       if (!res.ok) {
@@ -403,7 +444,7 @@ function NoaSheet({
         <div ref={scrollRef} className="flex flex-1 flex-col gap-3 overflow-y-auto p-5">
           {turns.length === 0 && (
             <p className="m-auto max-w-[16rem] text-center text-sm text-muted-foreground">
-              Pregúntame por tus entrenos. Ej.: «¿cuántos entrenos llevo?».
+              {emptyHint(session.active && session.phase === "active", cardio.isTracking)}
             </p>
           )}
           {turns.map((t, i) => (
@@ -477,6 +518,18 @@ function NoaSheet({
       </div>
     </div>
   );
+}
+
+/**
+ * Sugerencia de la pantalla vacía. Con algo en marcha se ofrece lo que de
+ * verdad va a preguntar el usuario en ese momento: a mitad de entreno nadie
+ * abre NOA para saber cuántos entrenos lleva este mes.
+ */
+function emptyHint(enEntreno: boolean, enRuta: boolean): string {
+  if (enEntreno && enRuta) return "Tienes un entreno y una ruta en marcha. Pregúntame por cualquiera de los dos.";
+  if (enEntreno) return "Estás entrenando. Ej.: «¿cómo lo llevo?» o «¿subo el peso en press banca?».";
+  if (enRuta) return "Estás en mitad de una ruta. Ej.: «¿cómo ves mi ritmo?».";
+  return "Pregúntame por tus entrenos. Ej.: «¿cuántos entrenos llevo?».";
 }
 
 /** Hoy en la zona horaria del navegador (YYYY-MM-DD). El servidor corre en UTC,

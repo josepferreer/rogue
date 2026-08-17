@@ -22,14 +22,18 @@ import { Capacitor } from "@capacitor/core";
  * que ser el usuario quien decida cuando hacerlo.
  */
 export function NoaExactAlarmCard() {
-  // null = aun comprobando; en web la tarjeta no se pinta.
+  /**
+   * `null` = todavia sin respuesta, que es tambien el estado permanente en
+   * navegador: alli el efecto sale antes de preguntar nada. Un segundo estado
+   * "soy nativo" seria redundante --y ademas obligaba a un setState sincrono
+   * dentro del efecto, que es justo lo que no hay que hacer.
+   */
   const [granted, setGranted] = useState<boolean | null>(null);
-  const [native, setNative] = useState(false);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
-    setNative(true);
     let alive = true;
+    // No necesita catch: canScheduleExact resuelve siempre (ver su try/catch).
     canScheduleExact().then((ok) => {
       if (alive) setGranted(ok);
     });
@@ -39,7 +43,7 @@ export function NoaExactAlarmCard() {
   }, []);
 
   // En navegador los recordatorios no existen: no hay nada que configurar.
-  if (!native || granted === null) return null;
+  if (granted === null) return null;
 
   if (granted) {
     return (

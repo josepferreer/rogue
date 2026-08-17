@@ -39,6 +39,43 @@ POST /api/noa (guard: requireUser + rateLimit)
 | `personality.ts` | Preferencias → bloque de estilo del system prompt. Solo servidor. |
 | `engine.ts` | Orquestador. |
 | `modules/*` | Un módulo autocontenido por dominio. `training` y `nutrition` son los ejemplos completos. |
+| `live/snapshot.ts` | Aduana del contexto en vivo: valida y recorta lo que manda el móvil. |
+| `client/live-snapshot.ts` | Lo arma el móvil desde sus stores (cliente). |
+
+## Sesión en curso (contexto en vivo)
+
+Un entreno abierto en el mini-player y una ruta grabándose por GPS **existen
+solo en el cliente**: no llegan a Supabase hasta que terminan. Por eso NOA no
+podía responder a lo más natural que se le pregunta —«¿cómo lo llevo?» a mitad
+de serie, «¿cómo ves mi ritmo?» en medio de una carrera—: miraba el historial y
+contestaba sobre la semana pasada.
+
+El móvil adjunta un snapshot (`NoaLiveContext`) en **cada** turno, la route lo
+sanea (`live/snapshot.ts`, entrada no confiable) y llega a las tools como
+`ctx.live`. El módulo `live` es quien lo explota:
+
+- `getActiveWorkout` cruza el entreno abierto con el historial: para cada
+  ejercicio devuelve las series ya marcadas, lo que hizo **la última vez**, su
+  mejor marca, la diferencia ya calculada y la nota que se dejó.
+- `getActiveCardio` deriva de la serie tiempo→distancia los tramos de
+  correr / trotar / andar / parado, los parciales por km y la tendencia del
+  ritmo, y los compara con su media de las últimas rutas (`modules/live/pace.ts`).
+
+Dos decisiones que no se negocian:
+
+- **Sin coordenadas.** Igual que en `cardio`, la polilínea no sale del
+  dispositivo. Lo que viaja es `[segundos, kmAcumulados]`, que es cuanto hace
+  falta para razonar sobre el ritmo.
+- **`live` no se elige por palabras clave.** No tiene `intentKeywords`: lo activa
+  el engine cuando hay algo en curso (`liveModules`), junto a su módulo de
+  dominio. A mitad de entreno se escribe «¿voy bien?», y eso no casa nada; lo
+  que el usuario está HACIENDO es mejor señal que lo que teclea. Por lo mismo,
+  con sesión abierta se salta el router de Gemini: sería pagar una llamada para
+  acertar menos.
+
+Cuando no hay nada en marcha, el system prompt lo dice explícitamente: el
+inventario enseña estas tools siempre y, sin esa línea, NOA pedía reformular la
+pregunta para cargar unas tools que no le habrían servido.
 
 ## Nutrición: de dónde salen las calorías
 
@@ -119,6 +156,9 @@ cerrar) y se persiste en `sessionStorage`.
    respondía sin herramientas, o sea sin datos. Cuesta una llamada extra a la
    clave del usuario, por eso no se usa cuando la etapa 1 ya acertó. Si falla,
    el turno sigue como conversación general.
+
+Por encima de las dos etapas: si hay una **sesión en curso**, el engine impone
+`live` + su módulo de dominio y se salta el router (ver la sección anterior).
 
 ## Pendiente
 

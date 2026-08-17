@@ -50,6 +50,8 @@ const DESCRIPTIONS: Record<NoaModule, string> = {
     "comidas, calorías INGERIDAS, macros, dieta, despensa y objetivos nutricionales",
   cardio:
     "correr, andar o bici: distancia, ritmo, rutas de GPS y calorías QUEMADAS. NO incluye levantar pesas",
+  live:
+    "la sesión que el usuario tiene EN MARCHA en este instante (entreno abierto o ruta grabándose). No lo elijas: lo activa la app cuando de verdad hay algo en curso",
   profile:
     "datos del usuario (peso corporal, pesajes, altura, objetivo) y preferencias de la app",
   calendar: "qué toca hoy o esta semana, agenda y planificación",

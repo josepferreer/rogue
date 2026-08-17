@@ -6,6 +6,7 @@ import {
   unauthorized,
 } from "@/lib/api/guard";
 import { runNoa, runNoaConfirm, type ConfirmAction } from "@/lib/noa/engine";
+import { parseLiveContext } from "@/lib/noa/live/snapshot";
 import { GeminiError } from "@/lib/noa/gemini/client";
 import type { NoaResponse, NoaTurn } from "@/lib/noa/types";
 
@@ -34,15 +35,19 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "bad_request" }, { status: 400 });
   }
 
-  const { message, history, confirm, clientDate, clientNow } = (body ?? {}) as {
+  const { message, history, confirm, clientDate, clientNow, live } = (body ?? {}) as {
     message?: unknown;
     history?: unknown;
     confirm?: unknown;
     clientDate?: unknown;
     clientNow?: unknown;
+    live?: unknown;
   };
   const clientToday = typeof clientDate === "string" ? clientDate : undefined;
   const clientNowISO = typeof clientNow === "string" ? clientNow : undefined;
+  // Sesión en curso (entreno abierto / ruta grabándose). Entrada del cliente,
+  // así que pasa por la aduana antes de tocar nada: se valida y se recorta.
+  const liveContext = parseLiveContext(live);
 
   // Rama de confirmación: el usuario aceptó un plan (una o varias acciones).
   if (confirm && typeof confirm === "object") {
@@ -57,6 +62,7 @@ export async function POST(req: NextRequest) {
         history: sanitizeHistory(history),
         clientToday,
         clientNowISO,
+        live: liveContext,
       });
       return Response.json(response);
     } catch (err) {
@@ -75,6 +81,7 @@ export async function POST(req: NextRequest) {
       history: sanitizeHistory(history),
       clientToday,
       clientNowISO,
+      live: liveContext,
     });
     return Response.json(response);
   } catch (err) {

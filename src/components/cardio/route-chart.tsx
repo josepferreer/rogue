@@ -30,15 +30,19 @@ export function RouteChart({ coordinates }: RouteChartProps) {
   const data = useMemo(() => {
     if (coordinates.length < 5) return null;
 
-    // 1. Calculate cumulative distance
+    // 1. Calculate cumulative distance.
+    // Bucle explícito y no `map`: el acumulador vivía fuera del callback, y
+    // reasignar desde dentro una variable del render es justo lo que el
+    // compilador de React no puede garantizar entre renders.
+    const withDist: (Coordinate & { dist: number })[] = [];
     let totalDist = 0;
-    const withDist = coordinates.map((c, i) => {
+    for (let i = 0; i < coordinates.length; i++) {
       if (i > 0) {
         const prev = coordinates[i - 1];
-        totalDist += haversineKm(prev.lat, prev.lng, c.lat, c.lng);
+        totalDist += haversineKm(prev.lat, prev.lng, coordinates[i].lat, coordinates[i].lng);
       }
-      return { ...c, dist: totalDist };
-    });
+      withDist.push({ ...coordinates[i], dist: totalDist });
+    }
 
     if (totalDist === 0) return null;
 
@@ -146,8 +150,8 @@ export function RouteChart({ coordinates }: RouteChartProps) {
 
         {/* Labels for Pace (fastest at top, slowest at bottom) */}
         <div className="absolute inset-y-0 left-0 flex flex-col justify-between text-[9px] font-mono text-muted-foreground">
-          <span>{MIN_PACE}'/km</span>
-          <span>{MAX_PACE}'/km</span>
+          <span>{MIN_PACE}&apos;/km</span>
+          <span>{MAX_PACE}&apos;/km</span>
         </div>
       </div>
     </div>

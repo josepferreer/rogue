@@ -3,6 +3,7 @@ import type { ToolModule } from "@/lib/noa/types";
 import { trainingModule } from "@/lib/noa/modules/training";
 import { nutritionModule } from "@/lib/noa/modules/nutrition";
 import { cardioModule } from "@/lib/noa/modules/cardio";
+import { liveModule } from "@/lib/noa/modules/live";
 import { profileModule } from "@/lib/noa/modules/profile";
 import { calendarModule } from "@/lib/noa/modules/calendar";
 import { notificationsModule } from "@/lib/noa/modules/notifications";
@@ -20,11 +21,15 @@ import { notificationsModule } from "@/lib/noa/modules/notifications";
  *                     `getNutritionDay`); un módulo transversal sería una capa
  *                     que solo reenvía.
  *   - `heatmap`     → la funcionalidad no existe todavía en Rogue.
+ *
+ * `live` es el único módulo que NO se elige por palabras clave: lo activa el
+ * engine cuando el móvil adjunta una sesión en curso. Ver su cabecera.
  */
 export const ALL_MODULES: ToolModule[] = [
   trainingModule,
   nutritionModule,
   cardioModule,
+  liveModule,
   profileModule,
   calendarModule,
   notificationsModule,

@@ -19,6 +19,8 @@ export type NoaModule =
   | "training"
   | "nutrition"
   | "cardio"
+  /** Lo que está pasando AHORA MISMO (entreno abierto, ruta grabándose). */
+  | "live"
   | "heatmap"
   | "statistics"
   | "profile"
@@ -43,6 +45,73 @@ export type ToolSensitivity = "safe" | "confirm";
 /** JSON Schema laxo. Es lo único de la tool que ve Gemini (junto a name+desc). */
 export type JsonSchema = Record<string, unknown>;
 
+/* ————————————————— Sesión EN CURSO (contexto en vivo) —————————————————
+ *
+ * Un entreno abierto en el mini-player y una ruta grabándose por GPS existen
+ * SOLO en el cliente: sus datos no llegan a Supabase hasta que la sesión
+ * termina (la ruta vuelca progreso cada 30 s, pero sin los segundos finales ni
+ * el estado de pausa). Por eso el móvil adjunta este snapshot en cada turno:
+ * sin él, preguntarle a NOA "¿cómo llevo el entreno?" a mitad de serie la
+ * dejaba mirando el historial, es decir, respondiendo sobre AYER.
+ *
+ * Es entrada NO confiable (viene del cliente): el servidor la valida y la
+ * recorta en `live/snapshot.ts` antes de que la vea ninguna tool.
+ */
+
+/** Marca rápida que el usuario pone a un ejercicio durante la sesión. */
+export type NoaLiveFlag = "subir" | "bajar" | "ok";
+
+/** Una serie del entreno en curso. `weightKg` SIEMPRE en kg (el cliente
+ *  convierte desde la unidad de la sesión antes de mandarlo). */
+export interface NoaLiveSet {
+  reps: number;
+  weightKg: number;
+  done: boolean;
+}
+
+export interface NoaLiveExercise {
+  exerciseId: string;
+  /** Nombre legible, ya resuelto por el cliente (tiene el catálogo en memoria). */
+  name: string;
+  plannedSets: number;
+  plannedReps: number;
+  sets: NoaLiveSet[];
+  /** Flag/nota que el usuario está poniendo AHORA (aún sin guardar). */
+  flag?: NoaLiveFlag;
+  note?: string;
+}
+
+export interface NoaLiveWorkout {
+  dayLabel: string;
+  focus?: string;
+  /** Segundos desde que empezó (tiempo real, incluye descansos). */
+  elapsedSec: number;
+  /** Segundos que le quedan de descanso; 0 = no está descansando. */
+  restRemainingSec: number;
+  exercises: NoaLiveExercise[];
+}
+
+/**
+ * Ruta en curso. NO lleva coordenadas a propósito: igual que el módulo cardio,
+ * la polilínea es el dato más sensible del usuario (empieza y acaba en su casa)
+ * y no hace falta para razonar sobre el ritmo. Lo que viaja es una serie
+ * tiempo→distancia, de la que el servidor deriva velocidades y tramos.
+ */
+export interface NoaLiveCardio {
+  paused: boolean;
+  distanceKm: number;
+  durationSec: number;
+  /** Está siguiendo una ruta guardada (modo repetir). */
+  followingRoute: boolean;
+  /** Serie remuestreada a intervalo fijo: `[segundos, kmAcumulados]`. */
+  samples: [number, number][];
+}
+
+export interface NoaLiveContext {
+  workout?: NoaLiveWorkout;
+  cardio?: NoaLiveCardio;
+}
+
 /**
  * Contexto que reciben los handlers de las tools de datos. `supabase` ya viene
  * autenticado con la sesión del usuario: cualquier query hereda su RLS, así que
@@ -52,6 +121,13 @@ export interface NoaToolContext {
   userId: string;
   supabase: SupabaseClient;
   now: Date;
+  /**
+   * Lo que el usuario tiene EN CURSO en el móvil ahora mismo (ver
+   * `NoaLiveContext`). Solo lo sabe el cliente: un entreno abierto o una ruta
+   * grabándose viven en sus stores y no están en Supabase hasta que terminan.
+   * `undefined` = no hay nada en marcha (o el cliente no lo mandó).
+   */
+  live?: NoaLiveContext;
   /**
    * Día de HOY en la zona horaria del USUARIO (YYYY-MM-DD). Lo aporta el cliente
    * en la petición; si falta, el engine cae a la fecha del servidor. Úsalo para

@@ -1,44 +1,52 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Droplet, Plus, Minus, RotateCcw, Settings2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Droplet, Plus, RotateCcw } from "lucide-react";
 import { useMeals } from "@/lib/store/meals-store";
+import { useHydrated } from "@/lib/use-hydrated";
+
+const CAPACITY_KEY = "rogue:bottle_capacity";
+const GOAL_KEY = "rogue:water_goal";
+const LEVEL_KEY = "rogue:bottle_level";
+
+/** Lee un ajuste de localStorage. En servidor (y si el valor es basura)
+ *  devuelve el de por defecto. */
+function readSetting(key: string, fallback: number): number {
+  if (typeof window === "undefined") return fallback;
+  const raw = localStorage.getItem(key);
+  const n = raw === null ? NaN : Number(raw);
+  return Number.isFinite(n) ? n : fallback;
+}
 
 export function WaterTracker({ date }: { date: string }) {
   const { waterForDay, updateWaterLog } = useMeals();
   const todayMl = waterForDay(date);
 
-  // Configuracion guardada en localStorage
-  const [capacity, setCapacity] = useState(750); // ml
-  const [currentLevel, setCurrentLevel] = useState(750); // ml en la botella virtual
-  const [goal, setGoal] = useState(2500); // ml diarios
-  const [isClient, setIsClient] = useState(false);
-  
+  // Configuracion guardada en localStorage. Se lee en el inicializador, no en
+  // un efecto: el componente no se pinta hasta hidratar (ver isClient), así que
+  // aquí ya hay `window` y nos ahorramos el render en cascada de leer después.
+  // Sin setter: hoy no hay UI para cambiarlos, solo se leen al montar y
+  // `saveState` los reescribe tal cual para no perderlos.
+  const [capacity] = useState(() => readSetting(CAPACITY_KEY, 750));
+  const [goal] = useState(() => readSetting(GOAL_KEY, 2500));
+  // Sin nivel guardado se arranca con la botella llena.
+  const [currentLevel, setCurrentLevel] = useState(() =>
+    readSetting(LEVEL_KEY, readSetting(CAPACITY_KEY, 750)),
+  );
+  // La botella se dibuja con lo guardado en localStorage: en SSR no existe, así
+  // que no se pinta hasta hidratar (si no, el HTML del servidor no cuadraría).
+  const isClient = useHydrated();
+
   // Drag state
   const bottleRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const startYRef = useRef(0);
   const startLevelRef = useRef(0);
 
-  useEffect(() => {
-    setIsClient(true);
-    const savedCap = localStorage.getItem("rogue:bottle_capacity");
-    const savedGoal = localStorage.getItem("rogue:water_goal");
-    const savedLevel = localStorage.getItem("rogue:bottle_level");
-    
-    if (savedCap) setCapacity(Number(savedCap));
-    if (savedGoal) setGoal(Number(savedGoal));
-    if (savedLevel) {
-      setCurrentLevel(Number(savedLevel));
-    } else if (savedCap) {
-      setCurrentLevel(Number(savedCap));
-    }
-  }, []);
-
   const saveState = (newCap: number, newGoal: number, newLevel: number) => {
-    localStorage.setItem("rogue:bottle_capacity", String(newCap));
-    localStorage.setItem("rogue:water_goal", String(newGoal));
-    localStorage.setItem("rogue:bottle_level", String(newLevel));
+    localStorage.setItem(CAPACITY_KEY, String(newCap));
+    localStorage.setItem(GOAL_KEY, String(newGoal));
+    localStorage.setItem(LEVEL_KEY, String(newLevel));
   };
 
   const updateLevel = (newLevel: number) => {

@@ -8,6 +8,7 @@ import { Layers, Box } from "lucide-react";
 import type { Coordinate } from "@/lib/store/cardio-store";
 import { cleanTrace } from "@/lib/cardio/clean-trace";
 import type { RouteProgress } from "@/lib/cardio/route-progress";
+import { useHydrated } from "@/lib/use-hydrated";
 
 interface MapViewProps {
   coordinates: Coordinate[];
@@ -41,7 +42,8 @@ export default function MapView({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  // MapLibre necesita un contenedor real del DOM: nada de esto existe en SSR.
+  const mounted = useHydrated();
 
   // Modo de mapa guardado en localStorage (por defecto 2.5D)
   const [mapMode, setMapMode] = useState<MapMode>(() => {
@@ -51,10 +53,6 @@ export default function MapView({
     }
     return "2.5d";
   });
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const drawn = useMemo(
     () => (cleanOutliers && coordinates.length >= 2 ? cleanTrace(coordinates) : coordinates),

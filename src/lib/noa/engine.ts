@@ -1,12 +1,14 @@
 import "server-only";
 import type {
   NoaClientAction,
+  NoaLiveContext,
   NoaModule,
   NoaRefetchScope,
   NoaResponse,
   NoaToolContext,
   NoaTurn,
 } from "@/lib/noa/types";
+import { hasLiveCardio, hasLiveWorkout } from "@/lib/noa/live/snapshot";
 import { createClient } from "@/lib/supabase/server";
 import { ToolRegistry } from "@/lib/noa/registry";
 import { ALL_MODULES } from "@/lib/noa/modules";
@@ -85,6 +87,9 @@ export interface RunNoaInput {
   /** Día de hoy en la tz del usuario (YYYY-MM-DD), aportado por el cliente. */
   clientToday?: string;
   clientNowISO?: string;
+  /** Sesión en curso en el móvil (entreno abierto / ruta grabándose), ya
+   *  saneada por la route. */
+  live?: NoaLiveContext;
 }
 
 /** Fecha del servidor como YYYY-MM-DD (fallback si el cliente no la manda). */
@@ -122,6 +127,71 @@ function renderNowBlock(clientNowISO: string | undefined, fallback: Date): strin
   ].join("\n");
 }
 
+/**
+ * Módulos que impone tener algo EN CURSO.
+ *
+ * El Intent Analyzer mira lo que el usuario ESCRIBE, y a mitad de entreno se
+ * escribe poquísimo: "¿voy bien?", "¿y ahora?", "¿subo?". Ninguna de esas
+ * frases casa una palabra clave, así que el turno acababa en el router o en
+ * conversación general y NOA respondía a ciegas teniendo la sesión delante.
+ *
+ * Con una sesión abierta, lo que está haciendo el usuario es mejor señal que lo
+ * que teclea: se fuerza `live` y su módulo de dominio (para poder cruzar con el
+ * historial), y se conserva lo que el intent hubiera acertado por su cuenta.
+ */
+function liveModules(live: NoaLiveContext | undefined): NoaModule[] {
+  const out: NoaModule[] = [];
+  if (hasLiveWorkout(live)) out.push("live", "training");
+  if (hasLiveCardio(live)) {
+    if (!out.includes("live")) out.push("live");
+    out.push("cardio");
+  }
+  return out;
+}
+
+/**
+ * Aviso en cabecera del system prompt. El contexto precargado ya lleva los
+ * números, pero sin una instrucción explícita el modelo tiraba de
+ * `getWorkoutHistory` —el pasado— para responder sobre el presente.
+ */
+function renderLiveBlock(live: NoaLiveContext | undefined): string {
+  const lines: string[] = [];
+  if (hasLiveWorkout(live)) {
+    lines.push(
+      `HAY UN ENTRENO EN CURSO ahora mismo («${live?.workout?.dayLabel}»), abierto en la app.`,
+      "Para CUALQUIER pregunta sobre cómo va, qué le queda, si sube el peso o cómo",
+      "compara con otras veces, llama a getActiveWorkout. Esa tool ya te trae el",
+      "estado de hoy junto con lo que hizo la última vez en cada ejercicio, su",
+      "récord y sus notas: no uses getWorkoutHistory para hablar del entreno de ahora.",
+    );
+  }
+  if (hasLiveCardio(live)) {
+    lines.push(
+      "HAY UNA RUTA GRABÁNDOSE ahora mismo con el GPS.",
+      "Para cualquier pregunta sobre el ritmo, la distancia, si va rápido o lento, o",
+      "en qué tramos ha corrido y en cuáles ha andado, llama a getActiveCardio. Trae",
+      "el análisis ya hecho (tramos, splits por km, tendencia y su ritmo habitual):",
+      "no uses getCardioHistory para hablar de la ruta de ahora.",
+    );
+  }
+  // Sin sesión abierta hay que decirlo: el INVENTARIO enseña getActiveWorkout y
+  // getActiveCardio siempre, y sin esta línea NOA pedía al usuario que
+  // reformulara la pregunta para "cargar" unas tools que no le servirían de nada.
+  if (lines.length === 0) {
+    return [
+      "NO hay ninguna sesión en curso: ni entreno abierto ni ruta grabándose.",
+      "getActiveWorkout y getActiveCardio no aplican en este turno; si te preguntan",
+      "por «el entreno» o «la ruta» se refieren a los del historial.",
+    ].join("\n");
+  }
+  lines.push(
+    "El usuario está EN MEDIO de esto: responde corto y al grano, sin párrafos",
+    "largos ni listas interminables. Si el análisis viene marcado como poco",
+    "fiable o faltan datos, dilo en una línea en vez de rellenar.",
+  );
+  return lines.join("\n");
+}
+
 /** ISO 8601 con offset (2026-08-08T19:23:45+02:00) o en Z. */
 function isValidLocalISO(v: string | undefined): v is string {
   return (
@@ -150,11 +220,15 @@ async function buildSystemPrompt(
   const capabilityBlock = renderCapabilityBlock(
     registry.select(modules).map((t) => t.name),
   );
+  // Antes que el inventario: si el usuario está a mitad de serie o corriendo,
+  // eso manda sobre cualquier otra cosa que pudiera responder.
+  const liveBlock = renderLiveBlock(ctx.live);
   return [
     SYSTEM_BASE,
     SYSTEM_HONESTY,
     personalityBlock,
     nowBlock,
+    liveBlock,
     capabilityBlock,
     contextBlock,
   ]
@@ -179,6 +253,7 @@ export async function runNoa(input: RunNoaInput): Promise<NoaResponse> {
     now,
     today: resolveToday(input.clientToday, now),
     locale: "es-ES",
+    live: input.live,
   };
 
   // 1. Intent → módulos relevantes. Se arrastra el contexto del último turno
@@ -212,9 +287,24 @@ export async function runNoa(input: RunNoaInput): Promise<NoaResponse> {
   // 2b. Etapa 2 del Intent Analyzer: si las palabras clave no dieron nada
   // ("¿cómo lo llevo?"), se le pregunta a Gemini qué módulos hacen falta antes
   // de responder a ciegas. Solo en ese caso: cuesta una llamada.
-  const modules = intent.general
-    ? await routeModules(input.message, registry.modules(), apiKey)
-    : intent.modules;
+  //
+  // Con una sesión en curso el router se salta: ya sabemos de qué habla el
+  // usuario (lo tiene entre manos), y sería pagar una llamada para acertar
+  // menos que la propia app.
+  const forced = liveModules(input.live);
+  const routed =
+    intent.general && forced.length === 0
+      ? await routeModules(input.message, registry.modules(), apiKey)
+      : intent.modules;
+  // `live` sin sesión abierta no aporta nada: sus tools solo sabrían decir
+  // "no hay nada en curso", así que se cae del scope aunque el router la pida.
+  // Los forzados van primero: si hay que recortar, lo que se cae es lo que el
+  // intent adivinó, nunca lo que el usuario tiene entre manos. El tope sube a 5
+  // (de los 4 del analyzer) para que la sesión en curso no desplace al dominio
+  // que el mensaje sí acertó.
+  const modules = [...new Set([...forced, ...routed])]
+    .filter((m) => m !== "live" || forced.includes("live"))
+    .slice(0, 5);
   const tools = registry.select(modules);
 
   // 3. System prompt: reglas base + personalidad (solo forma) + contexto
@@ -263,6 +353,8 @@ export interface RunNoaConfirmInput {
   /** Día de hoy en la tz del usuario (YYYY-MM-DD), aportado por el cliente. */
   clientToday?: string;
   clientNowISO?: string;
+  /** Sesión en curso, para que el turno reanudado siga sabiendo qué pasa. */
+  live?: NoaLiveContext;
 }
 
 /**
@@ -318,6 +410,7 @@ export async function runNoaConfirm(input: RunNoaConfirmInput): Promise<NoaRespo
     now,
     today: resolveToday(input.clientToday, now),
     locale: "es-ES",
+    live: input.live,
   };
 
   // Orden de dependencia (estable): alimentos → platos → vaciar → menú.
@@ -348,7 +441,10 @@ export async function runNoaConfirm(input: RunNoaConfirmInput): Promise<NoaRespo
   }
   for (const scope of refetchScopes) executedActions.push({ type: "refetch", scope });
 
-  const scopeModules = [...modules];
+  // Con sesión en curso, el turno reanudado conserva las tools del directo:
+  // tras confirmar algo a mitad de entreno, lo siguiente que pregunte el
+  // usuario sigue siendo sobre lo que tiene abierto.
+  const scopeModules = [...new Set([...modules, ...liveModules(input.live)])];
 
   // REANUDAR: se re-entra en el bucle con lo ejecutado, para que NOA cierre el
   // plan (o proponga un paso que faltara). Aquí vivía el bug de "limpia pero no
