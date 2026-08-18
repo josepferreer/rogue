@@ -112,36 +112,70 @@ export async function startGeoWatch(
   onError: (e: GeoError) => void,
 ): Promise<StopWatch> {
   if (Capacitor.isNativePlatform()) {
-    const id = await BackgroundGeolocation.addWatcher(
-      {
-        backgroundMessage: "Grabando tu ruta de cardio.",
-        backgroundTitle: "Rogue · cardio en marcha",
-        requestPermissions: true,
-        // No entregar posiciones "viejas" cacheadas al arrancar.
-        stale: false,
-        // Metros minimos entre lecturas: reduce ruido y bateria.
-        distanceFilter: 5,
-      },
-      (location, error) => {
-        if (error) {
-          onError({
-            message: error.message ?? "No se pudo acceder al GPS.",
-            permissionDenied: error.code === "NOT_AUTHORIZED",
-          });
-          return;
+    let attempts = 0;
+    let watcherId: string | null = null;
+    let cancelled = false;
+
+    const tryAddWatcher = async (): Promise<string | null> => {
+      while (attempts < 5 && !cancelled) {
+        try {
+          const id = await BackgroundGeolocation.addWatcher(
+            {
+              backgroundMessage: "Grabando tu ruta de cardio.",
+              backgroundTitle: "Rogue · cardio en marcha",
+              requestPermissions: true,
+              // Entregar posición inicial inmediata (de caché si existe)
+              stale: true,
+              // Emisión continua sin exigencia de desplazamiento mínimo de 5m
+              distanceFilter: 0,
+            },
+            (location, error) => {
+              if (error) {
+                onError({
+                  message: error.message ?? "No se pudo acceder al GPS.",
+                  permissionDenied: error.code === "NOT_AUTHORIZED",
+                });
+                return;
+              }
+              if (location) {
+                onPosition({
+                  lat: location.latitude,
+                  lng: location.longitude,
+                  alt: location.altitude ?? undefined,
+                  timestamp: location.time ?? Date.now(),
+                });
+              }
+            },
+          );
+          return id;
+        } catch (err: any) {
+          attempts++;
+          if (err?.message?.includes("Service not running") && attempts < 5) {
+            await new Promise((res) => setTimeout(res, 300));
+            continue;
+          }
+          throw err;
         }
-        if (location) {
-          onPosition({
-            lat: location.latitude,
-            lng: location.longitude,
-            alt: location.altitude ?? undefined,
-            timestamp: location.time ?? Date.now(),
-          });
+      }
+      return null;
+    };
+
+    tryAddWatcher()
+      .then((id) => {
+        watcherId = id;
+        if (cancelled && id) {
+          BackgroundGeolocation.removeWatcher({ id }).catch(() => {});
         }
-      },
-    );
+      })
+      .catch((e) => {
+        onError({ message: e?.message ?? "No se pudo iniciar el servicio GPS nativo." });
+      });
+
     return () => {
-      BackgroundGeolocation.removeWatcher({ id }).catch(() => {});
+      cancelled = true;
+      if (watcherId) {
+        BackgroundGeolocation.removeWatcher({ id: watcherId }).catch(() => {});
+      }
     };
   }
 
