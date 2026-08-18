@@ -207,17 +207,18 @@ type ActiveSnapshot = {
 const FLUSH_INTERVAL_MS = 30_000;
 
 /**
- * Silencio del GPS a partir del cual se AVISA (no se rearma: ver `vigilarGPS`).
+ * Silencio del GPS tras el cual, AL VOLVER de segundo plano, se rearma el
+ * watcher (ver `rearmarSiHizoFalta`).
  *
- * OJO con la tentacion de bajarlo: con `distanceFilter: 5` el plugin no emite
- * mientras no te mueves, asi que estar parado produce silencio legitimo. Metro
- * y medio de margen no existe aqui: un semaforo largo o una parada a atarse el
- * cordon pasan de un minuto sin problema. 90 s es "llevas un buen rato sin
- * moverte NI recibir nada", que ya merece una mirada del usuario.
+ * NO se usa para avisar en pantalla. Antes había un aviso periódico "no llega
+ * señal del GPS" que saltaba a los 90 s de silencio, y era una falsa alarma
+ * dañina: con `distanceFilter: 5` estar QUIETO produce silencio legítimo (el
+ * plugin no emite hasta desplazarte 5 m), así que el aviso gritaba "GPS roto"
+ * teniendo el GPS perfecto — con 13 satélites y la request activa, medido. El
+ * usuario lo leía como una avería. Desde JS no se puede distinguir "parado" de
+ * "GPS muerto", así que cualquier aviso por tiempo es poco fiable: fuera.
  */
 const SIN_SENAL_MS = 90_000;
-/** Cada cuanto se comprueba el silencio. Solo para avisar, sin efectos. */
-const CHEQUEO_GPS_MS = 15_000;
 /**
  * Tope de rearmes por sesion (solo al volver a primer plano). Con tres basta
  * para un par de idas y venidas al segundo plano; mas seria insistir contra
@@ -489,42 +490,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
-   * Watchdog del GPS.
-   *
-   * El caso real que lo motiva: una salida de 10 minutos con UNA sola fijacion
-   * y 0,00 km. El vigilante del plugin se quedo mudo (la app en segundo plano
-   * congela el WebView, y tambien pasa con la optimizacion de bateria), y como
-   * nada lo rearmaba, quedo muerto el resto de la salida. Peor aun: la pantalla
-   * seguia contando el tiempo tan tranquila, asi que el usuario no se enteraba
-   * hasta llegar a casa y ver la ruta vacia.
-   *
-   * Aqui no se intenta adivinar POR QUE se callo: si no entra nada en
-   * SIN_SENAL_MS se rearma y punto. Si tras varios intentos sigue sin entrar,
-   * se avisa en pantalla en vez de dejar creer que se esta grabando.
-   *
-   * Vive en el store, no en la pantalla: asi cubre igual una ruta nueva que el
-   * seguimiento de una guardada, que es el mismo motor.
-   */
-  /**
-   * Avisa (y SOLO avisa) si hace mucho que no entra una fijacion.
-   *
-   * No rearma nada: el silencio NO prueba que el GPS este muerto. Con
-   * `distanceFilter: 5` el plugin calla mientras no te mueves, asi que un
-   * semaforo largo es silencio legitimo. Una version anterior de esto rearmaba
-   * al detectar silencio, y como rearmar implica `removeWatcher`, acababa
-   * APAGANDO la ubicacion cada vez que el usuario se paraba. El aviso, en
-   * cambio, no tiene efectos: como mucho sobra.
-   */
-  const vigilarGPS = useCallback(() => {
-    if (!isTrackingRef.current || !watchingRef.current) return;
-    if (Date.now() - lastFixAtRef.current < SIN_SENAL_MS) return;
-    setGpsError(
-      "Hace rato que no llega señal del GPS. Si no estás parado, comprueba los permisos de ubicación.",
-    );
-  }, []);
-
-  /**
-   * Rearme, solo al VOLVER a primer plano.
+   * Rearme del GPS, solo al VOLVER a primer plano.
    *
    * Este es el caso que de verdad mata el seguimiento: la APK es la web en un
    * WebView, y con la app en segundo plano el JS se congela y las llamadas del
@@ -545,12 +511,6 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     clearGPS();
     watchGPS();
   }, [clearGPS, watchGPS]);
-
-  useEffect(() => {
-    if (!isTracking || isPaused) return;
-    const id = setInterval(vigilarGPS, CHEQUEO_GPS_MS);
-    return () => clearInterval(id);
-  }, [isTracking, isPaused, vigilarGPS]);
 
   // El wake lock se libera solo al ocultar la pestana; se re-adquiere al
   // volver si la grabacion sigue activa. Y de paso se comprueba el GPS: volver
