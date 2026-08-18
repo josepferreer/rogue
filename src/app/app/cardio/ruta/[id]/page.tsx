@@ -98,7 +98,7 @@ export default function SavedRouteDetailPage({
       </div>
 
       <div className="relative h-[46dvh] min-h-[300px] max-h-[520px] w-full overflow-hidden rounded-3xl border border-border shadow-sm">
-        <MapView coordinates={[]} ghostRoute={route.coordinates} />
+        <MapView coordinates={[]} ghostRoute={route.coordinates} hideControls={isTracking} />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
