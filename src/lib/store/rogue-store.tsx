@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import { usePathname } from "next/navigation";
-import type { ExerciseCategory } from "@/lib/exercises/types";
+import type { ExerciseCategory, MuscleId } from "@/lib/exercises/types";
 import { DEMO_EXERCISES } from "@/lib/exercises/repo";
 import { estimate1RM } from "@/lib/workout/one-rm";
 import { DEMO_ROUTINE } from "@/data/routine.demo";
@@ -46,6 +46,7 @@ const DEFAULT_PREFERENCES: Preferences = {
   notifyRestEnd: true,
   notifyWeeklySummary: false,
   shareStats: true,
+  recoveryHours: {},
 };
 
 /**
@@ -237,6 +238,7 @@ type ProfileRow = {
   notify_rest_end: boolean;
   notify_weekly_summary: boolean;
   share_stats: boolean;
+  recovery_hours: Partial<Record<MuscleId, number>> | null;
 };
 
 function rowToProfile(row: ProfileRow): Profile {
@@ -259,6 +261,7 @@ function rowToPreferences(row: ProfileRow): Preferences {
     notifyRestEnd: row.notify_rest_end,
     notifyWeeklySummary: row.notify_weekly_summary,
     shareStats: row.share_stats,
+    recoveryHours: row.recovery_hours ?? {},
   };
 }
 
@@ -286,6 +289,7 @@ function toProfileRowPatch(
   if (patch.notifyWeeklySummary !== undefined)
     row.notify_weekly_summary = patch.notifyWeeklySummary;
   if (patch.shareStats !== undefined) row.share_stats = patch.shareStats;
+  if (patch.recoveryHours !== undefined) row.recovery_hours = patch.recoveryHours;
   return row;
 }
 

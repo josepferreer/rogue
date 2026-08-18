@@ -85,6 +85,10 @@ create table if not exists profiles (
   -- La despensa demo se siembra UNA vez: sin esta marca, vaciarla a mano la
   -- repoblaba sola en la siguiente carga.
   pantry_seeded boolean not null default false,
+  -- Umbrales de recuperacion muscular que el usuario haya cambiado, en horas:
+  -- {"pectoral": 60}. `{}` = todos por defecto. Van juntos en un jsonb porque
+  -- son 17 musculos y siempre se leen y escriben a la vez.
+  recovery_hours jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

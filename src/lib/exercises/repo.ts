@@ -5,6 +5,7 @@ import type {
   Exercise,
   ExerciseCategory,
   ExerciseFilters,
+  MuscleId,
 } from "./types";
 
 /**
@@ -72,8 +73,26 @@ export async function getExercises(
   return filterExercises(EXERCISES, filters);
 }
 
+/** Indice por id. El mapa de calor muscular resuelve un ejercicio POR SERIE
+ *  (miles de llamadas al pintar el historial), y un `find` lineal sobre 200
+ *  ejercicios en cada una se nota. */
+const BY_ID = new Map(EXERCISES.map((exercise) => [exercise.id, exercise]));
+
 export async function getExerciseById(id: string): Promise<Exercise | null> {
-  return EXERCISES.find((exercise) => exercise.id === id) ?? null;
+  return BY_ID.get(id) ?? null;
+}
+
+/** Musculos de un ejercicio. Sincrono a proposito: lo usa el calculo de
+ *  recuperacion muscular, que es una funcion pura sobre todo el historial. */
+export function getExerciseMuscles(id: string): {
+  primary: MuscleId[];
+  secondary: MuscleId[];
+} {
+  const exercise = BY_ID.get(id);
+  return {
+    primary: exercise?.musculosPrimarios ?? [],
+    secondary: exercise?.musculosSecundarios ?? [],
+  };
 }
 
 export async function getAllExerciseIds(): Promise<string[]> {

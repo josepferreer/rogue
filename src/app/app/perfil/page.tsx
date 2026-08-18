@@ -28,6 +28,7 @@ import {
 } from "@/components/profile/preference-controls";
 import { NoaKeyCard } from "@/components/noa/noa-key-card";
 import { NoaExactAlarmCard } from "@/components/noa/noa-exact-alarm-card";
+import { RecoveryHoursCard } from "@/components/training/recovery-hours-card";
 import { NoaPersonalityCard } from "@/components/noa/noa-personality-card";
 import { useRogue } from "@/lib/store/rogue-store";
 import { useFriends } from "@/lib/store/friends-store";
@@ -561,6 +562,10 @@ export default function PerfilPage({
 
       <Section title="UNIDADES">
         <UnitToggle />
+      </Section>
+
+      <Section title="RECUPERACIÓN MUSCULAR">
+        <RecoveryHoursCard />
       </Section>
 
       <Section title="NOA">

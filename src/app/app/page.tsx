@@ -31,6 +31,7 @@ import {
 } from "@/lib/exercises/types";
 import { formatWeight } from "@/lib/units";
 import { cn, formatDurationLabel } from "@/lib/utils";
+import { MuscleHeatmap } from "@/components/training/muscle-heatmap";
 
 const WEEKDAY_LETTERS = ["L", "M", "X", "J", "V", "S", "D"];
 
@@ -824,6 +825,8 @@ export default function Home() {
           ))}
         </div>
       </div>
+
+      <MuscleHeatmap />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { ExerciseCategory } from "@/lib/exercises/types";
+import type { ExerciseCategory, MuscleId } from "@/lib/exercises/types";
 
 export type Sex = "hombre" | "mujer";
 
@@ -30,6 +30,12 @@ export type Preferences = {
   notifyWeeklySummary: boolean;
   /** Deja que tus amigos vean tus contadores: entrenos, racha y km de cardio. */
   shareStats: boolean;
+  /**
+   * Horas de descanso por musculo que el usuario haya cambiado. Solo viajan
+   * los tocados; el resto sale de DEFAULT_RECOVERY_HOURS. Alimenta el mapa de
+   * recuperacion muscular de la home.
+   */
+  recoveryHours: Partial<Record<MuscleId, number>>;
 };
 
 /** Nombre o username segun la preferencia del usuario, con fallback. */
