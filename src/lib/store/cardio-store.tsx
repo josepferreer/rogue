@@ -448,15 +448,21 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
             if (last) {
               const distKm = haversineKm(last.lat, last.lng, newCoord.lat, newCoord.lng);
               const dtSec = (newCoord.timestamp - last.timestamp) / 1000;
+              // En los 3 primeros puntos recibidos o si han transcurrido más de 10s,
+              // permitimos la actualización de lastAcceptedRef sin descarte por velocidad
+              // para que el GPS se asiente sin quedar bloqueado en el punto 1.
+              const isInitialPhase = coordinatesRef.current.length < 3;
               const isOutlier =
-                dtSec > 0
+                isInitialPhase
+                  ? false
+                  : dtSec > 0
                   ? (distKm * 1000) / dtSec > MAX_SPEED_MPS
                   : distKm * 1000 > MAX_JUMP_M;
-              // Solo cuenta (y avanza el punto de referencia) si no es un salto
-              // imposible. Un outlier se guarda igual en coordinatesRef para el
-              // mapa (que re-limpia al dibujar), pero no infla la distancia.
+
               if (!isOutlier) {
                 distanceKmRef.current += distKm;
+                lastAcceptedRef.current = newCoord;
+              } else if (dtSec > 10) {
                 lastAcceptedRef.current = newCoord;
               }
             } else {
@@ -604,6 +610,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     if (isTrackingRef.current) return;
     isTrackingRef.current = true;
 
+    clearGPS();
     followRouteIdRef.current = routeId ?? null;
     setFollowRoute(ghostRoute ?? []);
     setIsTracking(true);
@@ -612,6 +619,8 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     coordinatesRef.current = [];
     distanceKmRef.current = 0;
     lastAcceptedRef.current = null;
+    rearmesRef.current = 0;
+    lastFixAtRef.current = Date.now();
     setCoordinates([]);
     setDistanceKm(0);
     setDurationSec(0);
@@ -626,7 +635,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     storedLenRef.current = 0;
     acquireWakeLock();
     watchGPS();
-  }, [watchGPS, acquireWakeLock]);
+  }, [clearGPS, watchGPS, acquireWakeLock]);
 
   const pauseTracking = useCallback(() => {
     accumulatedSecRef.current = computeDuration();

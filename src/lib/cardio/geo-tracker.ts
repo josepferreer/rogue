@@ -164,7 +164,7 @@ export async function startGeoWatch(
         message: err.message,
         permissionDenied: err.code === 1, // PERMISSION_DENIED
       }),
-    { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
+    { enableHighAccuracy: true, timeout: 30000, maximumAge: 10000 },
   );
   return () => navigator.geolocation.clearWatch(wid);
 }

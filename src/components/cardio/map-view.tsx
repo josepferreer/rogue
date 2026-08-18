@@ -171,7 +171,7 @@ export default function MapView({
       // visualmente DEBAJO de esa capa, así que buscamos la capa que sigue a
       // building-top para quedar por encima de los edificios planos.
       const allLayers = map.getStyle()?.layers || [];
-      const buildingTopIdx = allLayers.findIndex((l) => l.id === "building-top");
+      const buildingTopIdx = allLayers.findIndex((l: { id: string }) => l.id === "building-top");
       const insertBefore: string | undefined =
         buildingTopIdx >= 0 && buildingTopIdx + 1 < allLayers.length
           ? allLayers[buildingTopIdx + 1].id
