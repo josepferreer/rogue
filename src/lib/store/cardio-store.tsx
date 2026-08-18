@@ -207,18 +207,21 @@ type ActiveSnapshot = {
 const FLUSH_INTERVAL_MS = 30_000;
 
 /**
- * Silencio del GPS a partir del cual se da por muerto el vigilante y se rearma.
- * Con `distanceFilter: 5` andando entra una fijacion cada pocos segundos, y
- * hasta parado en un semaforo el proveedor sigue emitiendo. 45 s sin NADA no es
- * ir despacio: es que se ha callado.
+ * Silencio del GPS a partir del cual se AVISA (no se rearma: ver `vigilarGPS`).
+ *
+ * OJO con la tentacion de bajarlo: con `distanceFilter: 5` el plugin no emite
+ * mientras no te mueves, asi que estar parado produce silencio legitimo. Metro
+ * y medio de margen no existe aqui: un semaforo largo o una parada a atarse el
+ * cordon pasan de un minuto sin problema. 90 s es "llevas un buen rato sin
+ * moverte NI recibir nada", que ya merece una mirada del usuario.
  */
-const SIN_SENAL_MS = 45_000;
-/** Cada cuanto se comprueba. No hace falta mas fino: rearmar es barato. */
+const SIN_SENAL_MS = 90_000;
+/** Cada cuanto se comprueba el silencio. Solo para avisar, sin efectos. */
 const CHEQUEO_GPS_MS = 15_000;
 /**
- * Rearmes seguidos antes de rendirse y avisar. Tres intentos son ~2 minutos:
- * suficiente para descartar un bache y poco para no tener al usuario andando
- * media hora sin grabar nada.
+ * Tope de rearmes por sesion (solo al volver a primer plano). Con tres basta
+ * para un par de idas y venidas al segundo plano; mas seria insistir contra
+ * algo que no se arregla solo, y cada rearme apaga y enciende la ubicacion.
  */
 const MAX_REARMES = 3;
 /** Cada cuanto, como maximo, se reescribe el snapshot local. */
@@ -502,17 +505,40 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
    * Vive en el store, no en la pantalla: asi cubre igual una ruta nueva que el
    * seguimiento de una guardada, que es el mismo motor.
    */
+  /**
+   * Avisa (y SOLO avisa) si hace mucho que no entra una fijacion.
+   *
+   * No rearma nada: el silencio NO prueba que el GPS este muerto. Con
+   * `distanceFilter: 5` el plugin calla mientras no te mueves, asi que un
+   * semaforo largo es silencio legitimo. Una version anterior de esto rearmaba
+   * al detectar silencio, y como rearmar implica `removeWatcher`, acababa
+   * APAGANDO la ubicacion cada vez que el usuario se paraba. El aviso, en
+   * cambio, no tiene efectos: como mucho sobra.
+   */
   const vigilarGPS = useCallback(() => {
     if (!isTrackingRef.current || !watchingRef.current) return;
-    const mudoDesde = Date.now() - lastFixAtRef.current;
-    if (mudoDesde < SIN_SENAL_MS) return;
+    if (Date.now() - lastFixAtRef.current < SIN_SENAL_MS) return;
+    setGpsError(
+      "Hace rato que no llega señal del GPS. Si no estás parado, comprueba los permisos de ubicación.",
+    );
+  }, []);
 
-    if (rearmesRef.current >= MAX_REARMES) {
-      setGpsError(
-        "El GPS lleva un rato sin dar señal y no se está grabando tu recorrido. Abre la app y comprueba los permisos de ubicación.",
-      );
-      return;
-    }
+  /**
+   * Rearme, solo al VOLVER a primer plano.
+   *
+   * Este es el caso que de verdad mata el seguimiento: la APK es la web en un
+   * WebView, y con la app en segundo plano el JS se congela y las llamadas del
+   * plugin dejan de llegar. Al volver, el vigilante puede haber quedado muerto
+   * y nada lo resucitaba.
+   *
+   * Se hace AQUI y no en un temporizador porque volver del segundo plano es un
+   * evento real, no una suposicion: mientras la app esta delante y el usuario
+   * quieto, no se toca nada.
+   */
+  const rearmarSiHizoFalta = useCallback(() => {
+    if (!isTrackingRef.current) return;
+    if (Date.now() - lastFixAtRef.current < SIN_SENAL_MS) return;
+    if (rearmesRef.current >= MAX_REARMES) return;
     rearmesRef.current += 1;
     // clearGPS baja watchingRef, que es lo que deja pasar a watchGPS: sin esto
     // se creeria que sigue vigilando y no haria nada.
@@ -534,12 +560,12 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     const onVisible = () => {
       if (document.visibilityState === "visible") {
         acquireWakeLock();
-        vigilarGPS();
+        rearmarSiHizoFalta();
       }
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [isTracking, isPaused, acquireWakeLock, vigilarGPS]);
+  }, [isTracking, isPaused, acquireWakeLock, rearmarSiHizoFalta]);
 
   /**
    * Vuelca a Supabase lo grabado desde el ultimo volcado. Sin esto la ruta solo
