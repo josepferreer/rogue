@@ -1,0 +1,12 @@
+-- Retira el modulo de hidratacion (el tracker de agua de la pantalla Comidas).
+--
+-- Se quito del producto por no aportar lo suficiente: el codigo que leia y
+-- escribia esta tabla (WaterTracker + waterForDay/updateWaterLog en el store de
+-- comidas) ya no existe, asi que la tabla queda huerfana.
+--
+-- OJO: esto BORRA el historico de ml por dia de todos los usuarios. Si algun
+-- dia se recupera el modulo, se parte de cero.
+--
+-- El drop se lleva por delante sus politicas RLS y el indice
+-- water_log_user_date_idx; no hace falta tirarlos aparte.
+drop table if exists public.water_log;

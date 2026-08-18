@@ -159,10 +159,6 @@ type MealsContextValue = {
   updateEntry: (id: string, data: Partial<Omit<MealEntry, "id" | "date" | "mealType">>) => void;
   removeEntry: (id: string) => void;
   setGoals: (goals: NutritionGoals) => void;
-  /** Devuelve los ml de agua registrados en un día, o 0 si no hay registro. */
-  waterForDay: (date: string) => number;
-  /** Actualiza (upsert) el registro de agua de un día. */
-  updateWaterLog: (date: string, waterMl: number) => void;
 };
 
 const MealsContext = createContext<MealsContextValue | null>(null);
@@ -329,29 +325,6 @@ async function fetchGoals(
   };
 }
 
-async function fetchWaterLogs(
-  supabase: SupabaseClient,
-  userId: string,
-  from: string,
-  until?: string,
-): Promise<Record<string, number>> {
-  let q = supabase
-    .from("water_log")
-    .select("date, water_ml")
-    .eq("user_id", userId)
-    .gte("date", from);
-  if (until) q = q.lte("date", until);
-
-  const { data, error } = await q;
-  if (error) throw error;
-
-  const logs: Record<string, number> = {};
-  for (const row of data ?? []) {
-    logs[row.date] = row.water_ml;
-  }
-  return logs;
-}
-
 function newId(): string {
   return typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
@@ -365,7 +338,6 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [entries, setEntries] = useState<MealEntry[]>([]);
-  const [waterLogs, setWaterLogs] = useState<Record<string, number>>({});
   const [goals, setGoalsState] = useState<NutritionGoals>(DEFAULT_GOALS);
   const userIdRef = useRef<string | null>(null);
   // Primer dia cargado. Todo lo anterior aun no esta en `entries`, asi que
@@ -393,12 +365,10 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
       const windowStart = shiftDayKey(dayKey(), -INITIAL_WINDOW_DAYS);
       let loadedEntries: MealEntry[];
       let loadedGoals: NutritionGoals;
-      let loadedWater: Record<string, number>;
       try {
-        [loadedEntries, loadedGoals, loadedWater] = await Promise.all([
+        [loadedEntries, loadedGoals] = await Promise.all([
           fetchEntries(supabase, user.id, windowStart),
           fetchGoals(supabase, user.id),
-          fetchWaterLogs(supabase, user.id, windowStart),
         ]);
       } catch (err) {
         // El diario queda vacio hasta la proxima navegacion (userIdRef no se
@@ -412,7 +382,6 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
       rangeStartRef.current = windowStart;
       setEntries(loadedEntries);
       setGoalsState(loadedGoals);
-      setWaterLogs(loadedWater);
       setHydrated(true);
     })();
     return () => {
@@ -469,16 +438,12 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
       setLoadingOlder(true);
       (async () => {
         try {
-          const [olderEntries, olderWater] = await Promise.all([
-            fetchEntries(supabase, userId, date, until),
-            fetchWaterLogs(supabase, userId, date, until),
-          ]);
+          const olderEntries = await fetchEntries(supabase, userId, date, until);
           setEntries((prev) => {
             const known = new Set(prev.map((e) => e.id));
             const nuevos = olderEntries.filter((e) => !known.has(e.id));
             return nuevos.length > 0 ? [...nuevos, ...prev] : prev;
           });
-          setWaterLogs((prev) => ({ ...prev, ...olderWater }));
         } catch (err) {
           // Se reabre la ventana para que un nuevo intento vuelva a pedirlo.
           rangeStartRef.current = shiftDayKey(until, 1);
@@ -617,31 +582,6 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  const waterForDay = useCallback(
-    (date: string) => waterLogs[date] ?? 0,
-    [waterLogs],
-  );
-
-  const updateWaterLog = useCallback(
-    (date: string, waterMl: number) => {
-      setWaterLogs((prev) => ({ ...prev, [date]: waterMl }));
-      const userId = userIdRef.current;
-      if (userId) {
-        syncWrite("el agua", {
-          kind: "upsert",
-          table: "water_log",
-          rows: {
-            user_id: userId,
-            date,
-            water_ml: waterMl,
-            updated_at: new Date().toISOString(),
-          },
-        });
-      }
-    },
-    [],
-  );
-
   const value: MealsContextValue = useMemo(
     () => ({
       hydrated,
@@ -656,16 +596,12 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
       updateEntry,
       removeEntry,
       setGoals,
-      waterForDay,
-      updateWaterLog,
     }),
     [
       hydrated,
       loadingOlder,
       entries,
       goals,
-      waterForDay,
-      updateWaterLog,
       entriesForDay,
       ensureLoadedFrom,
       reload,

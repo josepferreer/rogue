@@ -252,12 +252,28 @@ export default function MapView({
           coordinates: ghostRoute.map((c) => [c.lng, c.lat]),
         },
       };
-      const doneGeo: GeoJSON.Feature<GeoJSON.LineString> = {
+      // MultiLineString, no LineString: si te desvias por una obra y vuelves
+      // mas adelante, lo pisado son VARIOS tramos con huecos en medio. Con una
+      // sola linea el hueco se rellenaria solo y saldria verde sin pisarlo.
+      const doneGeo: GeoJSON.Feature<GeoJSON.MultiLineString> = {
         type: "Feature",
         properties: {},
         geometry: {
-          type: "LineString",
-          coordinates: (progress?.doneCoords ?? []).map((c) => [c.lng, c.lat]),
+          type: "MultiLineString",
+          coordinates: (progress?.doneSegments ?? []).map((seg) =>
+            seg.map((c) => [c.lng, c.lat])
+          ),
+        },
+      };
+      // Los desvios: por donde fuiste cuando no estabas sobre la ruta.
+      const detourGeo: GeoJSON.Feature<GeoJSON.MultiLineString> = {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "MultiLineString",
+          coordinates: (progress?.detours ?? []).map((seg) =>
+            seg.map((c) => [c.lng, c.lat])
+          ),
         },
       };
       const first = ghostRoute[0];
@@ -273,6 +289,7 @@ export default function MapView({
       if (map.getSource("ghost-source")) {
         (map.getSource("ghost-source") as maplibregl.GeoJSONSource).setData(ghostGeo);
         (map.getSource("ghost-done-source") as maplibregl.GeoJSONSource)?.setData(doneGeo);
+        (map.getSource("detour-source") as maplibregl.GeoJSONSource)?.setData(detourGeo);
         (map.getSource("ghost-ends-source") as maplibregl.GeoJSONSource)?.setData(endsGeo);
       } else {
         map.addSource("ghost-source", { type: "geojson", data: ghostGeo });
@@ -310,6 +327,21 @@ export default function MapView({
           paint: {
             "line-color": "#22c55e",
             "line-width": 6,
+          },
+        });
+
+        // Desvios en azul, encima del verde: por donde fuiste cuando te saliste
+        // de la ruta. El tramo de ruta que te saltaste NO se pinta de verde,
+        // asi que se ve el hueco tenue al lado de tu desvio azul.
+        map.addSource("detour-source", { type: "geojson", data: detourGeo });
+        map.addLayer({
+          id: "detour-line",
+          type: "line",
+          source: "detour-source",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: {
+            "line-color": "#2563eb",
+            "line-width": 5,
           },
         });
 
