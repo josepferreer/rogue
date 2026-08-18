@@ -77,7 +77,25 @@ export function RouteTrackerModal() {
    */
   const altitud = useMemo(() => {
     const con = coordinates.reduce((n, c) => n + (c.alt != null ? 1 : 0), 0);
-    return { con, total: coordinates.length };
+    const ultima = coordinates[coordinates.length - 1];
+    /**
+     * Hora de la ÚLTIMA fijación, no "hace X segundos": si el GPS deja de
+     * entregar, un contador relativo se congelaría igual que el resto y no se
+     * notaría. Con la hora puesta se ve de un vistazo que lleva parada desde
+     * las 14:03 aunque sean las 14:09.
+     */
+    const hora = ultima
+      ? new Date(ultima.timestamp).toLocaleTimeString("es-ES", { hour12: false })
+      : "—";
+    /** Puntos que repiten exactamente la posición anterior: el sintoma de un
+     *  proveedor que responde pero no actualiza. */
+    let repetidos = 0;
+    for (let i = 1; i < coordinates.length; i++) {
+      const a = coordinates[i - 1];
+      const b = coordinates[i];
+      if (a.lat === b.lat && a.lng === b.lng) repetidos++;
+    }
+    return { con, total: coordinates.length, hora, repetidos };
   }, [coordinates]);
 
   if (!isTracking || isMinimized) return null;
@@ -162,8 +180,10 @@ export function RouteTrackerModal() {
         </div>
 
         {/* DIAGNÓSTICO TEMPORAL: ver el comentario de `altitud` arriba. */}
-        <p className="mt-3 text-center font-mono text-[11px] text-muted-foreground">
+        <p className="mt-3 text-center font-mono text-[11px] leading-relaxed text-muted-foreground">
           GPS: {altitud.total} fijaciones · {altitud.con} con altitud
+          <br />
+          última {altitud.hora} · {altitud.repetidos} repetidas
         </p>
 
         {/* Controls */}
