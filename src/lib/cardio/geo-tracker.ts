@@ -53,6 +53,17 @@ interface BgGeoPlugin {
 const BackgroundGeolocation =
   registerPlugin<BgGeoPlugin>("BackgroundGeolocation");
 
+// Plugin nativo minimal para pedir la exencion de optimizacion de bateria.
+// Sin esto Android 6+ puede matar el Foreground Service del GPS cuando la
+// pantalla se apaga, cortando el seguimiento aunque los permisos de ubicacion
+// esten concedidos. El diálogo del sistema solo aparece UNA vez (si ya está
+// exento, isIgnoringBatteryOptimizations devuelve true y no se muestra nada).
+interface BatteryPlugin {
+  isIgnoringBatteryOptimizations(): Promise<{ exempt: boolean }>;
+  requestIgnoreBatteryOptimizations(): Promise<void>;
+}
+const Battery = registerPlugin<BatteryPlugin>("Battery");
+
 /**
  * Pide los permisos de ubicacion (y notificacion en Android 13+) ANTES de
  * arrancar el watcher, y espera a que el usuario responda.
@@ -80,6 +91,27 @@ export async function ensureGeoPermissions(): Promise<boolean> {
     // Version del plugin sin API de permisos: dejamos que addWatcher los pida
     // (comportamiento anterior); no bloqueamos el arranque.
     return true;
+  }
+}
+
+/**
+ * Solicita la exención de optimización de batería en Android 6+.
+ *
+ * Android puede matar el Foreground Service del GPS cuando la pantalla se
+ * apaga si la app está "optimizada". Esta función muestra el diálogo del
+ * sistema (ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) para que el usuario
+ * la exima. Si ya está exenta o no es plataforma nativa, no hace nada.
+ * No lanza: si el plugin falla (emulador, ROM sin soporte) se ignora.
+ */
+export async function ensureBatteryExemption(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    const { exempt } = await Battery.isIgnoringBatteryOptimizations();
+    if (!exempt) {
+      await Battery.requestIgnoreBatteryOptimizations();
+    }
+  } catch {
+    /* ROM sin soporte o emulador: no bloqueamos el arranque */
   }
 }
 

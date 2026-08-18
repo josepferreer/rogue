@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(BatteryPlugin.class);
         super.onCreate(savedInstanceState);
 
         // El escaner de codigos de barras (ML Kit) pinta la vista de camara

@@ -15,6 +15,7 @@ import { fetchAllPages } from "@/lib/supabase/fetch-all";
 import { syncWrite } from "@/lib/supabase/sync";
 import {
   ensureGeoPermissions,
+  ensureBatteryExemption,
   openLocationSettings,
   startGeoWatch,
   type StopWatch,
@@ -438,6 +439,13 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
         setGpsNeedsSettings(true);
         return;
       }
+      // Pide exencion de optimizacion de bateria (Android 6+). Si Android
+      // optimiza la app, mata el Foreground Service del GPS en cuanto la
+      // pantalla se apaga. Esta llamada muestra el dialogo del sistema UNA
+      // sola vez; si ya esta exento no hace nada.
+      await ensureBatteryExemption();
+      // Se detuvo mientras aparecia el dialogo de bateria.
+      if (!watchingRef.current) return;
       try {
         const stop = await startGeoWatch(
           (p) => {
