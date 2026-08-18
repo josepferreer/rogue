@@ -1,12 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Minimize2,
   Play,
   Pause,
   Square,
+  Trash2,
   MapPin,
   Activity,
   Clock,
@@ -16,6 +17,7 @@ import { useCardio } from "@/lib/store/cardio-store";
 import { cleanTrace } from "@/lib/cardio/clean-trace";
 import { computeRouteProgress } from "@/lib/cardio/route-progress";
 import { useBackButton } from "@/lib/use-back-button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const MapView = dynamic(() => import("./map-view"), {
   ssr: false,
@@ -59,6 +61,24 @@ export function RouteTrackerModal() {
     () => computeRouteProgress(followRoute, cleanTrace(coordinates)),
     [followRoute, coordinates]
   );
+
+  // Confirmación de descarte (guardar es irreversible al revés: una vez en el
+  // historial hay que ir a borrarla a mano).
+  const [confirmarDescarte, setConfirmarDescarte] = useState(false);
+
+  /**
+   * DIAGNÓSTICO TEMPORAL de altitud. En Android el plugin usa el proveedor
+   * "fusionado" de Google, que a menudo NO rellena la altitud aunque la
+   * posición horizontal sea buena; el resultado es que ninguna ruta guardada
+   * tiene desnivel. Esto cuenta cuántas fijaciones llegan con altitud para
+   * saber si el problema es del proveedor o del dispositivo.
+   *
+   * Quitar (junto con su línea en la UI) en cuanto haya respuesta.
+   */
+  const altitud = useMemo(() => {
+    const con = coordinates.reduce((n, c) => n + (c.alt != null ? 1 : 0), 0);
+    return { con, total: coordinates.length };
+  }, [coordinates]);
 
   if (!isTracking || isMinimized) return null;
 
@@ -141,12 +161,24 @@ export function RouteTrackerModal() {
           </div>
         </div>
 
+        {/* DIAGNÓSTICO TEMPORAL: ver el comentario de `altitud` arriba. */}
+        <p className="mt-3 text-center font-mono text-[11px] text-muted-foreground">
+          GPS: {altitud.total} fijaciones · {altitud.con} con altitud
+        </p>
+
         {/* Controls */}
         <div className="mt-6 flex items-center justify-center gap-6">
           {isPaused ? (
             <>
               <button
-                onClick={stopTracking}
+                onClick={() => setConfirmarDescarte(true)}
+                aria-label="Descartar ruta"
+                className="flex size-16 items-center justify-center rounded-full bg-neutral-200 text-red-600 shadow-lg transition-transform active:scale-95 dark:bg-neutral-800 dark:text-red-400"
+              >
+                <Trash2 className="size-6" />
+              </button>
+              <button
+                onClick={() => stopTracking()}
                 aria-label="Terminar ruta"
                 className="flex size-16 items-center justify-center rounded-full bg-neutral-200 text-neutral-900 shadow-lg transition-transform active:scale-95 dark:bg-neutral-800 dark:text-white"
               >
@@ -171,6 +203,18 @@ export function RouteTrackerModal() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmarDescarte}
+        title="¿Descartar esta ruta?"
+        description={`Perderás ${distanceKm.toFixed(2)} km y ${formatTime(durationSec)} de grabación. No se guardará en tu historial.`}
+        confirmLabel="Descartar"
+        onConfirm={() => {
+          setConfirmarDescarte(false);
+          stopTracking({ discard: true });
+        }}
+        onCancel={() => setConfirmarDescarte(false)}
+      />
     </div>
   );
 }

@@ -138,7 +138,8 @@ export default function SavedRouteDetailPage({
 
       <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
         <MapPin className="size-3.5" />
-        Verde = inicio · Rojo = final. Al empezar, tu recorrido la irá completando.
+        Ámbar = inicio · Rojo = final. Al empezar se irá pintando de verde lo que
+        pises, y en azul los desvíos.
       </p>
     </div>
   );

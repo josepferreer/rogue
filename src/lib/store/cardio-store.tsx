@@ -82,7 +82,13 @@ export type CardioContextValue = {
   startTracking: (routeId?: string, ghostRoute?: Coordinate[]) => void;
   pauseTracking: () => void;
   resumeTracking: () => void;
-  stopTracking: () => void;
+  /**
+   * Cierra la sesion en curso. Con `{ discard: true }` no se guarda nada: ni en
+   * el historial local ni en Supabase. Y no basta con "no guardar", porque
+   * mientras grabas se van volcando los puntos al servidor cada poco: hay que
+   * borrar ademas la fila ya escrita o queda una ruta fantasma en el historial.
+   */
+  stopTracking: (options?: { discard?: boolean }) => void;
   minimize: () => void;
   maximize: () => void;
   openLocationSettings: () => void;
@@ -586,7 +592,8 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     watchGPS();
   }, [watchGPS, acquireWakeLock]);
 
-  const stopTracking = useCallback(() => {
+  const stopTracking = useCallback((options?: { discard?: boolean }) => {
+    const discard = options?.discard ?? false;
     const finalDuration = computeDuration();
     const finalCoordinates = coordinatesRef.current;
     const finalDistance = distanceKmRef.current;
@@ -613,7 +620,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     followRouteIdRef.current = null;
     storedLenRef.current = 0;
 
-    if (id && (finalDistance > 0 || finalDuration > 10)) {
+    if (!discard && id && (finalDistance > 0 || finalDuration > 10)) {
       const newSession: CardioSession = {
         id,
         dateISO,
@@ -651,8 +658,8 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } else if (id && userIdRef.current && storedLen > 0) {
-      // Ruta descartada por insignificante pero con volcados ya en servidor:
-      // hay que borrar la fila o quedaria una ruta fantasma en el historial.
+      // Ruta descartada (a mano o por insignificante) pero con volcados ya en
+      // servidor: hay que borrar la fila o queda una ruta fantasma.
       const userId = userIdRef.current;
       syncWrite("el descarte de la ruta", {
         kind: "delete",

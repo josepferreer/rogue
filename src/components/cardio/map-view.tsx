@@ -352,9 +352,11 @@ export default function MapView({
           source: "ghost-ends-source",
           paint: {
             "circle-radius": 8,
-            // El verde ya significa "tramo completado": el inicio va en azul
-            // para no leerse como parte del progreso.
-            "circle-color": ["match", ["get", "role"], "start", "#3b82f6", "end", "#ef4444", "#888888"],
+            // Cada color significa UNA cosa: verde = tramo pisado, azul = tu
+            // posicion y tus desvios, rojo = final. Al inicio le toca ambar:
+            // antes era el mismo azul (#3b82f6) que el punto de posicion, o sea
+            // dos cosas distintas pintadas igual en el mismo mapa.
+            "circle-color": ["match", ["get", "role"], "start", "#f59e0b", "end", "#ef4444", "#888888"],
             "circle-stroke-width": 3,
             "circle-stroke-color": "#ffffff",
           },

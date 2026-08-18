@@ -12,21 +12,29 @@ import { useEffect, useState } from "react";
  * Mirandolo una vez, el destino quedaba en null para siempre y esos
  * componentes no llegaban a aparecer nunca.
  *
- * Por eso reintenta por frame hasta encontrarlo. Para los modales, que se
- * montan con el shell ya pintado, lo encuentra al primer intento.
+ * Por eso reintenta hasta encontrarlo. Para los modales, que se montan con el
+ * shell ya pintado, lo encuentra al primer intento.
+ *
+ * El reintento va con temporizador y NO con requestAnimationFrame: el
+ * navegador no ejecuta rAF en una pestaña que no se esta pintando (segundo
+ * plano, app minimizada, pestaña oculta). Si la app arrancaba asi, el destino
+ * se quedaba en null PARA SIEMPRE —ni volviendo al primer plano se arreglaba,
+ * porque la cadena de reintentos ya se habia cortado— y NOA no aparecia hasta
+ * recargar. Los temporizadores sí corren en segundo plano (mas espaciados, que
+ * para esto da igual).
  */
 export function usePortalTarget(id: string): Element | null {
   const [target, setTarget] = useState<Element | null>(null);
 
   useEffect(() => {
-    let raf = 0;
+    let timer = 0;
     const find = () => {
       const el = document.getElementById(id);
       if (el) setTarget(el);
-      else raf = requestAnimationFrame(find);
+      else timer = window.setTimeout(find, 50);
     };
     find();
-    return () => cancelAnimationFrame(raf);
+    return () => clearTimeout(timer);
   }, [id]);
 
   return target;

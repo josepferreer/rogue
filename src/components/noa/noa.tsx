@@ -63,6 +63,11 @@ export function Noa() {
   const { mounted, state } = usePresence(open);
   const portalTarget = useAppShellPortal();
   const pathname = usePathname();
+  // El seguimiento de ruta a pantalla completa: ahí el botón estorba encima del
+  // mapa. Ojo, `isTracking` a secas NO vale: con la ruta minimizada se sigue
+  // grabando y es justo cuando quieres preguntarle a NOA por tu ritmo.
+  const { isTracking: cardioTracking, isMinimized: cardioMinimized } = useCardio();
+  const rutaAPantallaCompleta = cardioTracking && !cardioMinimized;
 
   // La conversación vive AQUÍ, no dentro de la hoja: la hoja se desmonta al
   // cerrarla, así que antes cerrar NOA borraba el hilo entero. Se persiste
@@ -100,6 +105,10 @@ export function Noa() {
   // Onboarding gestiona su propio layout sin navegación: NOA no pinta ahí.
   // Tampoco queremos pintar NOA mientras examinamos una ruta.
   if (pathname.startsWith("/app/onboarding") || pathname.startsWith("/app/cardio/actividad/")) return null;
+  // Tampoco durante el seguimiento de ruta abierto. Si la hoja ya estaba
+  // abierta se respeta (`mounted`): no se le cierra el chat en la cara a nadie
+  // por minimizar y volver.
+  if (rutaAPantallaCompleta && !mounted) return null;
   if (!portalTarget) return null;
   // Sin clave de Gemini configurada, NOA no se muestra.
   if (!hasKey) return null;
