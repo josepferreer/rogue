@@ -205,6 +205,22 @@ type ActiveSnapshot = {
 
 /** Cada cuanto se vuelca el progreso de la ruta a Supabase. */
 const FLUSH_INTERVAL_MS = 30_000;
+
+/**
+ * Silencio del GPS a partir del cual se da por muerto el vigilante y se rearma.
+ * Con `distanceFilter: 5` andando entra una fijacion cada pocos segundos, y
+ * hasta parado en un semaforo el proveedor sigue emitiendo. 45 s sin NADA no es
+ * ir despacio: es que se ha callado.
+ */
+const SIN_SENAL_MS = 45_000;
+/** Cada cuanto se comprueba. No hace falta mas fino: rearmar es barato. */
+const CHEQUEO_GPS_MS = 15_000;
+/**
+ * Rearmes seguidos antes de rendirse y avisar. Tres intentos son ~2 minutos:
+ * suficiente para descartar un bache y poco para no tener al usuario andando
+ * media hora sin grabar nada.
+ */
+const MAX_REARMES = 3;
 /** Cada cuanto, como maximo, se reescribe el snapshot local. */
 const SNAPSHOT_THROTTLE_MS = 10_000;
 
@@ -341,6 +357,10 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
   // salto no se actualiza, para que el siguiente punto se compare con el ultimo
   // bueno y la traza se auto-corrija (igual que cleanTrace al dibujar).
   const lastAcceptedRef = useRef<Coordinate | null>(null);
+  /** Momento de la ULTIMA fijacion recibida. Lo vigila el watchdog de abajo. */
+  const lastFixAtRef = useRef<number>(0);
+  /** Rearmes seguidos sin que haya entrado nada. */
+  const rearmesRef = useRef(0);
 
   // Cronometro por timestamps: aunque el navegador congele los timers en
   // segundo plano, al volver el tiempo mostrado se recalcula y es correcto.
@@ -396,20 +416,11 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     wakeLockRef.current = null;
   }, []);
 
-  // El wake lock se libera solo al ocultar la pestana; se re-adquiere al
-  // volver si la grabacion sigue activa.
-  useEffect(() => {
-    if (!isTracking || isPaused) return;
-    const onVisible = () => {
-      if (document.visibilityState === "visible") acquireWakeLock();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [isTracking, isPaused, acquireWakeLock]);
 
   const watchGPS = useCallback(() => {
     if (watchingRef.current) return; // ya hay un seguimiento activo
     watchingRef.current = true;
+    lastFixAtRef.current = Date.now(); // arranca el reloj del watchdog
     // Pide permisos (y espera) ANTES de addWatcher: con la app en primer plano
     // y los permisos ya concedidos, el foreground service nativo arranca a la
     // primera. Ver ensureGeoPermissions() para el motivo (bug del 1.er arranque).
@@ -447,6 +458,8 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
             } else {
               lastAcceptedRef.current = newCoord;
             }
+            lastFixAtRef.current = Date.now();
+            rearmesRef.current = 0; // el GPS responde: se reinicia la cuenta
             coordinatesRef.current = [...coordinatesRef.current, newCoord];
             setCoordinates(coordinatesRef.current);
             setDistanceKm(distanceKmRef.current);
@@ -471,6 +484,62 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     stopWatchRef.current?.();
     stopWatchRef.current = null;
   }, []);
+
+  /**
+   * Watchdog del GPS.
+   *
+   * El caso real que lo motiva: una salida de 10 minutos con UNA sola fijacion
+   * y 0,00 km. El vigilante del plugin se quedo mudo (la app en segundo plano
+   * congela el WebView, y tambien pasa con la optimizacion de bateria), y como
+   * nada lo rearmaba, quedo muerto el resto de la salida. Peor aun: la pantalla
+   * seguia contando el tiempo tan tranquila, asi que el usuario no se enteraba
+   * hasta llegar a casa y ver la ruta vacia.
+   *
+   * Aqui no se intenta adivinar POR QUE se callo: si no entra nada en
+   * SIN_SENAL_MS se rearma y punto. Si tras varios intentos sigue sin entrar,
+   * se avisa en pantalla en vez de dejar creer que se esta grabando.
+   *
+   * Vive en el store, no en la pantalla: asi cubre igual una ruta nueva que el
+   * seguimiento de una guardada, que es el mismo motor.
+   */
+  const vigilarGPS = useCallback(() => {
+    if (!isTrackingRef.current || !watchingRef.current) return;
+    const mudoDesde = Date.now() - lastFixAtRef.current;
+    if (mudoDesde < SIN_SENAL_MS) return;
+
+    if (rearmesRef.current >= MAX_REARMES) {
+      setGpsError(
+        "El GPS lleva un rato sin dar señal y no se está grabando tu recorrido. Abre la app y comprueba los permisos de ubicación.",
+      );
+      return;
+    }
+    rearmesRef.current += 1;
+    // clearGPS baja watchingRef, que es lo que deja pasar a watchGPS: sin esto
+    // se creeria que sigue vigilando y no haria nada.
+    clearGPS();
+    watchGPS();
+  }, [clearGPS, watchGPS]);
+
+  useEffect(() => {
+    if (!isTracking || isPaused) return;
+    const id = setInterval(vigilarGPS, CHEQUEO_GPS_MS);
+    return () => clearInterval(id);
+  }, [isTracking, isPaused, vigilarGPS]);
+
+  // El wake lock se libera solo al ocultar la pestana; se re-adquiere al
+  // volver si la grabacion sigue activa. Y de paso se comprueba el GPS: volver
+  // del segundo plano es justo cuando mas probable es que se haya quedado mudo.
+  useEffect(() => {
+    if (!isTracking || isPaused) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        acquireWakeLock();
+        vigilarGPS();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [isTracking, isPaused, acquireWakeLock, vigilarGPS]);
 
   /**
    * Vuelca a Supabase lo grabado desde el ultimo volcado. Sin esto la ruta solo

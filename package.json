@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "patch-package || exit 0"
+    "postinstall": "patch-package || exit 0",
+    "test": "node --import tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "@capacitor-community/background-geolocation": "1.2.26",
@@ -49,6 +50,7 @@
     "eslint-config-next": "16.2.10",
     "patch-package": "^8.0.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.12",
     "typescript": "^5"
   }
 }
