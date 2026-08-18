@@ -116,13 +116,41 @@ function resolveToday(clientToday: string | undefined, now: Date): string {
  * offset ya montado para que pueda copiar la zona horaria tal cual en los
  * `atISO` de los recordatorios.
  */
+const DIAS_SEMANA = [
+  "domingo",
+  "lunes",
+  "martes",
+  "miércoles",
+  "jueves",
+  "viernes",
+  "sábado",
+];
+
+/**
+ * Día de la semana de una fecha ISO. Se calcula del trozo YYYY-MM-DD y en UTC:
+ * el día de la semana de una fecha de calendario es el mismo en cualquier zona,
+ * y así no depende de en qué huso corra el servidor.
+ */
+function weekdayOf(iso: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!m) return null;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  return Number.isNaN(d.getTime()) ? null : DIAS_SEMANA[d.getUTCDay()];
+}
+
 function renderNowBlock(clientNowISO: string | undefined, fallback: Date): string {
   const iso = isValidLocalISO(clientNowISO) ? clientNowISO : fallback.toISOString();
+  const dia = weekdayOf(iso);
   return [
     `MOMENTO ACTUAL DEL USUARIO: ${iso}`,
+    // El día de la semana va DADO, no deducido. Un modelo no sabe convertir
+    // fecha -> día fiablemente: con la misma fecha decía unas veces "martes" y
+    // otras "lunes", y encima suena seguro al decirlo.
+    ...(dia ? [`DÍA DE LA SEMANA: ${dia}`] : []),
     "Esa es la hora LOCAL del usuario, con su offset. Es tu única fuente de verdad para el tiempo:",
     "- Calcula siempre desde ahí lo relativo («en 5 minutos», «esta tarde», «mañana»).",
     "- Los `atISO` que generes van en esa misma hora local y con ese mismo offset.",
+    "- El día de la semana es el de arriba: NO lo deduzcas de la fecha.",
     "- Nunca digas que no sabes qué hora es, ni la deduzcas de otra cosa.",
   ].join("\n");
 }

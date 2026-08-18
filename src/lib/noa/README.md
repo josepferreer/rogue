@@ -162,7 +162,6 @@ Por encima de las dos etapas: si hay una **sesión en curso**, el engine impone
 
 ## Pendiente
 
-- Módulos: **heatmap** (la funcionalidad no existe todavía en Rogue).
 - Conectar writes a la cola persistente `SyncOp` (idempotente, offline).
 - `openModal`, `prefillForm` y `highlight`: no hay registro de modales por
   nombre, formularios prellenables ni anclas. El dispatcher avisa en vez de
