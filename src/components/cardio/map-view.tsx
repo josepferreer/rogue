@@ -39,7 +39,7 @@ type MapMode = "2d" | "2.5d";
 export default function MapView({
   coordinates,
   currentPosition,
-  cleanOutliers = false,
+  cleanOutliers = true,
   ghostRoute,
   progress,
   hideControls = false,
