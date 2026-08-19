@@ -166,10 +166,17 @@ export async function startGeoWatch(
               backgroundMessage: "Grabando tu ruta de cardio.",
               backgroundTitle: "Rogue · cardio en marcha",
               requestPermissions: true,
-              // Entregar posición inicial inmediata (de caché si existe)
-              stale: true,
-              // Emisión continua sin exigencia de desplazamiento mínimo de 5m
-              distanceFilter: 0,
+              // No entregar posiciones "viejas" cacheadas al arrancar: con
+              // `stale: true` la primera fijación podía ser de hace rato y de
+              // otro sitio, y la traza empezaba con un salto.
+              stale: false,
+              // Metros mínimos entre lecturas. Con 0 el proveedor emite cada
+              // segundo aunque estés QUIETO, y la deriva natural del GPS
+              // (±3-5 m) se convierte en un temblor permanente del punto y en
+              // kilómetros fantasma. 5 m es el valor con el que la traza salía
+              // limpia; el corte de señal que se intentaba arreglar bajándolo a
+              // 0 no venía de aquí, sino del servicio en primer plano.
+              distanceFilter: 5,
             },
             (location, error) => {
               if (error) {

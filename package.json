@@ -10,11 +10,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "patch-package || exit 0",
+    "postinstall": "patch-package",
     "test": "node --import tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
-    "@capacitor-community/background-geolocation": "1.2.26",
+    "@capacitor-community/background-geolocation": "^1.2.26",
     "@capacitor-mlkit/barcode-scanning": "^8.1.0",
     "@capacitor/android": "^8.4.2",
     "@capacitor/app": "^8.1.1",
