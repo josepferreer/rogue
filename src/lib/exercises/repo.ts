@@ -36,11 +36,12 @@ export const EXERCISE_IMG_BASE =
   process.env.NEXT_PUBLIC_EXERCISE_IMG_BASE ??
   "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";
 
-/** URLs de los 2 frames (inicio/fin del movimiento) de un ejercicio. */
-export function getExerciseImages(exercise: Exercise): [string, string] {
+/** URLs de los 2 frames (inicio/fin del movimiento) de un ejercicio o variante. */
+export function getExerciseImages(exercise: Exercise | { fuenteId: string } | string): [string, string] {
+  const fuenteId = typeof exercise === "string" ? exercise : exercise.fuenteId;
   return [
-    `${EXERCISE_IMG_BASE}/${exercise.fuenteId}/0.jpg`,
-    `${EXERCISE_IMG_BASE}/${exercise.fuenteId}/1.jpg`,
+    `${EXERCISE_IMG_BASE}/${fuenteId}/0.jpg`,
+    `${EXERCISE_IMG_BASE}/${fuenteId}/1.jpg`,
   ];
 }
 

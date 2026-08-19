@@ -81,6 +81,17 @@ export const DIFFICULTY_LABELS: Record<DifficultyId, string> = {
   avanzado: "Avanzado",
 };
 
+export type ExerciseVariant = {
+  id: string;
+  nombre: string;
+  agarre?: string;
+  fuenteId: string;
+  musculosPrimarios?: MuscleId[];
+  musculosSecundarios?: MuscleId[];
+  instrucciones?: string[];
+  consejos?: string[];
+};
+
 export type Exercise = {
   /** Slug propio en espanol, usado en la URL /biblioteca/[id]. */
   id: string;
@@ -99,6 +110,8 @@ export type Exercise = {
    * Cada ejercicio tiene 2 frames: {fuenteId}/0.jpg y {fuenteId}/1.jpg.
    */
   fuenteId: string;
+  /** Variantes de agarre/modalidad integradas dentro del mismo ejercicio. */
+  variantes?: ExerciseVariant[];
 };
 
 export type ExerciseFilters = {

@@ -250,7 +250,77 @@
       "Inclina el torso ligeramente hacia atras y saca pecho, sin balancearte.",
       "No tires de la barra por detras de la nuca."
     ],
-    "fuenteId": "Wide-Grip_Lat_Pulldown"
+    "fuenteId": "Wide-Grip_Lat_Pulldown",
+    "variantes": [
+      {
+        "id": "barra-ancha",
+        "nombre": "Barra ancha prono",
+        "agarre": "Prono ancho",
+        "fuenteId": "Wide-Grip_Lat_Pulldown",
+        "musculosPrimarios": [
+          "dorsal"
+        ],
+        "musculosSecundarios": [
+          "biceps",
+          "espalda-media",
+          "deltoide"
+        ],
+        "instrucciones": [
+          "Sujeta la barra por los extremos curvos con las palmas mirando al frente.",
+          "Tira de la barra hacia la parte alta del pecho abriendo los codos hacia los lados.",
+          "Regresa despacio frenando la subida."
+        ]
+      },
+      {
+        "id": "agarre-v",
+        "nombre": "Maneral V estrecho",
+        "agarre": "Neutro estrecho",
+        "fuenteId": "V-Bar_Pulldown",
+        "musculosPrimarios": [
+          "dorsal",
+          "espalda-media"
+        ],
+        "musculosSecundarios": [
+          "biceps"
+        ],
+        "instrucciones": [
+          "Engancha el maneral en V a la polea y siéntate bien ajustado.",
+          "Tira del maneral hacia la parte media del pecho juntando escápulas abajo."
+        ]
+      },
+      {
+        "id": "supinado-inverso",
+        "nombre": "Agarre inverso / supinado",
+        "agarre": "Supinado",
+        "fuenteId": "Underhand_Cable_Pulldowns",
+        "musculosPrimarios": [
+          "dorsal",
+          "biceps"
+        ],
+        "musculosSecundarios": [
+          "espalda-media"
+        ],
+        "instrucciones": [
+          "Agarra la barra al ancho de hombros con las palmas mirando hacia ti.",
+          "Tira hacia el mentón/pecho apretando dorsal y bíceps."
+        ]
+      },
+      {
+        "id": "unilateral-lat",
+        "nombre": "Unilateral (A una mano)",
+        "agarre": "Unilateral",
+        "fuenteId": "One_Arm_Lat_Pulldown",
+        "musculosPrimarios": [
+          "dorsal"
+        ],
+        "musculosSecundarios": [
+          "biceps"
+        ],
+        "instrucciones": [
+          "Tracciona de la polea alta con un solo brazo concentrando la fuerza en el dorsal del mismo lado."
+        ]
+      }
+    ]
   },
   {
     "id": "remo-con-barra",
@@ -302,7 +372,52 @@
       "El torso se mantiene casi inmovil: el movimiento sale de la espalda y los brazos.",
       "Aprieta las escapulas un segundo en cada repeticion."
     ],
-    "fuenteId": "Seated_Cable_Rows"
+    "fuenteId": "Seated_Cable_Rows",
+    "variantes": [
+      {
+        "id": "gironda-v",
+        "nombre": "Maneral V (Gironda)",
+        "agarre": "Neutro estrecho",
+        "fuenteId": "Seated_Cable_Rows",
+        "musculosPrimarios": [
+          "espalda-media",
+          "dorsal"
+        ],
+        "musculosSecundarios": [
+          "biceps",
+          "lumbar"
+        ],
+        "instrucciones": [
+          "Siéntate con los pies firmes en los soportes y coge el maneral en V.",
+          "Tira del maneral hacia la parte baja del abdomen manteniendo el torso erguido.",
+          "Junta fuertemente las escápulas al final del recorrido y regresa con control."
+        ],
+        "consejos": [
+          "Mantén los codos pegados al cuerpo para enfocar la zona baja de la espalda."
+        ]
+      },
+      {
+        "id": "unilateral-polea",
+        "nombre": "Unilateral (A una mano)",
+        "agarre": "Unilateral",
+        "fuenteId": "Seated_One-arm_Cable_Pulley_Rows",
+        "musculosPrimarios": [
+          "dorsal"
+        ],
+        "musculosSecundarios": [
+          "biceps",
+          "espalda-media"
+        ],
+        "instrucciones": [
+          "Coge un maneral individual con una sola mano.",
+          "Inicia el tirón llevando el codo hacia atrás rozando el costado.",
+          "Siente un estiramiento profundo del dorsal al extender el brazo."
+        ],
+        "consejos": [
+          "Excelente para trabajar cada lado de forma independiente sin compensar."
+        ]
+      }
+    ]
   },
   {
     "id": "remo-mancuerna",
@@ -4875,78 +4990,6 @@
     "fuenteId": "Landmine_Linear_Jammer"
   },
   {
-    "id": "jalon-pecho-agarre-v",
-    "nombre": "Jalón al pecho con agarre neutro estrecho (V)",
-    "grupo": "Espalda",
-    "equipo": "polea",
-    "dificultad": "principiante",
-    "mecanica": "compuesto",
-    "musculosPrimarios": [
-      "dorsal"
-    ],
-    "musculosSecundarios": [
-      "biceps",
-      "espalda-media"
-    ],
-    "instrucciones": [
-      "Engancha el maneral en V a la polea alta y siéntate ajustando los rodillos de las piernas.",
-      "Inclina el torso ligeramente hacia atrás y tira del maneral hacia la parte alta del pecho.",
-      "Aprieta las escápulas abajo y regresa desciendo el peso con control."
-    ],
-    "consejos": [
-      "Concéntrate en tirar desde los codos hacia tus costados."
-    ],
-    "fuenteId": "V-bar_Pull-Down"
-  },
-  {
-    "id": "remo-gironda-unilateral",
-    "nombre": "Remo en polea baja unilateral",
-    "grupo": "Espalda",
-    "equipo": "polea",
-    "dificultad": "intermedio",
-    "mecanica": "compuesto",
-    "musculosPrimarios": [
-      "dorsal",
-      "espalda-media"
-    ],
-    "musculosSecundarios": [
-      "biceps"
-    ],
-    "instrucciones": [
-      "Siéntate en la máquina de remo bajo y coge un maneral individual con una mano.",
-      "Inicia el movimiento llevando el codo hacia atrás pegado al costado mientras rotas levemente el torso.",
-      "Siente la contracción dorsal e inicia el estiramiento progresivo hacia delante."
-    ],
-    "consejos": [
-      "Mantén la espalda erguida en el punto de máxima contracción."
-    ],
-    "fuenteId": "Cable_Seated_One_Arm_Alternate_Row"
-  },
-  {
-    "id": "pullover-polea-cuerda",
-    "nombre": "Pullover en polea alta con cuerda",
-    "grupo": "Espalda",
-    "equipo": "polea",
-    "dificultad": "intermedio",
-    "mecanica": "aislamiento",
-    "musculosPrimarios": [
-      "dorsal"
-    ],
-    "musculosSecundarios": [
-      "pectoral",
-      "triceps"
-    ],
-    "instrucciones": [
-      "De pie frente a la polea alta con cuerda, da un paso atrás e inclina el torso 30 grados.",
-      "Con los brazos casi rectos, lleva la cuerda hacia abajo rozando los muslos abriendo los extremos.",
-      "Regresa controladamente hasta la altura de los ojos."
-    ],
-    "consejos": [
-      "Bloquea levemente el codo para no convertir el movimiento en una extensión de tríceps."
-    ],
-    "fuenteId": "Cable_Straight_Arm_Pull-down"
-  },
-  {
     "id": "remo-pendlay",
     "nombre": "Remo Pendlay con barra",
     "grupo": "Espalda",
@@ -5111,27 +5154,6 @@
     "fuenteId": "Barbell_Drag_Curl"
   },
   {
-    "id": "extension-katana-polea",
-    "nombre": "Extensión Katana de tríceps en polea alta",
-    "grupo": "Triceps",
-    "equipo": "polea",
-    "dificultad": "intermedio",
-    "mecanica": "aislamiento",
-    "musculosPrimarios": [
-      "triceps"
-    ],
-    "musculosSecundarios": [],
-    "instrucciones": [
-      "Cruza dos cables cruzados en polea alta sin manerales y coge las bolas por encima de la cabeza de espaldas a la torre.",
-      "Extiende los codos diagonalmente hacia afuera como si desenfundaras dos espadas.",
-      "Siente la contracción máxima en la cabeza larga del tríceps."
-    ],
-    "consejos": [
-      "Mantén los codos fijos en el espacio durante la extensión."
-    ],
-    "fuenteId": "Cable_Overhead_Triceps_Extension"
-  },
-  {
     "id": "press-frances-inclinado",
     "nombre": "Press francés en banco inclinado con barra Z",
     "grupo": "Triceps",
@@ -5246,29 +5268,6 @@
     "fuenteId": "Dumbbell_Romanian_Deadlift"
   },
   {
-    "id": "sentadilla-sissi",
-    "nombre": "Sentadilla Sissi corporal",
-    "grupo": "Piernas",
-    "equipo": "peso-corporal",
-    "dificultad": "avanzado",
-    "mecanica": "aislamiento",
-    "musculosPrimarios": [
-      "cuadriceps"
-    ],
-    "musculosSecundarios": [
-      "abdominales"
-    ],
-    "instrucciones": [
-      "De pie sosteniéndote levemente de una estructura rígida para equilibrio.",
-      "Eleva los talones e inclina el torso hacia atrás mientras doblas las rodillas hacia delante.",
-      "Baja controladamente hasta sentir estiramiento intenso en cuádriceps y regresa."
-    ],
-    "consejos": [
-      "Mantén una línea recta entre las rodillas, cadera y hombros."
-    ],
-    "fuenteId": "Sissy_Squat"
-  },
-  {
     "id": "extension-cuadriceps-unilateral",
     "nombre": "Extensión de cuádriceps unilateral en máquina",
     "grupo": "Piernas",
@@ -5288,29 +5287,6 @@
       "Ideal para corregir descompensaciones de fuerza entre piernas."
     ],
     "fuenteId": "Lever_Single_Leg_Extension"
-  },
-  {
-    "id": "hip-thrust-maquina",
-    "nombre": "Hip Thrust en máquina guiada",
-    "grupo": "Gluteos",
-    "equipo": "maquina",
-    "dificultad": "principiante",
-    "mecanica": "compuesto",
-    "musculosPrimarios": [
-      "gluteo"
-    ],
-    "musculosSecundarios": [
-      "isquiotibiales"
-    ],
-    "instrucciones": [
-      "Colócate en la máquina de hip thrust colocando el cinturón/rodillo sobre la cadera.",
-      "Empuja con los talones elevando la pelvis hasta alinear las rodillas con el torso.",
-      "Aprieta fuerte el glúteo arriba durante 1 segundo antes de bajar."
-    ],
-    "consejos": [
-      "Facilita la carga pesada sin la incomodidad de montar la barra libre."
-    ],
-    "fuenteId": "Lever_Hip_Thrust"
   },
   {
     "id": "paseo-del-granjero",
@@ -5360,33 +5336,5 @@
       "Enfatiza la porción media e inferior del trapecio."
     ],
     "fuenteId": "Barbell_Behind_The_Back_Shrug"
-  },
-  {
-    "id": "remo-polea-barra-ancha",
-    "nombre": "Remo en polea sentado con barra ancha (jalón)",
-    "grupo": "Espalda",
-    "equipo": "polea",
-    "dificultad": "intermedio",
-    "mecanica": "compuesto",
-    "musculosPrimarios": [
-      "dorsal",
-      "espalda-media"
-    ],
-    "musculosSecundarios": [
-      "deltoide",
-      "biceps",
-      "trapecio"
-    ],
-    "instrucciones": [
-      "Engancha la barra larga de jalón a la máquina de remo bajo y siéntate con los pies firmes en los soportes.",
-      "Sujeta la barra con un agarre prono (palmas hacia abajo) más ancho que los hombros.",
-      "Inicia el tirón llevando los codos hacia atrás hasta rozar la parte alta del abdomen/esternón.",
-      "Retrae fuertemente las escápulas al final del recorrido y extiende los brazos con control."
-    ],
-    "consejos": [
-      "Mantén el torso erguido sin tumbarte en exceso hacia atrás para enfatizar la espalda media y dorsal alto.",
-      "Los codos deben ir ligeramente abiertos en un ángulo de 45 grados."
-    ],
-    "fuenteId": "Cable_Seated_Wide-grip_Row"
   }
 ]
