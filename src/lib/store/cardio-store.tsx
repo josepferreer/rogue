@@ -46,7 +46,12 @@ export type CardioContextValue = {
   isPaused: boolean;
   isMinimized: boolean;
   coordinates: Coordinate[];
+  /** Última posición conocida (incluye fijaciones que NO entran en la traza).
+   *  Es la que pinta el punto azul: así se ve vivo aunque estés parado. */
+  currentPosition: Coordinate | null;
   distanceKm: number;
+  /** Fijaciones recibidas del GPS, para diagnóstico. */
+  fixesRecibidos: number;
   durationSec: number;
   history: CardioSession[];
   gpsError: string | null;
@@ -342,6 +347,11 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
   const lastAcceptedRef = useRef<Coordinate | null>(null);
   /** Fijaciones ACEPTADas por el filtro. Las 2 primeras entran sin filtrar. */
   const acceptedCountRef = useRef(0);
+  /** Ancla de distancia: ultima posicion desde la que se conto desplazamiento. */
+  const distanceAnchorRef = useRef<Coordinate | null>(null);
+  const fixesRecibidosRef = useRef(0);
+  const [currentPosition, setCurrentPosition] = useState<Coordinate | null>(null);
+  const [fixesRecibidos, setFixesRecibidos] = useState(0);
   /** Momento de la ULTIMA fijacion recibida. Lo vigila el watchdog de abajo. */
   const lastFixAtRef = useRef<number>(0);
   /** Rearmes seguidos sin que haya entrado nada. */
@@ -441,7 +451,11 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
             // GPS y hacían botar el punto. Pura y testeable (ver fix-filter.ts).
             const decision = decideFix(
               { lat: p.lat, lng: p.lng, timestamp: p.timestamp, accuracy: p.accuracy },
-              { last: lastAcceptedRef.current, count: acceptedCountRef.current },
+              {
+                last: lastAcceptedRef.current,
+                anchor: distanceAnchorRef.current,
+                count: acceptedCountRef.current,
+              },
             );
             if (!decision.accept) return; // fix burdo o desordenado: ni se pinta
 
@@ -449,8 +463,21 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
             distanceKmRef.current += decision.addDistanceM / 1000;
             lastAcceptedRef.current = newCoord;
             acceptedCountRef.current += 1;
-            coordinatesRef.current = [...coordinatesRef.current, newCoord];
-            setCoordinates(coordinatesRef.current);
+            fixesRecibidosRef.current += 1;
+            // La POSICIÓN actual se actualiza con cada fijación: así el punto
+            // azul está vivo y el usuario ve que el GPS responde.
+            setCurrentPosition(newCoord);
+            setFixesRecibidos(fixesRecibidosRef.current);
+
+            // La TRAZA, en cambio, solo crece con movimiento real. Sin esta
+            // separación la deriva del sensor se dibujaba: con el móvil quieto
+            // sobre la mesa salía una estrella de líneas de 20 m saliendo del
+            // punto, y 0,25 km "recorridos". La traza es lo que se guarda.
+            if (decision.advanceAnchor) {
+              distanceAnchorRef.current = newCoord;
+              coordinatesRef.current = [...coordinatesRef.current, newCoord];
+              setCoordinates(coordinatesRef.current);
+            }
             setDistanceKm(distanceKmRef.current);
           },
           (e) => {
@@ -598,7 +625,11 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     coordinatesRef.current = [];
     distanceKmRef.current = 0;
     lastAcceptedRef.current = null;
+    distanceAnchorRef.current = null;
     acceptedCountRef.current = 0;
+    fixesRecibidosRef.current = 0;
+    setCurrentPosition(null);
+    setFixesRecibidos(0);
     rearmesRef.current = 0;
     lastFixAtRef.current = Date.now();
     setCoordinates([]);
@@ -756,6 +787,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     // Ya hay traza: el filtro debe estar activo desde el primer fix al reanudar
     // (no en "fase inicial", que se saltaría el filtrado).
     acceptedCountRef.current = snap.coordinates.length;
+    distanceAnchorRef.current = snap.coordinates[snap.coordinates.length - 1] ?? null;
     accumulatedSecRef.current = duration;
     runningSinceRef.current = null;
     // Se reengancha a la MISMA fila que ya se estaba escribiendo: si no, al
@@ -823,6 +855,8 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
       isPaused,
       isMinimized,
       coordinates,
+      currentPosition,
+      fixesRecibidos,
       distanceKm,
       durationSec,
       followRoute,
@@ -845,6 +879,8 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
       isPaused,
       isMinimized,
       coordinates,
+      currentPosition,
+      fixesRecibidos,
       distanceKm,
       durationSec,
       followRoute,

@@ -12,10 +12,10 @@ index 2d88a67..983a1df 100644
      }
      lintOptions {
 diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
-index a92fcf9..43412f0 100644
+index a92fcf9..9751441 100644
 --- a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
 +++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
-@@ -42,7 +42,8 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+@@ -42,9 +42,24 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
                  @Permission(
                          strings = {
                                  Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -24,7 +24,23 @@ index a92fcf9..43412f0 100644
 +                                Manifest.permission.POST_NOTIFICATIONS
                          },
                          alias = "location"
++                ),
++                // Alias APARTE para el permiso de segundo plano ("Permitir
++                // siempre"). Va separado a proposito: Android exige pedirlo en
++                // un paso posterior al de primer plano, y desde Android 11 solo
++                // se concede desde Ajustes, no con un dialogo normal.
++                //
++                // Sin esto la app no tenia forma de SABER si lo tenia. Medido en
++                // un Pixel 9: con solo "mientras se usa la app", la sesion de
++                // ubicacion duraba 1,4 segundos y Android la cortaba en cuanto
++                // se apagaba la pantalla, aunque hubiera servicio en primer
++                // plano. Con el permiso concedido, aguanta indefinidamente.
++                @Permission(
++                        strings = { Manifest.permission.ACCESS_BACKGROUND_LOCATION },
++                        alias = "background"
                  )
+         }
+ )
 diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
 index fafbb86..281f9a8 100644
 --- a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java

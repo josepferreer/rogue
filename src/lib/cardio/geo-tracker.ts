@@ -45,8 +45,8 @@ interface BgGeoPlugin {
   // plugin que declare @Permission. El alias "location" del plugin agrupa
   // ACCESS_*_LOCATION y (por el patch de este repo) POST_NOTIFICATIONS, asi
   // que una sola solicitud cubre ubicacion + notificacion del servicio.
-  checkPermissions(): Promise<{ location: PermissionState }>;
-  requestPermissions(): Promise<{ location: PermissionState }>;
+  checkPermissions(): Promise<{ location: PermissionState; background?: PermissionState }>;
+  requestPermissions(): Promise<{ location: PermissionState; background?: PermissionState }>;
   // Abre los ajustes de la app (para conceder "Permitir todo el tiempo", que el
   // sistema no ofrece desde el dialogo in-app en Android 10+).
   openSettings(): Promise<void>;
@@ -92,6 +92,32 @@ export async function ensureGeoPermissions(): Promise<boolean> {
   } catch {
     // Version del plugin sin API de permisos: dejamos que addWatcher los pida
     // (comportamiento anterior); no bloqueamos el arranque.
+    return true;
+  }
+}
+
+/**
+ * ¿Tiene la app permiso de ubicación en SEGUNDO PLANO ("Permitir siempre")?
+ *
+ * Importa mucho más de lo que parece: sin él, Android corta la ubicación a los
+ * pocos segundos de apagarse la pantalla, aunque haya servicio en primer plano
+ * y aunque la sesión figure como activa. Medido en un Pixel 9 con Android 17:
+ * la sesión duraba 1,4 s sin el permiso y aguantaba indefinidamente con él.
+ *
+ * NO se puede pedir con un diálogo normal: desde Android 11 el usuario tiene
+ * que concederlo a mano en Ajustes (ver `openLocationSettings`). Por eso esto
+ * solo CONSULTA, y la UI decide cómo explicárselo al usuario.
+ *
+ * En web no aplica: devuelve true para no mostrar avisos que no vienen a cuento.
+ */
+export async function hasBackgroundLocation(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) return true;
+  try {
+    const status = await BackgroundGeolocation.checkPermissions();
+    // `background` es undefined en versiones del plugin sin ese alias: en ese
+    // caso no se puede saber, y se asume que sí para no dar la lata en falso.
+    return status.background == null || status.background === "granted";
+  } catch {
     return true;
   }
 }
@@ -170,13 +196,16 @@ export async function startGeoWatch(
               // `stale: true` la primera fijación podía ser de hace rato y de
               // otro sitio, y la traza empezaba con un salto.
               stale: false,
-              // Metros mínimos entre lecturas. Con 0 el proveedor emite cada
-              // segundo aunque estés QUIETO, y la deriva natural del GPS
-              // (±3-5 m) se convierte en un temblor permanente del punto y en
-              // kilómetros fantasma. 5 m es el valor con el que la traza salía
-              // limpia; el corte de señal que se intentaba arreglar bajándolo a
-              // 0 no venía de aquí, sino del servicio en primer plano.
-              distanceFilter: 5,
+              // 0 = el proveedor entrega cada segundo, se mueva uno o no.
+              //
+              // Con 5 m el punto se quedaba CONGELADO estando parado (y en
+              // interior, donde la posición viene del WiFi, ni andando 10 m
+              // cruzaba el umbral): la app parecía rota aunque el GPS
+              // funcionase. El riesgo de bajarlo a 0 es la deriva del sensor,
+              // que antes inflaba los kilómetros; eso ya NO pasa porque el
+              // filtro de `fix-filter.ts` descarta los fixes imprecisos y solo
+              // suma distancia si el desplazamiento supera el ruido.
+              distanceFilter: 0,
             },
             (location, error) => {
               if (error) {

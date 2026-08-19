@@ -12,6 +12,9 @@ import { useHydrated } from "@/lib/use-hydrated";
 
 interface MapViewProps {
   coordinates: Coordinate[];
+  /** Posición actual para el marcador. Puede no estar en `coordinates`: la
+   *  traza solo recoge movimiento real, el marcador toda fijación válida. */
+  currentPosition?: Coordinate | null;
   /** Descarta los saltos imposibles del GPS antes de dibujar. Para rutas ya
    *  terminadas; en el seguimiento en vivo se pinta la traza tal cual llega. */
   cleanOutliers?: boolean;
@@ -35,6 +38,7 @@ type MapMode = "2d" | "2.5d";
 
 export default function MapView({
   coordinates,
+  currentPosition,
   cleanOutliers = false,
   ghostRoute,
   progress,
@@ -438,7 +442,11 @@ export default function MapView({
     }
 
     // 3. Marcador de Posición Actual (Punto final)
-    const lastCoord = coordinates.length > 0 ? coordinates[coordinates.length - 1] : null;
+    // La posición actual va APARTE de la traza: incluye las fijaciones que no
+    // llegan a contar como movimiento (deriva del sensor estando parado). Así
+    // el punto azul se ve vivo sin que esos puntos ensucien la línea guardada.
+    const lastCoord =
+      currentPosition ?? (coordinates.length > 0 ? coordinates[coordinates.length - 1] : null);
     const pointGeoJSON: GeoJSON.FeatureCollection<GeoJSON.Point> = {
       type: "FeatureCollection",
       features: lastCoord
@@ -488,7 +496,10 @@ export default function MapView({
         },
       });
     }
-  }, [coordinates, drawn, followMode, ghostRoute, mapLoaded, mapMode, progress, resolvedTheme]);
+    // `currentPosition` va en las dependencias porque mueve el marcador: sin
+    // ella el punto azul solo se repintaría cuando crece la traza, o sea nunca
+    // mientras estás parado.
+  }, [coordinates, currentPosition, drawn, followMode, ghostRoute, mapLoaded, mapMode, progress, resolvedTheme]);
 
   // Modo seguimiento: al cargar (aún sin puntos en vivo), encuadra la ruta
   // fantasma entera para que el usuario vea lo que va a recorrer.

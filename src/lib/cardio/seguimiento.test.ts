@@ -26,7 +26,7 @@ for (let m = 0; m <= 1000; m += 10) RUTA.push({ lat: LAT, lng: este(m) });
 
 /** Pasa el stream por el filtro igual que hace el store, y devuelve la traza. */
 function grabar(fixes: IncomingFix[]) {
-  const state: FixState = { last: null, count: 0 };
+  const state: FixState = { last: null, anchor: null, count: 0 };
   const traza: { lat: number; lng: number; timestamp: number }[] = [];
   let distanciaM = 0;
   for (const f of fixes) {
@@ -36,6 +36,7 @@ function grabar(fixes: IncomingFix[]) {
     const punto = { lat: f.lat, lng: f.lng, timestamp: f.timestamp };
     traza.push(punto);
     state.last = punto;
+    if (d.advanceAnchor) state.anchor = punto;
     state.count += 1;
   }
   return { traza, distanciaM };
@@ -116,6 +117,7 @@ test("REGRESIÓN: al reanudar (traza previa) el filtro ya está activo", () => {
   // que el primer fix tras reanudar NO entra en fase inicial y sí se filtra.
   const state: FixState = {
     last: { lat: LAT, lng: este(500), timestamp: 1_000_000 },
+    anchor: { lat: LAT, lng: este(500), timestamp: 1_000_000 },
     count: 350,
   };
   const burdo: IncomingFix = {

@@ -40,6 +40,8 @@ export function RouteTrackerModal() {
     isPaused,
     isMinimized,
     coordinates,
+    currentPosition,
+    fixesRecibidos,
     distanceKm,
     durationSec,
     followRoute,
@@ -117,6 +119,7 @@ export function RouteTrackerModal() {
       <div className="absolute inset-0 z-0">
         <MapView
           coordinates={coordinates}
+          currentPosition={currentPosition}
           ghostRoute={followRoute.length > 0 ? followRoute : undefined}
           progress={progress}
           topBar={{
@@ -181,9 +184,9 @@ export function RouteTrackerModal() {
 
         {/* DIAGNÓSTICO TEMPORAL: ver el comentario de `altitud` arriba. */}
         <p className="mt-3 text-center font-mono text-[11px] leading-relaxed text-muted-foreground">
-          GPS: {altitud.total} fijaciones · {altitud.con} con altitud
+          GPS: {fixesRecibidos} recibidas · {altitud.total} en la traza
           <br />
-          última {altitud.hora} · {altitud.repetidos} repetidas
+          última {altitud.hora} · {altitud.con} con altitud
         </p>
 
         {/* Controls */}

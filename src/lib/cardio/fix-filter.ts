@@ -33,6 +33,34 @@ const GAP_FILL_MS = 8000;
  * un brinco del sensor no infle los km.
  */
 const MAX_SPEED_MPS = 8;
+/**
+ * Desplazamiento mínimo para que un tramo cuente como movimiento real.
+ *
+ * Con el proveedor entregando cada segundo, un GPS quieto "se mueve" 3-5 m por
+ * la deriva del sensor. Sumar eso daría kilómetros fantasma parado (el clásico
+ * problema del semáforo).
+ *
+ * OJO: no se compara contra la fijación ANTERIOR, sino contra un ANCLA. Andando
+ * a 1,4 m/s cada tramo mide ~1,4 m y ninguno superaría el umbral por separado:
+ * la distancia no subiría nunca. Con ancla, se acumula hasta superarlo y
+ * entonces se suma el desplazamiento entero. Así el paseo lento cuenta y la
+ * deriva no.
+ */
+const MIN_MOVE_M = 5;
+/**
+ * El desplazamiento tiene que superar la INCERTIDUMBRE del fix, no un número
+ * fijo, para contar como movimiento.
+ *
+ * Medido en una ruta real con el móvil quieto sobre la mesa: precisión ±20 m y
+ * saltos de 8-22 m entre fijaciones consecutivas (el punto rebota dentro de su
+ * círculo de error). Con un umbral fijo de 5 m, los 17 tramos pasaban el filtro
+ * y salían 248 m andados sin moverse. Comparando contra la precisión, un salto
+ * de 20 m con ±20 m de error es indistinguible de estar parado: no cuenta.
+ *
+ * El factor 1,5 da margen: exigir solo `> precisión` dejaba pasar los saltos
+ * justos por encima.
+ */
+const ACC_FACTOR = 1.5;
 
 export type IncomingFix = {
   lat: number;
@@ -45,6 +73,8 @@ export type IncomingFix = {
 export type FixState = {
   /** Última fijación ACEPTADA (posición + su timestamp). null si aún ninguna. */
   last: { lat: number; lng: number; timestamp: number } | null;
+  /** Ancla de distancia: última posición desde la que se contó desplazamiento. */
+  anchor: { lat: number; lng: number; timestamp: number } | null;
   /** Cuántas se han aceptado ya. Las 2 primeras entran sin filtrar (asentado). */
   count: number;
 };
@@ -54,14 +84,16 @@ export type FixDecision = {
   accept: boolean;
   /** Metros que suma a la distancia total (0 si no debe contar). */
   addDistanceM: number;
+  /** Este fix pasa a ser la nueva ancla de distancia. */
+  advanceAnchor: boolean;
 };
 
-const DROP: FixDecision = { accept: false, addDistanceM: 0 };
+const DROP: FixDecision = { accept: false, addDistanceM: 0, advanceAnchor: false };
 
 export function decideFix(fix: IncomingFix, state: FixState): FixDecision {
   // Fase inicial: los 2 primeros entran sin filtrar para que el GPS se asiente
   // sin quedarse clavado en el punto 1 si ese resultó ser malo.
-  if (state.count < 2) return { accept: true, addDistanceM: 0 };
+  if (state.count < 2) return { accept: true, addDistanceM: 0, advanceAnchor: true };
 
   const last = state.last;
 
@@ -78,10 +110,25 @@ export function decideFix(fix: IncomingFix, state: FixState): FixDecision {
     if (gapMs < GAP_FILL_MS || fix.accuracy > ACC_CAP_M) return DROP;
   }
 
-  if (!last) return { accept: true, addDistanceM: 0 };
+  // El fix es bueno: se pinta siempre. Lo que se decide ahora es si además
+  // cuenta como desplazamiento real.
+  const anchor = state.anchor ?? last;
+  if (!anchor) return { accept: true, addDistanceM: 0, advanceAnchor: true };
 
-  const m = haversineM(last, fix);
-  const dt = (fix.timestamp - last.timestamp) / 1000;
-  const addDistanceM = dt > 0 && m / dt <= MAX_SPEED_MPS ? m : 0;
-  return { accept: true, addDistanceM };
+  const m = haversineM(anchor, fix);
+  const dt = (fix.timestamp - anchor.timestamp) / 1000;
+
+  // Umbral de ruido: el mayor entre el mínimo fijo y la incertidumbre del fix.
+  // Por debajo es indistinguible de la deriva del sensor: se pinta pero no
+  // suma, y el ancla NO avanza (así se va acumulando el paseo lento).
+  const ruidoM = Math.max(MIN_MOVE_M, (fix.accuracy ?? 0) * ACC_FACTOR);
+  if (m < ruidoM) return { accept: true, addDistanceM: 0, advanceAnchor: false };
+
+  // Salto imposible a pie: se pinta, no suma, pero el ancla SÍ avanza para no
+  // quedarse midiendo eternamente contra un punto que ya no es dónde estás.
+  if (dt > 0 && m / dt > MAX_SPEED_MPS) {
+    return { accept: true, addDistanceM: 0, advanceAnchor: true };
+  }
+
+  return { accept: true, addDistanceM: m, advanceAnchor: true };
 }
