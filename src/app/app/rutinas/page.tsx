@@ -2,12 +2,13 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import { CalendarPlus, Pencil, Play } from "lucide-react";
+import { CalendarPlus, ChevronDown, ChevronUp, Dumbbell, Pencil, Play, Trash2 } from "lucide-react";
 import { PastelCard } from "@/components/ui/pastel-card";
 import { LibraryPanel } from "@/components/exercise/library-panel";
 import { getExerciseInfo, useRogue } from "@/lib/store/rogue-store";
 import { useWorkoutSession } from "@/lib/store/workout-session-store";
 import { WEEKDAY_LABELS, WEEKDAY_ORDER } from "@/lib/workout/types";
+import type { WorkoutSession } from "@/lib/workout/types";
 import { cn } from "@/lib/utils";
 
 type EntrenoTab = "rutina" | "ejercicios" | "historial";
@@ -34,9 +35,9 @@ function RoutinePanel() {
       <div className="flex flex-col items-center gap-3 rounded-3xl border border-border bg-surface py-12 text-center">
         <CalendarPlus className="size-8 text-muted-foreground" />
         <div>
-          <p className="text-sm font-semibold">Aun no tienes dias de rutina</p>
+          <p className="text-sm font-semibold">Aún no tienes días de rutina</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Crea tu primer dia de entreno desde el editor.
+            Crea tu primer día de entreno desde el editor.
           </p>
         </div>
         <Link
@@ -103,7 +104,7 @@ function RoutinePanel() {
 
             {day.exercises.length === 0 ? (
               <p className="py-2 text-xs text-muted-foreground">
-                Este dia no tiene ejercicios todavia.
+                Este día no tiene ejercicios todavía.
               </p>
             ) : (
               <div className="flex flex-col divide-y divide-black/5 dark:divide-white/10">
@@ -131,6 +132,182 @@ function RoutinePanel() {
   );
 }
 
+function SessionCard({ session }: { session: WorkoutSession }) {
+  const [expanded, setExpanded] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const { deleteSession } = useRogue();
+
+  const dateObj = new Date(session.dateISO);
+  const dateStr = dateObj.toLocaleDateString("es-ES", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const timeStr = dateObj.toLocaleTimeString("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  // Agrupar series por ejercicio manteniendo el orden de aparición
+  const groupedExercises: {
+    exerciseId: string;
+    name: string;
+    sets: { weightKg: number; reps: number }[];
+  }[] = [];
+
+  for (const set of session.sets) {
+    let group = groupedExercises.find((g) => g.exerciseId === set.exerciseId);
+    if (!group) {
+      const info = getExerciseInfo(set.exerciseId);
+      group = {
+        exerciseId: set.exerciseId,
+        name: info?.nombre || set.exerciseId,
+        sets: [],
+      };
+      groupedExercises.push(group);
+    }
+    group.sets.push({ weightKg: set.weightKg, reps: set.reps });
+  }
+
+  // Volumen total calculado
+  const totalVolumeKg = session.sets.reduce(
+    (acc, set) => acc + set.weightKg * set.reps,
+    0,
+  );
+
+  return (
+    <PastelCard variant="neutral" className="flex flex-col gap-3">
+      <div
+        className="flex cursor-pointer items-start justify-between gap-3"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <p className="text-base font-semibold">{session.dayLabel}</p>
+            <span className="font-mono text-[10px] text-muted-foreground">
+              {timeStr}
+            </span>
+          </div>
+          <p className="mt-0.5 font-mono text-[11px] uppercase text-muted-foreground">
+            {dateStr}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {session.durationSec !== undefined && (
+            <span className="rounded-full bg-muted px-2.5 py-1 font-mono text-[10px] font-medium text-muted-foreground">
+              {Math.floor(session.durationSec / 60)} MIN
+            </span>
+          )}
+          <button
+            type="button"
+            className="flex size-7 items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition-colors hover:bg-muted"
+            aria-label={expanded ? "Plegar detalle" : "Desplegar detalle"}
+          >
+            {expanded ? (
+              <ChevronUp className="size-4" />
+            ) : (
+              <ChevronDown className="size-4" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      <div
+        className="flex cursor-pointer items-center justify-between border-t border-border/40 pt-2.5 text-xs text-muted-foreground"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <span className="flex items-center gap-1.5 font-mono text-[11px]">
+          <Dumbbell className="size-3.5 opacity-70" />
+          {groupedExercises.length} {groupedExercises.length === 1 ? "ejercicio" : "ejercicios"} · {session.sets.length} series
+        </span>
+
+        {totalVolumeKg > 0 && (
+          <span className="font-mono text-[11px] font-medium text-foreground">
+            {totalVolumeKg.toLocaleString("es-ES")} kg volcados
+          </span>
+        )}
+      </div>
+
+      {/* Vista Desplegada con todos los ejercicios, series y pesos */}
+      {expanded && (
+        <div className="mt-1 flex flex-col gap-3.5 border-t border-border/50 pt-3">
+          <div className="flex flex-col gap-2.5">
+            {groupedExercises.map((group, exIdx) => {
+              const maxWeight = Math.max(...group.sets.map((s) => s.weightKg));
+              return (
+                <div
+                  key={`${group.exerciseId}-${exIdx}`}
+                  className="flex flex-col gap-1.5 rounded-2xl bg-black/5 p-3 dark:bg-white/5"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-foreground">
+                      {group.name}
+                    </p>
+                    {maxWeight > 0 && (
+                      <span className="font-mono text-[10px] font-medium text-muted-foreground">
+                        Máx. {maxWeight} kg
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5 pt-1 sm:grid-cols-3">
+                    {group.sets.map((set, setIdx) => (
+                      <div
+                        key={setIdx}
+                        className="flex items-center justify-between rounded-xl border border-border/30 bg-background/70 px-2.5 py-1.5 font-mono text-[11px]"
+                      >
+                        <span className="text-muted-foreground/70">#{setIdx + 1}</span>
+                        <span className="font-semibold text-foreground">
+                          {set.weightKg > 0 ? `${set.weightKg} kg` : "Corporal"} × {set.reps}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-end border-t border-border/40 pt-2">
+            {confirmDelete ? (
+              <div className="flex w-full items-center justify-between gap-2 rounded-xl bg-red-500/10 p-2 text-xs text-red-500">
+                <span>¿Eliminar esta sesión?</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => deleteSession(session.id)}
+                    className="rounded-lg bg-red-500 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-600"
+                  >
+                    Sí, borrar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    className="rounded-lg bg-muted px-3 py-1 text-xs font-medium text-foreground"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="flex items-center gap-1 font-mono text-[11px] font-medium text-muted-foreground transition-colors hover:text-red-500"
+              >
+                <Trash2 className="size-3.5" />
+                Eliminar sesión
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </PastelCard>
+  );
+}
+
 function HistoryPanel() {
   const { sessions } = useRogue();
 
@@ -154,33 +331,9 @@ function HistoryPanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      {sorted.map((s) => {
-        const dateStr = new Date(s.dateISO).toLocaleDateString("es-ES", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        });
-        return (
-          <PastelCard key={s.id} variant="neutral" className="flex flex-col gap-2">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-base font-semibold">{s.dayLabel}</p>
-                <p className="font-mono text-[11px] text-muted-foreground mt-0.5">
-                  {dateStr.toUpperCase()}
-                </p>
-              </div>
-              {s.durationSec !== undefined && (
-                <span className="rounded-full bg-muted px-2.5 py-1 font-mono text-[10px] font-medium text-muted-foreground">
-                  {Math.floor(s.durationSec / 60)} MIN
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {s.sets.length} {s.sets.length === 1 ? "serie registrada" : "series registradas"}
-            </p>
-          </PastelCard>
-        );
-      })}
+      {sorted.map((s) => (
+        <SessionCard key={s.id} session={s} />
+      ))}
     </div>
   );
 }
