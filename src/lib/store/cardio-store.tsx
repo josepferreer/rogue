@@ -13,14 +13,13 @@ import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { fetchAllPages } from "@/lib/supabase/fetch-all";
 import { syncWrite } from "@/lib/supabase/sync";
+import { haversineM } from "@/lib/cardio/clean-trace";
 import {
   ensureGeoPermissions,
-  ensureBatteryExemption,
   openLocationSettings,
   startGeoWatch,
   type StopWatch,
 } from "@/lib/cardio/geo-tracker";
-import { decideFix } from "@/lib/cardio/fix-filter";
 
 // --- Types ---
 
@@ -46,12 +45,7 @@ export type CardioContextValue = {
   isPaused: boolean;
   isMinimized: boolean;
   coordinates: Coordinate[];
-  /** Última posición conocida (incluye fijaciones que NO entran en la traza).
-   *  Es la que pinta el punto azul: así se ve vivo aunque estés parado. */
-  currentPosition: Coordinate | null;
   distanceKm: number;
-  /** Fijaciones recibidas del GPS, para diagnóstico. */
-  fixesRecibidos: number;
   durationSec: number;
   history: CardioSession[];
   gpsError: string | null;
@@ -191,24 +185,21 @@ type ActiveSnapshot = {
 const FLUSH_INTERVAL_MS = 30_000;
 
 /**
- * Silencio del GPS tras el cual, AL VOLVER de segundo plano, se rearma el
- * watcher (ver `rearmarSiHizoFalta`).
- *
- * NO se usa para avisar en pantalla. Antes había un aviso periódico "no llega
- * señal del GPS" que saltaba a los 90 s de silencio, y era una falsa alarma
- * dañina: con `distanceFilter: 5` estar QUIETO produce silencio legítimo (el
- * plugin no emite hasta desplazarte 5 m), así que el aviso gritaba "GPS roto"
- * teniendo el GPS perfecto — con 13 satélites y la request activa, medido. El
- * usuario lo leía como una avería. Desde JS no se puede distinguir "parado" de
- * "GPS muerto", así que cualquier aviso por tiempo es poco fiable: fuera.
+ * Topes para descartar un salto imposible del GPS (tunel, rebote urbano).
+ * Solo afectan a la DISTANCIA: el punto se pinta igual, pero no la infla.
  */
-const SIN_SENAL_MS = 90_000;
+const MAX_SPEED_MPS = 8;
+/** Salto maximo aceptable cuando no se puede calcular velocidad (dt <= 0). */
+const MAX_JUMP_M = 80;
 /**
- * Tope de rearmes por sesion (solo al volver a primer plano). Con tres basta
- * para un par de idas y venidas al segundo plano; mas seria insistir contra
- * algo que no se arregla solo, y cada rearme apaga y enciende la ubicacion.
+ * Desplazamiento minimo para que un tramo SUME distancia. Es el mismo umbral
+ * que el `distanceFilter` del watcher.
+ *
+ * Solo afecta a los KILOMETROS, nunca a la ubicacion: el punto se pinta y la
+ * traza crece con cada fijacion pase lo que pase. Sin esto, el movil quieto
+ * sobre la mesa acumulaba cientos de metros de pura deriva del sensor.
  */
-const MAX_REARMES = 3;
+const MIN_MOVE_M = 5;
 /** Cada cuanto, como maximo, se reescribe el snapshot local. */
 const SNAPSHOT_THROTTLE_MS = 10_000;
 
@@ -345,17 +336,10 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
   // salto no se actualiza, para que el siguiente punto se compare con el ultimo
   // bueno y la traza se auto-corrija (igual que cleanTrace al dibujar).
   const lastAcceptedRef = useRef<Coordinate | null>(null);
-  /** Fijaciones ACEPTADas por el filtro. Las 2 primeras entran sin filtrar. */
-  const acceptedCountRef = useRef(0);
-  /** Ancla de distancia: ultima posicion desde la que se conto desplazamiento. */
-  const distanceAnchorRef = useRef<Coordinate | null>(null);
-  const fixesRecibidosRef = useRef(0);
-  const [currentPosition, setCurrentPosition] = useState<Coordinate | null>(null);
-  const [fixesRecibidos, setFixesRecibidos] = useState(0);
-  /** Momento de la ULTIMA fijacion recibida. Lo vigila el watchdog de abajo. */
-  const lastFixAtRef = useRef<number>(0);
-  /** Rearmes seguidos sin que haya entrado nada. */
-  const rearmesRef = useRef(0);
+  /** ULTIMA fijacion recibida, aceptada o no. Es contra esta que se mide la
+   *  velocidad: contra el ancla, un rechazo agranda el hueco de tiempo y el
+   *  siguiente salto igual de imposible se cuela por parecer lento. */
+  const lastFixRef = useRef<Coordinate | null>(null);
 
   // Cronometro por timestamps: aunque el navegador congele los timers en
   // segundo plano, al volver el tiempo mostrado se recalcula y es correcto.
@@ -415,7 +399,6 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
   const watchGPS = useCallback(() => {
     if (watchingRef.current) return; // ya hay un seguimiento activo
     watchingRef.current = true;
-    lastFixAtRef.current = Date.now(); // arranca el reloj del watchdog
     // Pide permisos (y espera) ANTES de addWatcher: con la app en primer plano
     // y los permisos ya concedidos, el foreground service nativo arranca a la
     // primera. Ver ensureGeoPermissions() para el motivo (bug del 1.er arranque).
@@ -429,55 +412,42 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
         setGpsNeedsSettings(true);
         return;
       }
-      // Pide exencion de optimizacion de bateria (Android 6+). Si Android
-      // optimiza la app, mata el Foreground Service del GPS en cuanto la
-      // pantalla se apaga. Esta llamada muestra el dialogo del sistema UNA
-      // sola vez; si ya esta exento no hace nada.
-      await ensureBatteryExemption();
-      // Se detuvo mientras aparecia el dialogo de bateria.
-      if (!watchingRef.current) return;
       try {
         const stop = await startGeoWatch(
           (p) => {
             setGpsError(null);
             setGpsNeedsSettings(false);
-            // Que un fix haya LLEGADO ya prueba que el GPS responde, aunque
-            // luego lo descartemos por burdo: reinicia el reloj del watchdog.
-            lastFixAtRef.current = Date.now();
-            rearmesRef.current = 0;
-
-            // El filtro decide si este fix se pinta y cuánto suma. Descarta los
-            // saltos del proveedor de red (±20-50 m) que se intercalan con el
-            // GPS y hacían botar el punto. Pura y testeable (ver fix-filter.ts).
-            const decision = decideFix(
-              { lat: p.lat, lng: p.lng, timestamp: p.timestamp, accuracy: p.accuracy },
-              {
-                last: lastAcceptedRef.current,
-                anchor: distanceAnchorRef.current,
-                count: acceptedCountRef.current,
-              },
-            );
-            if (!decision.accept) return; // fix burdo o desordenado: ni se pinta
-
+            // TODA fijacion que llegue entra en la traza. Sin filtros ni
+            // umbrales de precision: cada una es la prueba de que el GPS sigue
+            // vivo, y descartarlas en JS es como se rompio esto antes (el punto
+            // azul aparecia al iniciar la ruta y no volvia a moverse).
             const newCoord: Coordinate = { lat: p.lat, lng: p.lng, alt: p.alt, timestamp: p.timestamp };
-            distanceKmRef.current += decision.addDistanceM / 1000;
-            lastAcceptedRef.current = newCoord;
-            acceptedCountRef.current += 1;
-            fixesRecibidosRef.current += 1;
-            // La POSICIÓN actual se actualiza con cada fijación: así el punto
-            // azul está vivo y el usuario ve que el GPS responde.
-            setCurrentPosition(newCoord);
-            setFixesRecibidos(fixesRecibidosRef.current);
-
-            // La TRAZA, en cambio, solo crece con movimiento real. Sin esta
-            // separación la deriva del sensor se dibujaba: con el móvil quieto
-            // sobre la mesa salía una estrella de líneas de 20 m saliendo del
-            // punto, y 0,25 km "recorridos". La traza es lo que se guarda.
-            if (decision.advanceAnchor) {
-              distanceAnchorRef.current = newCoord;
-              coordinatesRef.current = [...coordinatesRef.current, newCoord];
-              setCoordinates(coordinatesRef.current);
+            // 1. Velocidad contra la fijacion ANTERIOR: descarta el salto
+            //    imposible (rebote urbano, tunel), que no es movimiento real.
+            const prev = lastFixRef.current;
+            lastFixRef.current = newCoord;
+            const dtSec = prev ? (newCoord.timestamp - prev.timestamp) / 1000 : 0;
+            const saltoM = prev ? haversineM(prev, newCoord) : 0;
+            const esSalto = prev
+              ? dtSec > 0
+                ? saltoM / dtSec > MAX_SPEED_MPS
+                : saltoM > MAX_JUMP_M
+              : false;
+            // 2. Distancia contra el ANCLA (ultimo punto que sumo). Los tramos
+            //    por debajo del umbral no suman pero tampoco se pierden: el
+            //    ancla se queda y el siguiente fix mide desde ahi.
+            const anchor = lastAcceptedRef.current;
+            if (!anchor) {
+              lastAcceptedRef.current = newCoord;
+            } else if (!esSalto) {
+              const distM = haversineM(anchor, newCoord);
+              if (distM >= MIN_MOVE_M) {
+                distanceKmRef.current += distM / 1000;
+                lastAcceptedRef.current = newCoord;
+              }
             }
+            coordinatesRef.current = [...coordinatesRef.current, newCoord];
+            setCoordinates(coordinatesRef.current);
             setDistanceKm(distanceKmRef.current);
           },
           (e) => {
@@ -501,43 +471,18 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     stopWatchRef.current = null;
   }, []);
 
-  /**
-   * Rearme del GPS, solo al VOLVER a primer plano.
-   *
-   * Este es el caso que de verdad mata el seguimiento: la APK es la web en un
-   * WebView, y con la app en segundo plano el JS se congela y las llamadas del
-   * plugin dejan de llegar. Al volver, el vigilante puede haber quedado muerto
-   * y nada lo resucitaba.
-   *
-   * Se hace AQUI y no en un temporizador porque volver del segundo plano es un
-   * evento real, no una suposicion: mientras la app esta delante y el usuario
-   * quieto, no se toca nada.
-   */
-  const rearmarSiHizoFalta = useCallback(() => {
-    if (!isTrackingRef.current) return;
-    if (Date.now() - lastFixAtRef.current < SIN_SENAL_MS) return;
-    if (rearmesRef.current >= MAX_REARMES) return;
-    rearmesRef.current += 1;
-    // clearGPS baja watchingRef, que es lo que deja pasar a watchGPS: sin esto
-    // se creeria que sigue vigilando y no haria nada.
-    clearGPS();
-    watchGPS();
-  }, [clearGPS, watchGPS]);
-
   // El wake lock se libera solo al ocultar la pestana; se re-adquiere al
-  // volver si la grabacion sigue activa. Y de paso se comprueba el GPS: volver
-  // del segundo plano es justo cuando mas probable es que se haya quedado mudo.
+  // volver si la grabacion sigue activa.
   useEffect(() => {
     if (!isTracking || isPaused) return;
     const onVisible = () => {
       if (document.visibilityState === "visible") {
         acquireWakeLock();
-        rearmarSiHizoFalta();
       }
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [isTracking, isPaused, acquireWakeLock, rearmarSiHizoFalta]);
+  }, [isTracking, isPaused, acquireWakeLock]);
 
   /**
    * Vuelca a Supabase lo grabado desde el ultimo volcado. Sin esto la ruta solo
@@ -625,13 +570,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     coordinatesRef.current = [];
     distanceKmRef.current = 0;
     lastAcceptedRef.current = null;
-    distanceAnchorRef.current = null;
-    acceptedCountRef.current = 0;
-    fixesRecibidosRef.current = 0;
-    setCurrentPosition(null);
-    setFixesRecibidos(0);
-    rearmesRef.current = 0;
-    lastFixAtRef.current = Date.now();
+    lastFixRef.current = null;
     setCoordinates([]);
     setDistanceKm(0);
     setDurationSec(0);
@@ -784,10 +723,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     coordinatesRef.current = snap.coordinates;
     distanceKmRef.current = snap.distanceKm;
     lastAcceptedRef.current = snap.coordinates[snap.coordinates.length - 1] ?? null;
-    // Ya hay traza: el filtro debe estar activo desde el primer fix al reanudar
-    // (no en "fase inicial", que se saltaría el filtrado).
-    acceptedCountRef.current = snap.coordinates.length;
-    distanceAnchorRef.current = snap.coordinates[snap.coordinates.length - 1] ?? null;
+    lastFixRef.current = lastAcceptedRef.current;
     accumulatedSecRef.current = duration;
     runningSinceRef.current = null;
     // Se reengancha a la MISMA fila que ya se estaba escribiendo: si no, al
@@ -855,8 +791,6 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
       isPaused,
       isMinimized,
       coordinates,
-      currentPosition,
-      fixesRecibidos,
       distanceKm,
       durationSec,
       followRoute,
@@ -879,8 +813,6 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
       isPaused,
       isMinimized,
       coordinates,
-      currentPosition,
-      fixesRecibidos,
       distanceKm,
       durationSec,
       followRoute,

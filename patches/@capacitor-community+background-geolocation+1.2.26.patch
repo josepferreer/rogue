@@ -12,10 +12,10 @@ index 2d88a67..983a1df 100644
      }
      lintOptions {
 diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
-index a92fcf9..9751441 100644
+index a92fcf9..43412f0 100644
 --- a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
 +++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
-@@ -42,9 +42,24 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+@@ -42,7 +42,8 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
                  @Permission(
                          strings = {
                                  Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -24,46 +24,21 @@ index a92fcf9..9751441 100644
 +                                Manifest.permission.POST_NOTIFICATIONS
                          },
                          alias = "location"
-+                ),
-+                // Alias APARTE para el permiso de segundo plano ("Permitir
-+                // siempre"). Va separado a proposito: Android exige pedirlo en
-+                // un paso posterior al de primer plano, y desde Android 11 solo
-+                // se concede desde Ajustes, no con un dialogo normal.
-+                //
-+                // Sin esto la app no tenia forma de SABER si lo tenia. Medido en
-+                // un Pixel 9: con solo "mientras se usa la app", la sesion de
-+                // ubicacion duraba 1,4 segundos y Android la cortaba en cuanto
-+                // se apagaba la pantalla, aunque hubiera servicio en primer
-+                // plano. Con el permiso concedido, aguanta indefinidamente.
-+                @Permission(
-+                        strings = { Manifest.permission.ACCESS_BACKGROUND_LOCATION },
-+                        alias = "background"
                  )
-         }
- )
 diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
-index fafbb86..a7bab90 100644
+index fafbb86..fcc974b 100644
 --- a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
 +++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
-@@ -8,6 +8,9 @@ import android.location.Location;
+@@ -8,6 +8,8 @@ import android.location.Location;
  import android.os.Binder;
  import android.os.Build;
  import android.os.IBinder;
-+import android.os.Looper;
 +import android.os.PowerManager;
 +import android.content.Context;
  
  import com.getcapacitor.Logger;
  import com.google.android.gms.location.FusedLocationProviderClient;
-@@ -16,6 +19,7 @@ import com.google.android.gms.location.LocationCallback;
- import com.google.android.gms.location.LocationRequest;
- import com.google.android.gms.location.LocationResult;
- import com.google.android.gms.location.LocationServices;
-+import com.google.android.gms.location.Priority;
- 
- import java.util.HashSet;
- 
-@@ -41,6 +45,7 @@ public class BackgroundGeolocationService extends Service {
+@@ -41,6 +43,7 @@ public class BackgroundGeolocationService extends Service {
          public Notification backgroundNotification;
      }
      private HashSet<Watcher> watchers = new HashSet<Watcher>();
@@ -71,7 +46,7 @@ index fafbb86..a7bab90 100644
  
      @Override
      public IBinder onBind(Intent intent) {
-@@ -57,6 +62,10 @@ public class BackgroundGeolocationService extends Service {
+@@ -57,6 +60,10 @@ public class BackgroundGeolocationService extends Service {
              watcher.client.removeLocationUpdates(watcher.locationCallback);
          }
          watchers = new HashSet<Watcher>();
@@ -82,69 +57,7 @@ index fafbb86..a7bab90 100644
          stopSelf();
          return false;
      }
-@@ -80,16 +89,48 @@ public class BackgroundGeolocationService extends Service {
-             FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(
-                     BackgroundGeolocationService.this
-             );
--            LocationRequest locationRequest = new LocationRequest();
--            locationRequest.setMaxWaitTime(1000);
--            locationRequest.setInterval(1000);
--            locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
--            locationRequest.setSmallestDisplacement(distanceFilter);
-+            // API moderna (Builder). La antigua 'new LocationRequest()' esta
-+            // deprecada y en Android reciente ignora parte de la config.
-+            //
-+            // UNA SOLA FUENTE: el FusedLocationProviderClient. Una version
-+            // anterior de este parche pedia ademas GPS_PROVIDER y
-+            // NETWORK_PROVIDER crudos al LocationManager, los tres al mismo
-+            // callback. Resultado medido en una ruta real: el punto botaba ~25 m
-+            // entre la posicion del GPS (+-8 m) y la de red (+-30 m), con
-+            // timestamps desordenados (dt negativo) porque cada proveedor tiene
-+            // su reloj. Fused YA combina GPS + red + sensores internamente y
-+            // entrega UNA serie coherente: no hay que ayudarle.
-+            LocationRequest locationRequest = new LocationRequest.Builder(
-+                    Priority.PRIORITY_HIGH_ACCURACY,
-+                    1000
-+            )
-+                    .setMinUpdateIntervalMillis(1000)
-+                    .setMinUpdateDistanceMeters(distanceFilter)
-+                    .setMaxUpdateDelayMillis(1000)
-+                    .build();
-+
-+            final Watcher watcher = new Watcher();
- 
-             LocationCallback callback = new LocationCallback(){
-                 @Override
-                 public void onLocationResult(LocationResult locationResult) {
-+                    if (locationResult == null) return;
-                     Location location = locationResult.getLastLocation();
-+                    if (location == null) return;
-+                    // NADA de deduplicar aqui: TODA entrega sube al JS.
-+                    //
-+                    // Hubo una version con un filtro por marca de tiempo que
-+                    // descartaba las reentregas de la misma fijacion. Parecia
-+                    // razonable, pero rompia el caso principal: con el usuario
-+                    // QUIETO el proveedor reentrega la misma posicion (no hay
-+                    // otra que dar), asi que se descartaban todas y la app
-+                    // recibia UNA sola fijacion y luego silencio. El usuario lo
-+                    // veia como "la ubicacion se corta al iniciar la ruta".
-+                    //
-+                    // Filtrar es cosa del JS (lib/cardio/fix-filter.ts), que ya
-+                    // decide que se pinta y que suma distancia. Aqui, cuantas
-+                    // mas entregas lleguen, mejor: es la prueba de que el GPS
-+                    // sigue vivo.
-                     Intent intent = new Intent(ACTION_BROADCAST);
-                     intent.putExtra("location", location);
-                     intent.putExtra("id", id);
-@@ -105,7 +146,6 @@ public class BackgroundGeolocationService extends Service {
-                 }
-             };
- 
--            Watcher watcher = new Watcher();
-             watcher.id = id;
-             watcher.client = client;
-             watcher.locationRequest = locationRequest;
-@@ -113,16 +153,13 @@ public class BackgroundGeolocationService extends Service {
+@@ -113,16 +120,13 @@ public class BackgroundGeolocationService extends Service {
              watcher.backgroundNotification = backgroundNotification;
              watchers.add(watcher);
  
@@ -168,7 +81,7 @@ index fafbb86..a7bab90 100644
  
              // Promote the service to the foreground if necessary.
              // Ideally we would only call 'startForeground' if the service is not already
-@@ -130,16 +167,39 @@ public class BackgroundGeolocationService extends Service {
+@@ -130,16 +134,39 @@ public class BackgroundGeolocationService extends Service {
              // in API level 29 and seems to behave weirdly, as reported in #120. However,
              // it appears that 'startForeground' is idempotent, so we just call it repeatedly
              // each time a background watcher is added.
@@ -203,13 +116,13 @@ index fafbb86..a7bab90 100644
 +                watcher.client.requestLocationUpdates(
 +                        watcher.locationRequest,
 +                        watcher.locationCallback,
-+                        Looper.getMainLooper()
++                        null
 +                );
 +            } catch (SecurityException ignore) {}
          }
  
          void removeWatcher(String id) {
-@@ -149,6 +209,10 @@ public class BackgroundGeolocationService extends Service {
+@@ -149,6 +176,10 @@ public class BackgroundGeolocationService extends Service {
                      watchers.remove(watcher);
                      if (getNotification() == null) {
                          stopForeground(true);
@@ -220,12 +133,3 @@ index fafbb86..a7bab90 100644
                      }
                      return;
                  }
-@@ -163,7 +227,7 @@ public class BackgroundGeolocationService extends Service {
-                 watcher.client.requestLocationUpdates(
-                         watcher.locationRequest,
-                         watcher.locationCallback,
--                        null
-+                        Looper.getMainLooper()
-                 );
-             }
-         }

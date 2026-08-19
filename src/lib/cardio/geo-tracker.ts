@@ -16,8 +16,6 @@ type BgLocation = {
   latitude: number;
   longitude: number;
   altitude?: number | null;
-  /** Radio de incertidumbre horizontal en metros (el plugin lo entrega). */
-  accuracy?: number | null;
   time?: number | null;
 };
 // El plugin nativo pone code = "NOT_AUTHORIZED" cuando le falta el permiso de
@@ -45,8 +43,8 @@ interface BgGeoPlugin {
   // plugin que declare @Permission. El alias "location" del plugin agrupa
   // ACCESS_*_LOCATION y (por el patch de este repo) POST_NOTIFICATIONS, asi
   // que una sola solicitud cubre ubicacion + notificacion del servicio.
-  checkPermissions(): Promise<{ location: PermissionState; background?: PermissionState }>;
-  requestPermissions(): Promise<{ location: PermissionState; background?: PermissionState }>;
+  checkPermissions(): Promise<{ location: PermissionState }>;
+  requestPermissions(): Promise<{ location: PermissionState }>;
   // Abre los ajustes de la app (para conceder "Permitir todo el tiempo", que el
   // sistema no ofrece desde el dialogo in-app en Android 10+).
   openSettings(): Promise<void>;
@@ -54,17 +52,6 @@ interface BgGeoPlugin {
 
 const BackgroundGeolocation =
   registerPlugin<BgGeoPlugin>("BackgroundGeolocation");
-
-// Plugin nativo minimal para pedir la exencion de optimizacion de bateria.
-// Sin esto Android 6+ puede matar el Foreground Service del GPS cuando la
-// pantalla se apaga, cortando el seguimiento aunque los permisos de ubicacion
-// esten concedidos. El diálogo del sistema solo aparece UNA vez (si ya está
-// exento, isIgnoringBatteryOptimizations devuelve true y no se muestra nada).
-interface BatteryPlugin {
-  isIgnoringBatteryOptimizations(): Promise<{ exempt: boolean }>;
-  requestIgnoreBatteryOptimizations(): Promise<void>;
-}
-const Battery = registerPlugin<BatteryPlugin>("Battery");
 
 /**
  * Pide los permisos de ubicacion (y notificacion en Android 13+) ANTES de
@@ -97,53 +84,6 @@ export async function ensureGeoPermissions(): Promise<boolean> {
 }
 
 /**
- * ¿Tiene la app permiso de ubicación en SEGUNDO PLANO ("Permitir siempre")?
- *
- * Importa mucho más de lo que parece: sin él, Android corta la ubicación a los
- * pocos segundos de apagarse la pantalla, aunque haya servicio en primer plano
- * y aunque la sesión figure como activa. Medido en un Pixel 9 con Android 17:
- * la sesión duraba 1,4 s sin el permiso y aguantaba indefinidamente con él.
- *
- * NO se puede pedir con un diálogo normal: desde Android 11 el usuario tiene
- * que concederlo a mano en Ajustes (ver `openLocationSettings`). Por eso esto
- * solo CONSULTA, y la UI decide cómo explicárselo al usuario.
- *
- * En web no aplica: devuelve true para no mostrar avisos que no vienen a cuento.
- */
-export async function hasBackgroundLocation(): Promise<boolean> {
-  if (!Capacitor.isNativePlatform()) return true;
-  try {
-    const status = await BackgroundGeolocation.checkPermissions();
-    // `background` es undefined en versiones del plugin sin ese alias: en ese
-    // caso no se puede saber, y se asume que sí para no dar la lata en falso.
-    return status.background == null || status.background === "granted";
-  } catch {
-    return true;
-  }
-}
-
-/**
- * Solicita la exención de optimización de batería en Android 6+.
- *
- * Android puede matar el Foreground Service del GPS cuando la pantalla se
- * apaga si la app está "optimizada". Esta función muestra el diálogo del
- * sistema (ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) para que el usuario
- * la exima. Si ya está exenta o no es plataforma nativa, no hace nada.
- * No lanza: si el plugin falla (emulador, ROM sin soporte) se ignora.
- */
-export async function ensureBatteryExemption(): Promise<void> {
-  if (!Capacitor.isNativePlatform()) return;
-  try {
-    const { exempt } = await Battery.isIgnoringBatteryOptimizations();
-    if (!exempt) {
-      await Battery.requestIgnoreBatteryOptimizations();
-    }
-  } catch {
-    /* ROM sin soporte o emulador: no bloqueamos el arranque */
-  }
-}
-
-/**
  * Abre los ajustes del sistema para esta app, donde el usuario puede conceder
  * "Permitir todo el tiempo". Solo tiene efecto en nativo; en web no hay nada
  * que abrir (el navegador gestiona el permiso). No lanza.
@@ -157,15 +97,7 @@ export async function openLocationSettings(): Promise<void> {
   }
 }
 
-export type GeoPosition = {
-  lat: number;
-  lng: number;
-  alt?: number;
-  timestamp: number;
-  /** Radio de incertidumbre horizontal (m). Lo usa el filtro de fixes para
-   *  distinguir un fix de GPS (fino) de uno de red (burdo). */
-  accuracy?: number;
-};
+export type GeoPosition = { lat: number; lng: number; alt?: number; timestamp: number };
 export type GeoError = {
   code?: number;
   message: string;
@@ -180,82 +112,36 @@ export async function startGeoWatch(
   onError: (e: GeoError) => void,
 ): Promise<StopWatch> {
   if (Capacitor.isNativePlatform()) {
-    let attempts = 0;
-    let watcherId: string | null = null;
-    let cancelled = false;
-
-    const tryAddWatcher = async (): Promise<string | null> => {
-      while (attempts < 5 && !cancelled) {
-        try {
-          const id = await BackgroundGeolocation.addWatcher(
-            {
-              backgroundMessage: "Grabando tu ruta de cardio.",
-              backgroundTitle: "Rogue · cardio en marcha",
-              requestPermissions: true,
-              // No entregar posiciones "viejas" cacheadas al arrancar: con
-              // `stale: true` la primera fijación podía ser de hace rato y de
-              // otro sitio, y la traza empezaba con un salto.
-              stale: false,
-              // 0 = el proveedor entrega cada segundo, se mueva uno o no.
-              //
-              // Con 5 m el punto se quedaba CONGELADO estando parado (y en
-              // interior, donde la posición viene del WiFi, ni andando 10 m
-              // cruzaba el umbral): la app parecía rota aunque el GPS
-              // funcionase. El riesgo de bajarlo a 0 es la deriva del sensor,
-              // que antes inflaba los kilómetros; eso ya NO pasa porque el
-              // filtro de `fix-filter.ts` descarta los fixes imprecisos y solo
-              // suma distancia si el desplazamiento supera el ruido.
-              distanceFilter: 0,
-            },
-            (location, error) => {
-              if (error) {
-                onError({
-                  message: error.message ?? "No se pudo acceder al GPS.",
-                  permissionDenied: error.code === "NOT_AUTHORIZED",
-                });
-                return;
-              }
-              if (location) {
-                onPosition({
-                  lat: location.latitude,
-                  lng: location.longitude,
-                  alt: location.altitude ?? undefined,
-                  timestamp: location.time ?? Date.now(),
-                  accuracy: location.accuracy ?? undefined,
-                });
-              }
-            },
-          );
-          return id;
-        } catch (err) {
-          attempts++;
-          const msg = err instanceof Error ? err.message : String(err);
-          if (msg.includes("Service not running") && attempts < 5) {
-            await new Promise((res) => setTimeout(res, 300));
-            continue;
-          }
-          throw err;
+    const id = await BackgroundGeolocation.addWatcher(
+      {
+        backgroundMessage: "Grabando tu ruta de cardio.",
+        backgroundTitle: "Rogue · cardio en marcha",
+        requestPermissions: true,
+        // No entregar posiciones "viejas" cacheadas al arrancar.
+        stale: false,
+        // Metros minimos entre lecturas: reduce ruido y bateria.
+        distanceFilter: 5,
+      },
+      (location, error) => {
+        if (error) {
+          onError({
+            message: error.message ?? "No se pudo acceder al GPS.",
+            permissionDenied: error.code === "NOT_AUTHORIZED",
+          });
+          return;
         }
-      }
-      return null;
-    };
-
-    tryAddWatcher()
-      .then((id) => {
-        watcherId = id;
-        if (cancelled && id) {
-          BackgroundGeolocation.removeWatcher({ id }).catch(() => {});
+        if (location) {
+          onPosition({
+            lat: location.latitude,
+            lng: location.longitude,
+            alt: location.altitude ?? undefined,
+            timestamp: location.time ?? Date.now(),
+          });
         }
-      })
-      .catch((e) => {
-        onError({ message: e?.message ?? "No se pudo iniciar el servicio GPS nativo." });
-      });
-
+      },
+    );
     return () => {
-      cancelled = true;
-      if (watcherId) {
-        BackgroundGeolocation.removeWatcher({ id: watcherId }).catch(() => {});
-      }
+      BackgroundGeolocation.removeWatcher({ id }).catch(() => {});
     };
   }
 
@@ -271,7 +157,6 @@ export async function startGeoWatch(
         lng: pos.coords.longitude,
         alt: pos.coords.altitude ?? undefined,
         timestamp: pos.timestamp,
-        accuracy: pos.coords.accuracy ?? undefined,
       }),
     (err) =>
       onError({
@@ -279,7 +164,7 @@ export async function startGeoWatch(
         message: err.message,
         permissionDenied: err.code === 1, // PERMISSION_DENIED
       }),
-    { enableHighAccuracy: true, timeout: 30000, maximumAge: 10000 },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
   );
   return () => navigator.geolocation.clearWatch(wid);
 }

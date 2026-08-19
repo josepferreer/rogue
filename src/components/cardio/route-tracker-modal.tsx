@@ -40,8 +40,6 @@ export function RouteTrackerModal() {
     isPaused,
     isMinimized,
     coordinates,
-    currentPosition,
-    fixesRecibidos,
     distanceKm,
     durationSec,
     followRoute,
@@ -68,38 +66,6 @@ export function RouteTrackerModal() {
   // historial hay que ir a borrarla a mano).
   const [confirmarDescarte, setConfirmarDescarte] = useState(false);
 
-  /**
-   * DIAGNÓSTICO TEMPORAL de altitud. En Android el plugin usa el proveedor
-   * "fusionado" de Google, que a menudo NO rellena la altitud aunque la
-   * posición horizontal sea buena; el resultado es que ninguna ruta guardada
-   * tiene desnivel. Esto cuenta cuántas fijaciones llegan con altitud para
-   * saber si el problema es del proveedor o del dispositivo.
-   *
-   * Quitar (junto con su línea en la UI) en cuanto haya respuesta.
-   */
-  const altitud = useMemo(() => {
-    const con = coordinates.reduce((n, c) => n + (c.alt != null ? 1 : 0), 0);
-    const ultima = coordinates[coordinates.length - 1];
-    /**
-     * Hora de la ÚLTIMA fijación, no "hace X segundos": si el GPS deja de
-     * entregar, un contador relativo se congelaría igual que el resto y no se
-     * notaría. Con la hora puesta se ve de un vistazo que lleva parada desde
-     * las 14:03 aunque sean las 14:09.
-     */
-    const hora = ultima
-      ? new Date(ultima.timestamp).toLocaleTimeString("es-ES", { hour12: false })
-      : "—";
-    /** Puntos que repiten exactamente la posición anterior: el sintoma de un
-     *  proveedor que responde pero no actualiza. */
-    let repetidos = 0;
-    for (let i = 1; i < coordinates.length; i++) {
-      const a = coordinates[i - 1];
-      const b = coordinates[i];
-      if (a.lat === b.lat && a.lng === b.lng) repetidos++;
-    }
-    return { con, total: coordinates.length, hora, repetidos };
-  }, [coordinates]);
-
   if (!isTracking || isMinimized) return null;
 
   const followTitle = progress
@@ -119,7 +85,6 @@ export function RouteTrackerModal() {
       <div className="absolute inset-0 z-0">
         <MapView
           coordinates={coordinates}
-          currentPosition={currentPosition}
           ghostRoute={followRoute.length > 0 ? followRoute : undefined}
           progress={progress}
           topBar={{
@@ -181,13 +146,6 @@ export function RouteTrackerModal() {
             <p className="text-xs text-muted-foreground">RITMO</p>
           </div>
         </div>
-
-        {/* DIAGNÓSTICO TEMPORAL: ver el comentario de `altitud` arriba. */}
-        <p className="mt-3 text-center font-mono text-[11px] leading-relaxed text-muted-foreground">
-          GPS: {fixesRecibidos} recibidas · {altitud.total} en la traza
-          <br />
-          última {altitud.hora} · {altitud.con} con altitud
-        </p>
 
         {/* Controls */}
         <div className="mt-6 flex items-center justify-center gap-6">
