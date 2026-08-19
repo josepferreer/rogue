@@ -16,6 +16,8 @@ type BgLocation = {
   latitude: number;
   longitude: number;
   altitude?: number | null;
+  /** Radio de incertidumbre horizontal en metros (el plugin lo entrega). */
+  accuracy?: number | null;
   time?: number | null;
 };
 // El plugin nativo pone code = "NOT_AUTHORIZED" cuando le falta el permiso de
@@ -129,7 +131,15 @@ export async function openLocationSettings(): Promise<void> {
   }
 }
 
-export type GeoPosition = { lat: number; lng: number; alt?: number; timestamp: number };
+export type GeoPosition = {
+  lat: number;
+  lng: number;
+  alt?: number;
+  timestamp: number;
+  /** Radio de incertidumbre horizontal (m). Lo usa el filtro de fixes para
+   *  distinguir un fix de GPS (fino) de uno de red (burdo). */
+  accuracy?: number;
+};
 export type GeoError = {
   code?: number;
   message: string;
@@ -175,14 +185,16 @@ export async function startGeoWatch(
                   lng: location.longitude,
                   alt: location.altitude ?? undefined,
                   timestamp: location.time ?? Date.now(),
+                  accuracy: location.accuracy ?? undefined,
                 });
               }
             },
           );
           return id;
-        } catch (err: any) {
+        } catch (err) {
           attempts++;
-          if (err?.message?.includes("Service not running") && attempts < 5) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.includes("Service not running") && attempts < 5) {
             await new Promise((res) => setTimeout(res, 300));
             continue;
           }
@@ -223,6 +235,7 @@ export async function startGeoWatch(
         lng: pos.coords.longitude,
         alt: pos.coords.altitude ?? undefined,
         timestamp: pos.timestamp,
+        accuracy: pos.coords.accuracy ?? undefined,
       }),
     (err) =>
       onError({

@@ -20,29 +20,7 @@ import {
   startGeoWatch,
   type StopWatch,
 } from "@/lib/cardio/geo-tracker";
-
-// --- Helpers ---
-
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-// Rechazo de outliers para el calculo de distancia (mismos umbrales que el map
-// limpieza de lib/cardio/clean-trace). Un tramo que implica una velocidad imposible a pie
-// (>28.8 km/h) es un salto del sensor, no movimiento real: sin esto, la deriva
-// del GPS inflaba los km guardados. Un salto tras un apagon largo (dt grande)
-// da velocidad baja y SI cuenta, que es lo correcto (desplazamiento real).
-const MAX_SPEED_MPS = 8;
-// Sin timestamps fiables (dt<=0), cae a un umbral de distancia bruto.
-const MAX_JUMP_M = 80;
+import { decideFix } from "@/lib/cardio/fix-filter";
 
 // --- Types ---
 
@@ -362,6 +340,8 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
   // salto no se actualiza, para que el siguiente punto se compare con el ultimo
   // bueno y la traza se auto-corrija (igual que cleanTrace al dibujar).
   const lastAcceptedRef = useRef<Coordinate | null>(null);
+  /** Fijaciones ACEPTADas por el filtro. Las 2 primeras entran sin filtrar. */
+  const acceptedCountRef = useRef(0);
   /** Momento de la ULTIMA fijacion recibida. Lo vigila el watchdog de abajo. */
   const lastFixAtRef = useRef<number>(0);
   /** Rearmes seguidos sin que haya entrado nada. */
@@ -451,33 +431,24 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
           (p) => {
             setGpsError(null);
             setGpsNeedsSettings(false);
-            const newCoord: Coordinate = { lat: p.lat, lng: p.lng, alt: p.alt, timestamp: p.timestamp };
-            const last = lastAcceptedRef.current;
-            if (last) {
-              const distKm = haversineKm(last.lat, last.lng, newCoord.lat, newCoord.lng);
-              const dtSec = (newCoord.timestamp - last.timestamp) / 1000;
-              // En los 3 primeros puntos recibidos o si han transcurrido más de 10s,
-              // permitimos la actualización de lastAcceptedRef sin descarte por velocidad
-              // para que el GPS se asiente sin quedar bloqueado en el punto 1.
-              const isInitialPhase = coordinatesRef.current.length < 3;
-              const isOutlier =
-                isInitialPhase
-                  ? false
-                  : dtSec > 0
-                  ? (distKm * 1000) / dtSec > MAX_SPEED_MPS
-                  : distKm * 1000 > MAX_JUMP_M;
-
-              if (!isOutlier) {
-                distanceKmRef.current += distKm;
-                lastAcceptedRef.current = newCoord;
-              } else if (dtSec > 10) {
-                lastAcceptedRef.current = newCoord;
-              }
-            } else {
-              lastAcceptedRef.current = newCoord;
-            }
+            // Que un fix haya LLEGADO ya prueba que el GPS responde, aunque
+            // luego lo descartemos por burdo: reinicia el reloj del watchdog.
             lastFixAtRef.current = Date.now();
-            rearmesRef.current = 0; // el GPS responde: se reinicia la cuenta
+            rearmesRef.current = 0;
+
+            // El filtro decide si este fix se pinta y cuánto suma. Descarta los
+            // saltos del proveedor de red (±20-50 m) que se intercalan con el
+            // GPS y hacían botar el punto. Pura y testeable (ver fix-filter.ts).
+            const decision = decideFix(
+              { lat: p.lat, lng: p.lng, timestamp: p.timestamp, accuracy: p.accuracy },
+              { last: lastAcceptedRef.current, count: acceptedCountRef.current },
+            );
+            if (!decision.accept) return; // fix burdo o desordenado: ni se pinta
+
+            const newCoord: Coordinate = { lat: p.lat, lng: p.lng, alt: p.alt, timestamp: p.timestamp };
+            distanceKmRef.current += decision.addDistanceM / 1000;
+            lastAcceptedRef.current = newCoord;
+            acceptedCountRef.current += 1;
             coordinatesRef.current = [...coordinatesRef.current, newCoord];
             setCoordinates(coordinatesRef.current);
             setDistanceKm(distanceKmRef.current);
@@ -627,6 +598,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     coordinatesRef.current = [];
     distanceKmRef.current = 0;
     lastAcceptedRef.current = null;
+    acceptedCountRef.current = 0;
     rearmesRef.current = 0;
     lastFixAtRef.current = Date.now();
     setCoordinates([]);
@@ -781,6 +753,9 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     coordinatesRef.current = snap.coordinates;
     distanceKmRef.current = snap.distanceKm;
     lastAcceptedRef.current = snap.coordinates[snap.coordinates.length - 1] ?? null;
+    // Ya hay traza: el filtro debe estar activo desde el primer fix al reanudar
+    // (no en "fase inicial", que se saltaría el filtrado).
+    acceptedCountRef.current = snap.coordinates.length;
     accumulatedSecRef.current = duration;
     runningSinceRef.current = null;
     // Se reengancha a la MISMA fila que ya se estaba escribiendo: si no, al
