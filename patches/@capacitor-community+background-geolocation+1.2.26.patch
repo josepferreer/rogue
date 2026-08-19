@@ -26,7 +26,7 @@ index a92fcf9..43412f0 100644
                          alias = "location"
                  )
 diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
-index fafbb86..fcc974b 100644
+index fafbb86..9b54f7d 100644
 --- a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
 +++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
 @@ -8,6 +8,8 @@ import android.location.Location;
@@ -38,7 +38,15 @@ index fafbb86..fcc974b 100644
  
  import com.getcapacitor.Logger;
  import com.google.android.gms.location.FusedLocationProviderClient;
-@@ -41,6 +43,7 @@ public class BackgroundGeolocationService extends Service {
+@@ -16,6 +18,7 @@ import com.google.android.gms.location.LocationCallback;
+ import com.google.android.gms.location.LocationRequest;
+ import com.google.android.gms.location.LocationResult;
+ import com.google.android.gms.location.LocationServices;
++import com.google.android.gms.location.Priority;
+ 
+ import java.util.HashSet;
+ 
+@@ -41,6 +44,7 @@ public class BackgroundGeolocationService extends Service {
          public Notification backgroundNotification;
      }
      private HashSet<Watcher> watchers = new HashSet<Watcher>();
@@ -46,7 +54,7 @@ index fafbb86..fcc974b 100644
  
      @Override
      public IBinder onBind(Intent intent) {
-@@ -57,6 +60,10 @@ public class BackgroundGeolocationService extends Service {
+@@ -57,6 +61,10 @@ public class BackgroundGeolocationService extends Service {
              watcher.client.removeLocationUpdates(watcher.locationCallback);
          }
          watchers = new HashSet<Watcher>();
@@ -57,7 +65,24 @@ index fafbb86..fcc974b 100644
          stopSelf();
          return false;
      }
-@@ -113,16 +120,13 @@ public class BackgroundGeolocationService extends Service {
+@@ -80,11 +88,11 @@ public class BackgroundGeolocationService extends Service {
+             FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(
+                     BackgroundGeolocationService.this
+             );
+-            LocationRequest locationRequest = new LocationRequest();
+-            locationRequest.setMaxWaitTime(1000);
+-            locationRequest.setInterval(1000);
+-            locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+-            locationRequest.setSmallestDisplacement(distanceFilter);
++            LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000)
++                    .setMinUpdateIntervalMillis(1000)
++                    .setMaxUpdateDelayMillis(1000)
++                    .setMinUpdateDistanceMeters(distanceFilter)
++                    .build();
+ 
+             LocationCallback callback = new LocationCallback(){
+                 @Override
+@@ -113,16 +121,13 @@ public class BackgroundGeolocationService extends Service {
              watcher.backgroundNotification = backgroundNotification;
              watchers.add(watcher);
  
@@ -81,7 +106,7 @@ index fafbb86..fcc974b 100644
  
              // Promote the service to the foreground if necessary.
              // Ideally we would only call 'startForeground' if the service is not already
-@@ -130,16 +134,39 @@ public class BackgroundGeolocationService extends Service {
+@@ -130,16 +135,39 @@ public class BackgroundGeolocationService extends Service {
              // in API level 29 and seems to behave weirdly, as reported in #120. However,
              // it appears that 'startForeground' is idempotent, so we just call it repeatedly
              // each time a background watcher is added.
@@ -122,7 +147,7 @@ index fafbb86..fcc974b 100644
          }
  
          void removeWatcher(String id) {
-@@ -149,6 +176,10 @@ public class BackgroundGeolocationService extends Service {
+@@ -149,6 +177,10 @@ public class BackgroundGeolocationService extends Service {
                      watchers.remove(watcher);
                      if (getNotification() == null) {
                          stopForeground(true);
