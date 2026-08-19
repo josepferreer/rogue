@@ -17,6 +17,9 @@ type BgLocation = {
   longitude: number;
   altitude?: number | null;
   time?: number | null;
+  /** Radio de error en metros. Sirve para decidir que se DIBUJA, nunca para
+   *  decidir si la ubicacion llega: toda fijacion se entrega igual. */
+  accuracy?: number | null;
 };
 // El plugin nativo pone code = "NOT_AUTHORIZED" cuando le falta el permiso de
 // ubicacion (denegado, o solo "mientras se usa" cuando hace falta background).
@@ -97,7 +100,14 @@ export async function openLocationSettings(): Promise<void> {
   }
 }
 
-export type GeoPosition = { lat: number; lng: number; alt?: number; timestamp: number };
+export type GeoPosition = {
+  lat: number;
+  lng: number;
+  alt?: number;
+  timestamp: number;
+  /** Radio de error en metros, si el proveedor lo da. */
+  accuracy?: number;
+};
 export type GeoError = {
   code?: number;
   message: string;
@@ -136,6 +146,7 @@ export async function startGeoWatch(
             lng: location.longitude,
             alt: location.altitude ?? undefined,
             timestamp: location.time ?? Date.now(),
+            accuracy: location.accuracy ?? undefined,
           });
         }
       },
@@ -157,6 +168,7 @@ export async function startGeoWatch(
         lng: pos.coords.longitude,
         alt: pos.coords.altitude ?? undefined,
         timestamp: pos.timestamp,
+        accuracy: pos.coords.accuracy,
       }),
     (err) =>
       onError({

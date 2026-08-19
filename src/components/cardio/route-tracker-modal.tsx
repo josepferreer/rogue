@@ -40,6 +40,7 @@ export function RouteTrackerModal() {
     isPaused,
     isMinimized,
     coordinates,
+    currentPosition,
     distanceKm,
     durationSec,
     followRoute,
@@ -85,6 +86,7 @@ export function RouteTrackerModal() {
       <div className="absolute inset-0 z-0">
         <MapView
           coordinates={coordinates}
+          currentPosition={currentPosition}
           ghostRoute={followRoute.length > 0 ? followRoute : undefined}
           progress={progress}
           topBar={{

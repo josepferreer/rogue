@@ -45,6 +45,17 @@ export type CardioContextValue = {
   isPaused: boolean;
   isMinimized: boolean;
   coordinates: Coordinate[];
+  /**
+   * Ultima posicion conocida. Se actualiza con TODA fijacion que llegue, sin
+   * excepcion: es lo que pinta el punto azul, y que el punto siga vivo es como
+   * el usuario comprueba que el GPS responde. Nada puede impedir que cambie.
+   *
+   * Es DISTINTA de `coordinates` a proposito. La traza solo avanza con
+   * movimiento real, para que estando quieto no se dibuje la estrella de la
+   * deriva del sensor. Confundir las dos cosas fue el fallo: al filtrar los
+   * puntos de la traza se filtraba tambien el punto azul, y se quedaba clavado.
+   */
+  currentPosition: Coordinate | null;
   distanceKm: number;
   durationSec: number;
   history: CardioSession[];
@@ -200,6 +211,14 @@ const MAX_JUMP_M = 80;
  * sobre la mesa acumulaba cientos de metros de pura deriva del sensor.
  */
 const MIN_MOVE_M = 5;
+/**
+ * Precision peor que esta y la fijacion no se DIBUJA (el punto azul si se
+ * mueve igual). Es lo que separa dos cosas que por velocidad no se distinguen:
+ * el ruido del proveedor de red, que se cuela entre las lecturas buenas con un
+ * radio de 25-50 m, y la deriva del GPS estando quieto. Sin este corte, el
+ * ruido de red partia la traza y se inventaba desvios en el modo seguimiento.
+ */
+const ACC_MAX_M = 30;
 /** Cada cuanto, como maximo, se reescribe el snapshot local. */
 const SNAPSHOT_THROTTLE_MS = 10_000;
 
@@ -336,6 +355,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
   // salto no se actualiza, para que el siguiente punto se compare con el ultimo
   // bueno y la traza se auto-corrija (igual que cleanTrace al dibujar).
   const lastAcceptedRef = useRef<Coordinate | null>(null);
+  const [currentPosition, setCurrentPosition] = useState<Coordinate | null>(null);
   /** ULTIMA fijacion recibida, aceptada o no. Es contra esta que se mide la
    *  velocidad: contra el ancla, un rechazo agranda el hueco de tiempo y el
    *  siguiente salto igual de imposible se cuela por parecer lento. */
@@ -417,13 +437,18 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
           (p) => {
             setGpsError(null);
             setGpsNeedsSettings(false);
-            // TODA fijacion que llegue entra en la traza. Sin filtros ni
-            // umbrales de precision: cada una es la prueba de que el GPS sigue
-            // vivo, y descartarlas en JS es como se rompio esto antes (el punto
-            // azul aparecia al iniciar la ruta y no volvia a moverse).
             const newCoord: Coordinate = { lat: p.lat, lng: p.lng, alt: p.alt, timestamp: p.timestamp };
-            // 1. Velocidad contra la fijacion ANTERIOR: descarta el salto
-            //    imposible (rebote urbano, tunel), que no es movimiento real.
+            // LO PRIMERO, y sin ninguna condicion delante: el punto azul se
+            // mueve con cada fijacion. Cualquier `return` por encima de esta
+            // linea deja la ubicacion congelada, que es el fallo que hubo.
+            setCurrentPosition(newCoord);
+            // A partir de aqui se decide solo que se DIBUJA. Que la fijacion
+            // llegue ya esta registrado arriba y no depende de nada de esto.
+            //
+            // 1. Precision: una lectura burda no entra en la traza.
+            if (p.accuracy != null && p.accuracy > ACC_MAX_M) return;
+            // 2. Velocidad contra la fijacion ANTERIOR (ya filtrada por
+            //    precision): descarta el salto imposible, que no es movimiento.
             const prev = lastFixRef.current;
             lastFixRef.current = newCoord;
             const dtSec = prev ? (newCoord.timestamp - prev.timestamp) / 1000 : 0;
@@ -433,22 +458,27 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
                 ? saltoM / dtSec > MAX_SPEED_MPS
                 : saltoM > MAX_JUMP_M
               : false;
-            // 2. Distancia contra el ANCLA (ultimo punto que sumo). Los tramos
+            // 3. Distancia contra el ANCLA (ultimo punto que sumo). Los tramos
             //    por debajo del umbral no suman pero tampoco se pierden: el
             //    ancla se queda y el siguiente fix mide desde ahi.
             const anchor = lastAcceptedRef.current;
             if (!anchor) {
               lastAcceptedRef.current = newCoord;
+              coordinatesRef.current = [newCoord];
+              setCoordinates(coordinatesRef.current);
             } else if (!esSalto) {
               const distM = haversineM(anchor, newCoord);
+              // La TRAZA solo crece con movimiento real. Estando quieto, la
+              // deriva del sensor dibujaba una estrella de lineas de 20 m
+              // saliendo del punto, y sumaba km que nadie habia andado.
               if (distM >= MIN_MOVE_M) {
                 distanceKmRef.current += distM / 1000;
                 lastAcceptedRef.current = newCoord;
+                coordinatesRef.current = [...coordinatesRef.current, newCoord];
+                setCoordinates(coordinatesRef.current);
+                setDistanceKm(distanceKmRef.current);
               }
             }
-            coordinatesRef.current = [...coordinatesRef.current, newCoord];
-            setCoordinates(coordinatesRef.current);
-            setDistanceKm(distanceKmRef.current);
           },
           (e) => {
             console.warn(`GPS: ${e.message}`);
@@ -571,6 +601,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
     distanceKmRef.current = 0;
     lastAcceptedRef.current = null;
     lastFixRef.current = null;
+    setCurrentPosition(null);
     setCoordinates([]);
     setDistanceKm(0);
     setDurationSec(0);
@@ -791,6 +822,7 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
       isPaused,
       isMinimized,
       coordinates,
+      currentPosition,
       distanceKm,
       durationSec,
       followRoute,
