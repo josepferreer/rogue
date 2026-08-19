@@ -197,28 +197,27 @@ const FLUSH_INTERVAL_MS = 30_000;
 
 /**
  * Topes para descartar un salto imposible del GPS (tunel, rebote urbano).
- * Solo afectan a la DISTANCIA: el punto se pinta igual, pero no la infla.
+ * (28,8 km/h: mas rapido que cualquier carrera a pie).
  */
 const MAX_SPEED_MPS = 8;
 /** Salto maximo aceptable cuando no se puede calcular velocidad (dt <= 0). */
 const MAX_JUMP_M = 80;
 /**
- * Desplazamiento minimo para que un tramo SUME distancia. Es el mismo umbral
- * que el `distanceFilter` del watcher.
- *
- * Solo afecta a los KILOMETROS, nunca a la ubicacion: el punto se pinta y la
- * traza crece con cada fijacion pase lo que pase. Sin esto, el movil quieto
- * sobre la mesa acumulaba cientos de metros de pura deriva del sensor.
+ * Desplazamiento minimo base para que un tramo consolide traza y sume metros.
+ * 7 metros evita crear segmentos con el ruido natural estatico.
  */
-const MIN_MOVE_M = 5;
+const MIN_MOVE_M = 7;
 /**
- * Precision peor que esta y la fijacion no se DIBUJA (el punto azul si se
- * mueve igual). Es lo que separa dos cosas que por velocidad no se distinguen:
- * el ruido del proveedor de red, que se cuela entre las lecturas buenas con un
- * radio de 25-50 m, y la deriva del GPS estando quieto. Sin este corte, el
- * ruido de red partia la traza y se inventaba desvios en el modo seguimiento.
+ * Precision maxima aceptada (en metros). Cualquier fijacion con radio de error
+ * superior a 25 m (torre de telefonia o rebote) se descarta por completo
+ * (no mueve el punto azul ni la traza).
  */
-const ACC_MAX_M = 30;
+const ACC_MAX_M = 25;
+/**
+ * Umbral de velocidad minimo para considerar desplazamiento fisico humano (1,6 km/h).
+ * Por debajo de esto, cualquier variacion de posicion se considera ruido de sensor en reposo.
+ */
+const MIN_WALK_SPEED_MPS = 0.45;
 /** Cada cuanto, como maximo, se reescribe el snapshot local. */
 const SNAPSHOT_THROTTLE_MS = 10_000;
 
@@ -437,41 +436,62 @@ export function CardioProvider({ children }: { children: React.ReactNode }) {
           (p) => {
             setGpsError(null);
             setGpsNeedsSettings(false);
-            const newCoord: Coordinate = { lat: p.lat, lng: p.lng, alt: p.alt, timestamp: p.timestamp };
-            // LO PRIMERO, y sin ninguna condicion delante: el punto azul se
-            // mueve con cada fijacion. Cualquier `return` por encima de esta
-            // linea deja la ubicacion congelada, que es el fallo que hubo.
-            setCurrentPosition(newCoord);
-            // A partir de aqui se decide solo que se DIBUJA. Que la fijacion
-            // llegue ya esta registrado arriba y no depende de nada de esto.
-            //
-            // 1. Precision: una lectura burda no entra en la traza.
+
+            // 1. FILTRO DE PRECISIÓN ESTRICTO:
+            // Si la precisión es deficiente (> 25 m), es un rebote de señal o celda lejana.
+            // Se ignora por completo: ni mueve el punto azul ni ensucia la traza.
             if (p.accuracy != null && p.accuracy > ACC_MAX_M) return;
-            // 2. Velocidad contra la fijacion ANTERIOR (ya filtrada por
-            //    precision): descarta el salto imposible, que no es movimiento.
+
+            const newCoord: Coordinate = { lat: p.lat, lng: p.lng, alt: p.alt, timestamp: p.timestamp };
+
+            // 2. VELOCIDAD Y FILTRO DE SALTO IMPOSIBLE / OUTLIER:
             const prev = lastFixRef.current;
             lastFixRef.current = newCoord;
-            const dtSec = prev ? (newCoord.timestamp - prev.timestamp) / 1000 : 0;
+            const dtSec = prev ? Math.max(0.1, (newCoord.timestamp - prev.timestamp) / 1000) : 0;
             const saltoM = prev ? haversineM(prev, newCoord) : 0;
+            const calcSpeedMps = dtSec > 0 ? saltoM / dtSec : 0;
             const esSalto = prev
-              ? dtSec > 0
-                ? saltoM / dtSec > MAX_SPEED_MPS
-                : saltoM > MAX_JUMP_M
+              ? (dtSec > 0 && calcSpeedMps > MAX_SPEED_MPS) || saltoM > MAX_JUMP_M
               : false;
-            // 3. Distancia contra el ANCLA (ultimo punto que sumo). Los tramos
-            //    por debajo del umbral no suman pero tampoco se pierden: el
-            //    ancla se queda y el siguiente fix mide desde ahi.
+
+            if (esSalto) return; // Descartar saltos imposibles (> 28,8 km/h o > 80m de golpe)
+
+            // 3. DETECCIÓN DE REPOSO / ESTACIONARIO:
+            // Comprobamos la velocidad Doppler por hardware del sensor (p.speed) y la calculada.
+            const sensorSpeed = p.speed != null ? p.speed : null;
+            const isEffectivelyStationary =
+              (sensorSpeed != null && sensorSpeed < MIN_WALK_SPEED_MPS) ||
+              (prev != null && calcSpeedMps < MIN_WALK_SPEED_MPS && saltoM < 4);
+
+            // 4. ACTUALIZACIÓN AMORTIGUADA DEL MARCADOR EN PANTALLA:
+            // Mantiene el punto azul vivo y fluido, pero amortigua el micro-temblor en reposo.
+            setCurrentPosition((curPos) => {
+              if (!curPos) return newCoord;
+              const distFromCur = haversineM(curPos, newCoord);
+              if (isEffectivelyStationary && distFromCur < 4) {
+                // Amortiguación exponencial suave mientras se está quieto
+                return {
+                  lat: curPos.lat * 0.75 + newCoord.lat * 0.25,
+                  lng: curPos.lng * 0.75 + newCoord.lng * 0.25,
+                  alt: newCoord.alt,
+                  timestamp: newCoord.timestamp,
+                };
+              }
+              return newCoord;
+            });
+
+            // 5. CONSOLIDACIÓN DE TRAZA Y DISTANCIA:
+            // Solo consolida vértices y suma kilómetros cuando hay desplazamiento físico real.
             const anchor = lastAcceptedRef.current;
             if (!anchor) {
               lastAcceptedRef.current = newCoord;
               coordinatesRef.current = [newCoord];
               setCoordinates(coordinatesRef.current);
-            } else if (!esSalto) {
+            } else if (!isEffectivelyStationary) {
               const distM = haversineM(anchor, newCoord);
-              // La TRAZA solo crece con movimiento real. Estando quieto, la
-              // deriva del sensor dibujaba una estrella de lineas de 20 m
-              // saliendo del punto, y sumaba km que nadie habia andado.
-              if (distM >= MIN_MOVE_M) {
+              // Umbral dinámico: al menos 7 metros Y superar el radio de error del sensor
+              const minThreshold = Math.max(MIN_MOVE_M, (p.accuracy ?? 10) * 0.5);
+              if (distM >= minThreshold) {
                 distanceKmRef.current += distM / 1000;
                 lastAcceptedRef.current = newCoord;
                 coordinatesRef.current = [...coordinatesRef.current, newCoord];

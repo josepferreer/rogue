@@ -20,6 +20,8 @@ type BgLocation = {
   /** Radio de error en metros. Sirve para decidir que se DIBUJA, nunca para
    *  decidir si la ubicacion llega: toda fijacion se entrega igual. */
   accuracy?: number | null;
+  speed?: number | null;
+  bearing?: number | null;
 };
 // El plugin nativo pone code = "NOT_AUTHORIZED" cuando le falta el permiso de
 // ubicacion (denegado, o solo "mientras se usa" cuando hace falta background).
@@ -107,6 +109,10 @@ export type GeoPosition = {
   timestamp: number;
   /** Radio de error en metros, si el proveedor lo da. */
   accuracy?: number;
+  /** Velocidad calculada por el sensor en m/s. */
+  speed?: number;
+  /** Rumbo o direccion en grados (0-360). */
+  bearing?: number;
 };
 export type GeoError = {
   code?: number;
@@ -129,20 +135,6 @@ export async function startGeoWatch(
         requestPermissions: true,
         // No entregar posiciones "viejas" cacheadas al arrancar.
         stale: false,
-        // CERO metros. Esto NO es un ajuste de precision: es la diferencia
-        // entre recibir ubicacion y no recibirla.
-        //
-        // El plugin traduce esta opcion a setSmallestDisplacement(n) del
-        // proveedor de Android, que significa "no me entregues nada hasta que
-        // el movil se haya movido n metros". Con 5, estar quieto es silencio
-        // absoluto por diseno. Medido en un Pixel 9 parado en una oficina:
-        // UNA fijacion al iniciar la ruta y nada mas en 120 segundos. Se veia
-        // como que el GPS se cortaba nada mas empezar.
-        //
-        // Con 0, el proveedor entrega segun el intervalo (1 s) se mueva uno o
-        // no. Filtrar es cosa del JS, donde equivocarse no apaga nada: el
-        // punto azul se mueve con cada fijacion y la traza solo crece con
-        // movimiento real (ver el manejador en cardio-store).
         distanceFilter: 0,
       },
       (location, error) => {
@@ -160,6 +152,8 @@ export async function startGeoWatch(
             alt: location.altitude ?? undefined,
             timestamp: location.time ?? Date.now(),
             accuracy: location.accuracy ?? undefined,
+            speed: location.speed != null ? location.speed : undefined,
+            bearing: location.bearing != null ? location.bearing : undefined,
           });
         }
       },
@@ -182,6 +176,8 @@ export async function startGeoWatch(
         alt: pos.coords.altitude ?? undefined,
         timestamp: pos.timestamp,
         accuracy: pos.coords.accuracy,
+        speed: pos.coords.speed ?? undefined,
+        bearing: pos.coords.heading ?? undefined,
       }),
     (err) =>
       onError({
