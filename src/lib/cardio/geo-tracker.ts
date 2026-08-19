@@ -129,8 +129,21 @@ export async function startGeoWatch(
         requestPermissions: true,
         // No entregar posiciones "viejas" cacheadas al arrancar.
         stale: false,
-        // Metros minimos entre lecturas: reduce ruido y bateria.
-        distanceFilter: 5,
+        // CERO metros. Esto NO es un ajuste de precision: es la diferencia
+        // entre recibir ubicacion y no recibirla.
+        //
+        // El plugin traduce esta opcion a setSmallestDisplacement(n) del
+        // proveedor de Android, que significa "no me entregues nada hasta que
+        // el movil se haya movido n metros". Con 5, estar quieto es silencio
+        // absoluto por diseno. Medido en un Pixel 9 parado en una oficina:
+        // UNA fijacion al iniciar la ruta y nada mas en 120 segundos. Se veia
+        // como que el GPS se cortaba nada mas empezar.
+        //
+        // Con 0, el proveedor entrega segun el intervalo (1 s) se mueva uno o
+        // no. Filtrar es cosa del JS, donde equivocarse no apaga nada: el
+        // punto azul se mueve con cada fijacion y la traza solo crece con
+        // movimiento real (ver el manejador en cardio-store).
+        distanceFilter: 0,
       },
       (location, error) => {
         if (error) {
