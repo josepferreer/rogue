@@ -42,7 +42,7 @@ index a92fcf9..9751441 100644
          }
  )
 diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
-index fafbb86..281f9a8 100644
+index fafbb86..a7bab90 100644
 --- a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
 +++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
 @@ -8,6 +8,9 @@ import android.location.Location;
@@ -63,18 +63,15 @@ index fafbb86..281f9a8 100644
  
  import java.util.HashSet;
  
-@@ -39,8 +43,10 @@ public class BackgroundGeolocationService extends Service {
-         public LocationRequest locationRequest;
-         public LocationCallback locationCallback;
+@@ -41,6 +45,7 @@ public class BackgroundGeolocationService extends Service {
          public Notification backgroundNotification;
-+        public long lastSentTime = 0;
      }
      private HashSet<Watcher> watchers = new HashSet<Watcher>();
 +    private PowerManager.WakeLock wakeLock = null;
  
      @Override
      public IBinder onBind(Intent intent) {
-@@ -57,6 +63,10 @@ public class BackgroundGeolocationService extends Service {
+@@ -57,6 +62,10 @@ public class BackgroundGeolocationService extends Service {
              watcher.client.removeLocationUpdates(watcher.locationCallback);
          }
          watchers = new HashSet<Watcher>();
@@ -85,7 +82,7 @@ index fafbb86..281f9a8 100644
          stopSelf();
          return false;
      }
-@@ -80,16 +90,41 @@ public class BackgroundGeolocationService extends Service {
+@@ -80,16 +89,48 @@ public class BackgroundGeolocationService extends Service {
              FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(
                      BackgroundGeolocationService.this
              );
@@ -122,17 +119,24 @@ index fafbb86..281f9a8 100644
 +                    if (locationResult == null) return;
                      Location location = locationResult.getLastLocation();
 +                    if (location == null) return;
-+                    // Deduplicado por marca de tiempo: el proveedor puede
-+                    // reenviar la MISMA fijacion, y sin esto la traza acumula
-+                    // puntos repetidos que parecen temblor.
-+                    if (watcher.lastSentTime > 0 && location.getTime() == watcher.lastSentTime) {
-+                        return;
-+                    }
-+                    watcher.lastSentTime = location.getTime();
++                    // NADA de deduplicar aqui: TODA entrega sube al JS.
++                    //
++                    // Hubo una version con un filtro por marca de tiempo que
++                    // descartaba las reentregas de la misma fijacion. Parecia
++                    // razonable, pero rompia el caso principal: con el usuario
++                    // QUIETO el proveedor reentrega la misma posicion (no hay
++                    // otra que dar), asi que se descartaban todas y la app
++                    // recibia UNA sola fijacion y luego silencio. El usuario lo
++                    // veia como "la ubicacion se corta al iniciar la ruta".
++                    //
++                    // Filtrar es cosa del JS (lib/cardio/fix-filter.ts), que ya
++                    // decide que se pinta y que suma distancia. Aqui, cuantas
++                    // mas entregas lleguen, mejor: es la prueba de que el GPS
++                    // sigue vivo.
                      Intent intent = new Intent(ACTION_BROADCAST);
                      intent.putExtra("location", location);
                      intent.putExtra("id", id);
-@@ -105,7 +140,6 @@ public class BackgroundGeolocationService extends Service {
+@@ -105,7 +146,6 @@ public class BackgroundGeolocationService extends Service {
                  }
              };
  
@@ -140,7 +144,7 @@ index fafbb86..281f9a8 100644
              watcher.id = id;
              watcher.client = client;
              watcher.locationRequest = locationRequest;
-@@ -113,16 +147,13 @@ public class BackgroundGeolocationService extends Service {
+@@ -113,16 +153,13 @@ public class BackgroundGeolocationService extends Service {
              watcher.backgroundNotification = backgroundNotification;
              watchers.add(watcher);
  
@@ -164,7 +168,7 @@ index fafbb86..281f9a8 100644
  
              // Promote the service to the foreground if necessary.
              // Ideally we would only call 'startForeground' if the service is not already
-@@ -130,16 +161,39 @@ public class BackgroundGeolocationService extends Service {
+@@ -130,16 +167,39 @@ public class BackgroundGeolocationService extends Service {
              // in API level 29 and seems to behave weirdly, as reported in #120. However,
              // it appears that 'startForeground' is idempotent, so we just call it repeatedly
              // each time a background watcher is added.
@@ -205,7 +209,7 @@ index fafbb86..281f9a8 100644
          }
  
          void removeWatcher(String id) {
-@@ -149,6 +203,10 @@ public class BackgroundGeolocationService extends Service {
+@@ -149,6 +209,10 @@ public class BackgroundGeolocationService extends Service {
                      watchers.remove(watcher);
                      if (getNotification() == null) {
                          stopForeground(true);
@@ -216,7 +220,7 @@ index fafbb86..281f9a8 100644
                      }
                      return;
                  }
-@@ -163,7 +221,7 @@ public class BackgroundGeolocationService extends Service {
+@@ -163,7 +227,7 @@ public class BackgroundGeolocationService extends Service {
                  watcher.client.requestLocationUpdates(
                          watcher.locationRequest,
                          watcher.locationCallback,

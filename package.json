@@ -10,7 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "patch-package",
+    "postinstall": "node scripts/apply-patches.mjs",
     "test": "node --import tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
