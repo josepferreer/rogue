@@ -3,18 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { Check, ChevronDown, Info, Plus, Search, X } from "lucide-react";
+import { Check, ChevronDown, Dumbbell, Info, Plus, Search, X } from "lucide-react";
 import { ExerciseThumb } from "@/components/exercise/exercise-media";
 import {
   ExerciseFilterBar,
   type ExerciseFilterValue,
 } from "@/components/exercise/exercise-filter-bar";
-import {
-  DEMO_EXERCISES,
-  EXERCISE_IMG_BASE,
-  filterExercises,
-  getExerciseImages,
-} from "@/lib/exercises/repo";
+import { filterExercises, getExerciseImages } from "@/lib/exercises/repo";
+import { useCustomExercises } from "@/lib/store/custom-exercises-store";
 import {
   DIFFICULTY_LABELS,
   EQUIPMENT_LABELS,
@@ -43,9 +39,10 @@ function ExerciseItem({
   onSelect: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [thumb] = getExerciseImages(ex);
-  const img0 = `${EXERCISE_IMG_BASE}/${ex.fuenteId}/0.jpg`;
-  const img1 = `${EXERCISE_IMG_BASE}/${ex.fuenteId}/1.jpg`;
+  const images = getExerciseImages(ex);
+  const thumb = images?.[0] ?? null;
+  const img0 = images?.[0] ?? null;
+  const img1 = images?.[1] ?? null;
 
   return (
     <div
@@ -108,21 +105,27 @@ function ExerciseItem({
 
       {expanded && (
         <div className="border-t border-border px-3 pb-3 pt-3">
-          <div className="relative mb-3 aspect-[16/10] w-full overflow-hidden rounded-2xl bg-muted">
-            <Image
-              src={img0}
-              alt={`${ex.nombre} inicio`}
-              fill
-              className="object-cover [animation:ex-frame_1.2s_step-end_infinite]"
-              unoptimized
-            />
-            <Image
-              src={img1}
-              alt={`${ex.nombre} fin`}
-              fill
-              className="object-cover opacity-0 [animation:ex-frame-alt_1.2s_step-end_infinite]"
-              unoptimized
-            />
+          <div className="relative mb-3 flex aspect-[16/10] w-full items-center justify-center overflow-hidden rounded-2xl bg-muted">
+            {img0 && img1 ? (
+              <>
+                <Image
+                  src={img0}
+                  alt={`${ex.nombre} inicio`}
+                  fill
+                  className="object-cover [animation:ex-frame_1.2s_step-end_infinite]"
+                  unoptimized
+                />
+                <Image
+                  src={img1}
+                  alt={`${ex.nombre} fin`}
+                  fill
+                  className="object-cover opacity-0 [animation:ex-frame-alt_1.2s_step-end_infinite]"
+                  unoptimized
+                />
+              </>
+            ) : (
+              <Dumbbell className="size-8 text-muted-foreground" />
+            )}
           </div>
           {ex.instrucciones.length > 0 && (
             <ol className="flex flex-col gap-1.5">
@@ -166,9 +169,11 @@ export function ExerciseSelectorModal({
     prevOpenRef.current = open;
   }, [open]);
 
+  // Catalogo publico + ejercicios propios del usuario.
+  const { all: allExercises } = useCustomExercises();
   const filtered = useMemo(
-    () => filterExercises(DEMO_EXERCISES, { query, ...filters }),
-    [query, filters],
+    () => filterExercises(allExercises, { query, ...filters }),
+    [allExercises, query, filters],
   );
 
   const portalTarget = useAppShellPortal();

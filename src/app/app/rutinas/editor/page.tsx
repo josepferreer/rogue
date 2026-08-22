@@ -37,7 +37,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useRogue, getExerciseInfo } from "@/lib/store/rogue-store";
-import { DEMO_EXERCISES, EXERCISE_IMG_BASE } from "@/lib/exercises/repo";
+import { getExerciseByIdSync, getExerciseImages } from "@/lib/exercises/repo";
 import { ExerciseSelectorModal } from "@/components/routines/exercise-selector-modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
@@ -51,9 +51,6 @@ import type { Exercise } from "@/lib/exercises/types";
 import { fromKg, toKg } from "@/lib/units";
 import { useBackButton } from "@/lib/use-back-button";
 import { cn } from "@/lib/utils";
-
-// Mapa id → ejercicio completo para acceso O(1)
-const EX_MAP = new Map(DEMO_EXERCISES.map((e) => [e.id, e]));
 
 /** Id de dia nuevo. UUID de verdad (no un random de 6 caracteres) porque
  *  save_routine solo conserva el id del cliente si es un UUID valido; asi un
@@ -542,9 +539,10 @@ function ExerciseRow({
 }) {
   const [expanded, setExpanded] = useState(false);
   const { nombre } = getExerciseInfo(ex.exerciseId);
-  const exercise = EX_MAP.get(ex.exerciseId);
-  const img0 = exercise ? `${EXERCISE_IMG_BASE}/${exercise.fuenteId}/0.jpg` : null;
-  const img1 = exercise ? `${EXERCISE_IMG_BASE}/${exercise.fuenteId}/1.jpg` : null;
+  const exercise = getExerciseByIdSync(ex.exerciseId);
+  const images = getExerciseImages(exercise);
+  const img0 = images?.[0] ?? null;
+  const img1 = images?.[1] ?? null;
 
   const {
     attributes,

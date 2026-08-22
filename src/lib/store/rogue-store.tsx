@@ -11,7 +11,7 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 import type { ExerciseCategory, MuscleId } from "@/lib/exercises/types";
-import { DEMO_EXERCISES } from "@/lib/exercises/repo";
+import { getExerciseByIdSync } from "@/lib/exercises/repo";
 import { estimate1RM } from "@/lib/workout/one-rm";
 import { DEMO_ROUTINE } from "@/data/routine.demo";
 import { createClient } from "@/lib/supabase/client";
@@ -82,12 +82,15 @@ const EMPTY_STATS: WorkoutStats = {
 };
 
 type ExerciseInfo = { nombre: string; grupo: ExerciseCategory };
-const EXERCISE_INFO = new Map<string, ExerciseInfo>(
-  DEMO_EXERCISES.map((e) => [e.id, { nombre: e.nombre, grupo: e.grupo }]),
-);
 
+/** Resuelve contra la fachada en vez de contra un Map de modulo: los ejercicios
+ *  personalizados se registran despues del arranque, y con un Map construido al
+ *  importar el historial los mostraria con el slug crudo. */
 export function getExerciseInfo(id: string): ExerciseInfo {
-  return EXERCISE_INFO.get(id) ?? { nombre: id, grupo: "Core" };
+  const exercise = getExerciseByIdSync(id);
+  return exercise
+    ? { nombre: exercise.nombre, grupo: exercise.grupo }
+    : { nombre: id, grupo: "Core" };
 }
 
 export type PrResult = { exerciseId: string; nombre: string; est1RM: number };

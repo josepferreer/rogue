@@ -18,7 +18,7 @@ export function ExerciseCard({
   exercise: Exercise;
   badge?: ExerciseBadge;
 }) {
-  const [thumb] = getExerciseImages(exercise);
+  const thumb = getExerciseImages(exercise)?.[0] ?? null;
 
   return (
     <Link

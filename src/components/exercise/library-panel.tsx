@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, SearchX } from "lucide-react";
+import { Plus, Search, SearchX } from "lucide-react";
 import { ExerciseCard } from "@/components/exercise/exercise-card";
 import {
   ExerciseFilterBar,
   type ExerciseFilterValue,
 } from "@/components/exercise/exercise-filter-bar";
-import { DEMO_EXERCISES, filterExercises } from "@/lib/exercises/repo";
+import { filterExercises } from "@/lib/exercises/repo";
+import { useCustomExercises } from "@/lib/store/custom-exercises-store";
+import { CustomExerciseModal } from "@/components/exercise/custom-exercise-modal";
 import { createClient } from "@/lib/supabase/client";
 import {
   getCurrentUserId,
@@ -21,6 +23,9 @@ export function LibraryPanel() {
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<ExerciseFilterValue>({});
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [creating, setCreating] = useState(false);
+  // Catalogo publico + ejercicios propios del usuario.
+  const { all: allExercises } = useCustomExercises();
 
   useEffect(() => {
     let active = true;
@@ -38,8 +43,8 @@ export function LibraryPanel() {
   }, []);
 
   const results = useMemo(
-    () => filterExercises(DEMO_EXERCISES, { query, ...filters }),
-    [query, filters],
+    () => filterExercises(allExercises, { query, ...filters }),
+    [allExercises, query, filters],
   );
 
   // Favoritos primero, luego el resto. El sort es estable, asi que dentro de
@@ -69,9 +74,19 @@ export function LibraryPanel() {
 
       <ExerciseFilterBar value={filters} onChange={setFilters} />
 
-      <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
-        {results.length} RESULTADO{results.length === 1 ? "" : "S"}
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
+          {results.length} RESULTADO{results.length === 1 ? "" : "S"}
+        </p>
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-medium"
+        >
+          <Plus className="size-3.5" />
+          Crear ejercicio
+        </button>
+      </div>
 
       {sorted.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-3xl border border-border bg-surface py-12 text-center">
@@ -82,6 +97,15 @@ export function LibraryPanel() {
               Prueba con otro nombre o quita algun filtro.
             </p>
           </div>
+          {query.trim().length >= 3 && (
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className="rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background"
+            >
+              Crear &quot;{query.trim()}&quot;
+            </button>
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-2.5 md:grid md:grid-cols-2 md:gap-3">
@@ -94,6 +118,12 @@ export function LibraryPanel() {
           ))}
         </div>
       )}
+
+      <CustomExerciseModal
+        open={creating}
+        onClose={() => setCreating(false)}
+        initialName={results.length === 0 ? query.trim() : ""}
+      />
     </div>
   );
 }

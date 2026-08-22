@@ -1,8 +1,14 @@
 import "server-only";
 import type { NoaToolContext, ToolDef, ToolModule } from "@/lib/noa/types";
-import { getExercises } from "@/lib/exercises/repo";
-import { EXERCISE_CATEGORIES } from "@/lib/exercises/types";
-import type { EquipmentId } from "@/lib/exercises/types";
+import { filterExercises, getExercises } from "@/lib/exercises/repo";
+import {
+  DIFFICULTY_IDS,
+  EQUIPMENT_IDS,
+  MUSCLE_IDS,
+  validateCustomExercise,
+} from "@/lib/exercises/custom";
+import { EXERCISE_CATEGORIES, MUSCLE_LABELS } from "@/lib/exercises/types";
+import type { EquipmentId, Exercise, MuscleId } from "@/lib/exercises/types";
 import { WEEKDAY_LABELS } from "@/lib/workout/types";
 
 /**
@@ -145,7 +151,7 @@ const searchExercise: ToolDef = {
   module: "training",
   kind: "read",
   sensitivity: "safe",
-  async handler(args) {
+  async handler(args, ctx: NoaToolContext) {
     const grupo =
       typeof args.grupo === "string" &&
       (EXERCISE_CATEGORIES as readonly string[]).includes(args.grupo)
@@ -154,7 +160,15 @@ const searchExercise: ToolDef = {
     const query = typeof args.query === "string" ? args.query : undefined;
     const limit = clampInt(args.limit, 12, 1, 30);
 
-    const list = await getExercises({ query, grupo });
+    // El catalogo publico sale del dataset local; los personalizados solo estan
+    // en Supabase. En servidor no hay store que los registre en la fachada, asi
+    // que se consultan aqui: si no, NOA no encontraria un ejercicio que el
+    // usuario acaba de crear y le propondria crearlo otra vez.
+    const propios = await listCustomExercisesFor(ctx);
+    const list = filterExercises(
+      [...(await getExercises({})), ...propios],
+      { query, grupo },
+    );
     return {
       exercises: list.slice(0, limit).map((e) => ({
         id: e.id,
@@ -163,7 +177,129 @@ const searchExercise: ToolDef = {
         equipo: e.equipo,
         dificultad: e.dificultad,
         mecanica: e.mecanica,
+        esPersonalizado: e.esPersonalizado ?? false,
       })),
+    };
+  },
+};
+
+/** Ejercicios propios del usuario. La RLS ya filtra por owner. */
+async function listCustomExercisesFor(ctx: NoaToolContext): Promise<Exercise[]> {
+  const { data, error } = await ctx.supabase
+    .from("exercises")
+    .select(
+      "id, nombre, grupo, equipo, dificultad, mecanica, musculos_primarios, musculos_secundarios, instrucciones, consejos",
+    )
+    .eq("owner_id", ctx.userId);
+  if (error || !data) return [];
+  return data.map((r) => ({
+    id: r.id as string,
+    nombre: r.nombre as string,
+    grupo: r.grupo as Exercise["grupo"],
+    equipo: r.equipo as Exercise["equipo"],
+    dificultad: r.dificultad as Exercise["dificultad"],
+    mecanica: r.mecanica as Exercise["mecanica"],
+    musculosPrimarios: (r.musculos_primarios ?? []) as Exercise["musculosPrimarios"],
+    musculosSecundarios: (r.musculos_secundarios ?? []) as Exercise["musculosSecundarios"],
+    instrucciones: (r.instrucciones ?? []) as string[],
+    consejos: (r.consejos ?? []) as string[],
+    fuenteId: null,
+    esPersonalizado: true,
+  }));
+}
+
+const createCustomExercise: ToolDef = {
+  name: "createCustomExercise",
+  description:
+    "Crea un ejercicio personalizado del usuario cuando NO existe en el catálogo. Úsala si searchExercise no encuentra nada parecido y el usuario quiere registrar ese movimiento, o si te pide crearlo directamente. Los músculos que indiques alimentan el mapa de calor y el cálculo de recuperación muscular del usuario: elígelos con criterio y no inventes si no estás seguro del ejercicio; en ese caso, pregunta antes. El usuario SIEMPRE confirma antes de que se cree.",
+  parameters: {
+    type: "object",
+    properties: {
+      nombre: { type: "string", description: "Nombre del ejercicio, en español." },
+      grupo: {
+        type: "string",
+        enum: [...EXERCISE_CATEGORIES],
+        description: "Categoría bajo la que aparecerá en la biblioteca.",
+      },
+      equipo: {
+        type: "string",
+        enum: [...EQUIPMENT_IDS],
+        description: "Material necesario.",
+      },
+      dificultad: { type: "string", enum: [...DIFFICULTY_IDS] },
+      mecanica: { type: "string", enum: ["compuesto", "aislamiento"] },
+      musculosPrimarios: {
+        type: "array",
+        items: { type: "string", enum: [...MUSCLE_IDS] },
+        description: "Músculos que más trabaja. Obligatorio, al menos uno.",
+      },
+      musculosSecundarios: {
+        type: "array",
+        items: { type: "string", enum: [...MUSCLE_IDS] },
+        description: "Músculos que asisten al movimiento.",
+      },
+      instrucciones: {
+        type: "array",
+        items: { type: "string" },
+        description: "Pasos de ejecución, uno por elemento.",
+      },
+      consejos: { type: "array", items: { type: "string" } },
+    },
+    required: ["nombre", "grupo", "equipo", "musculosPrimarios"],
+  },
+  module: "training",
+  kind: "write",
+  sensitivity: "confirm",
+  refetch: "training",
+  summarize(args) {
+    const nombre = typeof args.nombre === "string" ? args.nombre : "ejercicio";
+    const musculos = Array.isArray(args.musculosPrimarios)
+      ? (args.musculosPrimarios as string[])
+          .map((m) => MUSCLE_LABELS[m as MuscleId] ?? m)
+          .join(", ")
+      : "";
+    return `Crear el ejercicio «${nombre}» (${args.grupo}, ${args.equipo}). Músculos principales: ${musculos}. Contará para tu mapa de calor.`;
+  },
+  async handler(args, ctx: NoaToolContext) {
+    // Misma validacion que el formulario de la biblioteca: los ids de musculo
+    // tienen que existir o el mapa de calor se llena de huecos silenciosos.
+    const exercise = validateCustomExercise({
+      nombre: String(args.nombre ?? ""),
+      grupo: String(args.grupo ?? ""),
+      equipo: String(args.equipo ?? ""),
+      dificultad: args.dificultad ? String(args.dificultad) : undefined,
+      mecanica: args.mecanica ? String(args.mecanica) : undefined,
+      musculosPrimarios: (args.musculosPrimarios ?? []) as string[],
+      musculosSecundarios: (args.musculosSecundarios ?? []) as string[],
+      instrucciones: (args.instrucciones ?? []) as string[],
+      consejos: (args.consejos ?? []) as string[],
+    });
+
+    const { error } = await ctx.supabase.from("exercises").insert({
+      id: exercise.id,
+      owner_id: ctx.userId,
+      nombre: exercise.nombre,
+      grupo: exercise.grupo,
+      equipo: exercise.equipo,
+      dificultad: exercise.dificultad,
+      mecanica: exercise.mecanica,
+      musculos_primarios: exercise.musculosPrimarios,
+      musculos_secundarios: exercise.musculosSecundarios,
+      instrucciones: exercise.instrucciones,
+      consejos: exercise.consejos,
+      fuente_id: null,
+    });
+    if (error) {
+      if (error.code === "23505") {
+        throw new Error(`Ya tienes un ejercicio llamado "${exercise.nombre}".`);
+      }
+      throw new Error(error.message);
+    }
+    return {
+      created: true,
+      id: exercise.id,
+      nombre: exercise.nombre,
+      grupo: exercise.grupo,
     };
   },
 };
@@ -655,6 +791,7 @@ export const trainingModule: ToolModule = {
     logWorkout,
     deleteWorkoutSession,
     saveRoutine,
+    createCustomExercise,
   ],
   intentKeywords: [
     "entreno",

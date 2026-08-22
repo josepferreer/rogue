@@ -36,9 +36,14 @@ export const EXERCISE_IMG_BASE =
   process.env.NEXT_PUBLIC_EXERCISE_IMG_BASE ??
   "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";
 
-/** URLs de los 2 frames (inicio/fin del movimiento) de un ejercicio o variante. */
-export function getExerciseImages(exercise: Exercise | { fuenteId: string } | string): [string, string] {
-  const fuenteId = typeof exercise === "string" ? exercise : exercise.fuenteId;
+/** URLs de los 2 frames (inicio/fin del movimiento) de un ejercicio o variante.
+ *  `null` si el ejercicio no tiene imagen (personalizados del usuario): la UI
+ *  pinta un placeholder en su lugar. */
+export function getExerciseImages(
+  exercise: Exercise | { fuenteId: string | null } | string | null,
+): [string, string] | null {
+  const fuenteId = typeof exercise === "string" ? exercise : exercise?.fuenteId;
+  if (!fuenteId) return null;
   return [
     `${EXERCISE_IMG_BASE}/${fuenteId}/0.jpg`,
     `${EXERCISE_IMG_BASE}/${fuenteId}/1.jpg`,
@@ -68,18 +73,54 @@ export function filterExercises(
   });
 }
 
-export async function getExercises(
-  filters: ExerciseFilters = {},
-): Promise<Exercise[]> {
-  return filterExercises(EXERCISES, filters);
-}
+/**
+ * Ejercicios personalizados del usuario en sesion.
+ *
+ * Viven en Supabase (exercises con owner_id, ver la migracion
+ * 20260822_ejercicios_personalizados.sql), pero el catalogo se consulta de
+ * forma SINCRONA desde el mapa de calor y el calculo de recuperacion muscular.
+ * Por eso el store los hidrata una sola vez al arrancar y los registra aqui, en
+ * vez de convertir toda la fachada en asincrona.
+ */
+let CUSTOM: Exercise[] = [];
+let ALL: Exercise[] = EXERCISES;
 
 /** Indice por id. El mapa de calor muscular resuelve un ejercicio POR SERIE
  *  (miles de llamadas al pintar el historial), y un `find` lineal sobre 200
  *  ejercicios en cada una se nota. */
-const BY_ID = new Map(EXERCISES.map((exercise) => [exercise.id, exercise]));
+let BY_ID = new Map(EXERCISES.map((exercise) => [exercise.id, exercise]));
+
+/** La llama el store de ejercicios personalizados al cargarlos o modificarlos.
+ *  Reconstruye indice y lista fusionada de una vez. */
+export function registerCustomExercises(custom: Exercise[]): void {
+  CUSTOM = custom;
+  ALL = [...EXERCISES, ...CUSTOM];
+  BY_ID = new Map(ALL.map((exercise) => [exercise.id, exercise]));
+}
+
+/** Catalogo publico + personalizados del usuario. Sincrono. */
+export function getAllExercisesSync(): Exercise[] {
+  return ALL;
+}
+
+export function getCustomExercisesSync(): Exercise[] {
+  return CUSTOM;
+}
+
+export async function getExercises(
+  filters: ExerciseFilters = {},
+): Promise<Exercise[]> {
+  return filterExercises(ALL, filters);
+}
 
 export async function getExerciseById(id: string): Promise<Exercise | null> {
+  return BY_ID.get(id) ?? null;
+}
+
+/** Igual que getExerciseById pero sincrono, para los consumidores que ya
+ *  construian su propio Map a nivel de modulo (y por tanto se perdian los
+ *  ejercicios personalizados, que se registran despues del arranque). */
+export function getExerciseByIdSync(id: string): Exercise | null {
   return BY_ID.get(id) ?? null;
 }
 
@@ -97,7 +138,7 @@ export function getExerciseMuscles(id: string): {
 }
 
 export async function getAllExerciseIds(): Promise<string[]> {
-  return EXERCISES.map((exercise) => exercise.id);
+  return ALL.map((exercise) => exercise.id);
 }
 
 /** Numero de ejercicios por categoria (para chips/contador). */

@@ -6,8 +6,9 @@ import { Dumbbell, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type ExerciseMediaProps = {
-  /** Los 2 frames del movimiento (inicio / fin). */
-  images: [string, string];
+  /** Los 2 frames del movimiento (inicio / fin). `null` en los ejercicios
+   *  personalizados, que no tienen imagen en free-exercise-db. */
+  images: [string, string] | null;
   alt: string;
   className?: string;
   /** Milisegundos entre frames. */
@@ -35,7 +36,8 @@ export function ExerciseMedia({
     return () => clearInterval(timer);
   }, [playing, failed, interval]);
 
-  if (failed) {
+  // Sin imagenes se reutiliza el mismo placeholder que ante un fallo de carga.
+  if (failed || !images) {
     return (
       <div
         className={cn(
@@ -85,7 +87,8 @@ export function ExerciseMedia({
 }
 
 type ExerciseThumbProps = {
-  src: string;
+  /** `null` en ejercicios personalizados: se pinta el icono directamente. */
+  src: string | null;
   alt: string;
   className?: string;
 };
@@ -98,11 +101,11 @@ export function ExerciseThumb({ src, alt, className }: ExerciseThumbProps) {
     <div
       className={cn(
         "relative size-16 shrink-0 overflow-hidden rounded-2xl bg-white",
-        failed && "flex items-center justify-center bg-muted",
+        (failed || !src) && "flex items-center justify-center bg-muted",
         className,
       )}
     >
-      {failed ? (
+      {failed || !src ? (
         <Dumbbell className="size-5 text-muted-foreground" />
       ) : (
         <Image

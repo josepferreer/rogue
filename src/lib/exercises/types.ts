@@ -108,8 +108,16 @@ export type Exercise = {
   /**
    * Id del ejercicio en free-exercise-db (fuente de las imagenes).
    * Cada ejercicio tiene 2 frames: {fuenteId}/0.jpg y {fuenteId}/1.jpg.
+   *
+   * `null` en los ejercicios personalizados del usuario: no existen en
+   * free-exercise-db, asi que no tienen imagen y la UI pinta un placeholder.
    */
-  fuenteId: string;
+  fuenteId: string | null;
+  /**
+   * Ejercicio creado por el usuario (owner_id no nulo en Supabase). Los del
+   * catalogo publico no llevan este campo.
+   */
+  esPersonalizado?: boolean;
   /** Variantes de agarre/modalidad integradas dentro del mismo ejercicio. */
   variantes?: ExerciseVariant[];
 };

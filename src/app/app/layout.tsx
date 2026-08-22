@@ -5,6 +5,7 @@ import { CardioProvider } from "@/lib/store/cardio-store";
 import { WorkoutSessionProvider } from "@/lib/store/workout-session-store";
 import { MealsProvider } from "@/lib/store/meals-store";
 import { FriendsProvider } from "@/lib/store/friends-store";
+import { CustomExercisesProvider } from "@/lib/store/custom-exercises-store";
 import { OnboardingGate } from "@/components/onboarding-gate";
 import { SyncErrorToast } from "@/components/sync-error-toast";
 import { ToastProvider } from "@/components/ui/toast";
@@ -23,23 +24,28 @@ export default function AppLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <RogueProvider>
-      <WorkoutSessionProvider>
-        <MealsProvider>
-          <CardioProvider>
-            <FriendsProvider>
-              <ToastProvider>
-                <HydrationGate>
-                  <AppShell>{children}</AppShell>
-                </HydrationGate>
-                <OnboardingGate />
-                <SyncErrorToast />
-                <Noa />
-                <DeployWatch />
-              </ToastProvider>
-            </FriendsProvider>
-          </CardioProvider>
-        </MealsProvider>
-      </WorkoutSessionProvider>
+      {/* Antes que WorkoutSession y el resto: registra los ejercicios propios
+          en la fachada repo.ts, de la que dependen el mapa de calor y el
+          calculo de recuperacion muscular. */}
+      <CustomExercisesProvider>
+        <WorkoutSessionProvider>
+          <MealsProvider>
+            <CardioProvider>
+              <FriendsProvider>
+                <ToastProvider>
+                  <HydrationGate>
+                    <AppShell>{children}</AppShell>
+                  </HydrationGate>
+                  <OnboardingGate />
+                  <SyncErrorToast />
+                  <Noa />
+                  <DeployWatch />
+                </ToastProvider>
+              </FriendsProvider>
+            </CardioProvider>
+          </MealsProvider>
+        </WorkoutSessionProvider>
+      </CustomExercisesProvider>
     </RogueProvider>
   );
 }
