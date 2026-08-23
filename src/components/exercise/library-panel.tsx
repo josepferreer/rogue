@@ -30,12 +30,18 @@ export function LibraryPanel() {
   useEffect(() => {
     let active = true;
     (async () => {
-      const supabase = createClient();
-      const userId = await getCurrentUserId(supabase);
-      if (!userId || !active) return;
-      const favIds = await listFavoriteIds(supabase, userId);
-      if (!active) return;
-      setFavoriteIds(new Set(favIds));
+      try {
+        const supabase = createClient();
+        const userId = await getCurrentUserId(supabase);
+        if (!userId || !active) return;
+        const favIds = await listFavoriteIds(supabase, userId);
+        if (!active) return;
+        setFavoriteIds(new Set(favIds));
+      } catch {
+        // Los favoritos son decorativos (ordenan la lista): si la red falla, la
+        // biblioteca tiene que seguir funcionando con el catalogo local en vez
+        // de tirar un unhandled rejection a consola.
+      }
     })();
     return () => {
       active = false;

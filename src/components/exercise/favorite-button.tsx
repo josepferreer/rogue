@@ -21,11 +21,16 @@ export function FavoriteButton({ exerciseId }: { exerciseId: string }) {
   useEffect(() => {
     let active = true;
     (async () => {
-      const uid = await getCurrentUserId(supabase);
-      if (!uid || !active) return;
-      setUserId(uid);
-      const fav = await isFavoriteExercise(supabase, uid, exerciseId);
-      if (active) setFavorite(fav);
+      try {
+        const uid = await getCurrentUserId(supabase);
+        if (!uid || !active) return;
+        setUserId(uid);
+        const fav = await isFavoriteExercise(supabase, uid, exerciseId);
+        if (active) setFavorite(fav);
+      } catch {
+        // Sin red el boton se queda sin userId y `toggle` no hace nada: mejor
+        // eso que un unhandled rejection al abrir cualquier ficha.
+      }
     })();
     return () => {
       active = false;

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Model, { type IExerciseData, type Muscle } from "react-body-highlighter";
 import { MUSCLE_ID_TO_SVG } from "@/lib/exercises/muscle-svg-map";
 import { getExerciseMuscles } from "@/lib/exercises/repo";
+import { useCustomExercises } from "@/lib/store/custom-exercises-store";
 import { useRogue } from "@/lib/store/rogue-store";
 import {
   computeMuscleRecovery,
@@ -113,11 +114,19 @@ export function MuscleHeatmap({ className }: { className?: string }) {
   const hydrated = useHydrated();
   const now = useNow();
 
+  // Los ejercicios propios se registran en repo.ts DESPUES del primer render.
+  // `custom` en las dependencias fuerza el recalculo en cuanto llegan; sin el,
+  // una serie hecha con un ejercicio propio no pintaba musculo hasta que
+  // `useNow` disparara el siguiente minuto.
+  const { custom } = useCustomExercises();
   const recoveryHours = preferences.recoveryHours;
   const recovery = useMemo(() => {
     if (!hydrated) return [];
     return computeMuscleRecovery(sessions, getExerciseMuscles, { now, recoveryHours });
-  }, [sessions, hydrated, now, recoveryHours]);
+    // `custom` no se usa dentro, pero SI cambia el resultado: getExerciseMuscles
+    // lee el global de repo.ts, que se rellena cuando llegan los personalizados.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessions, hydrated, now, recoveryHours, custom]);
 
   const { data, colors, porEstado } = useMemo(() => {
     const regiones = regionsByState(recovery);

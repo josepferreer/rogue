@@ -3397,7 +3397,7 @@
   },
   {
     "id": "extension-una-mano-polea",
-    "nombre": "Extension de triceps a una mano en polea",
+    "nombre": "Extension de triceps a una mano en polea alta",
     "grupo": "Triceps",
     "equipo": "polea",
     "dificultad": "principiante",
@@ -8799,7 +8799,7 @@
   },
   {
     "id": "extension-triceps-una-mano-polea",
-    "nombre": "Extension de triceps a una mano en polea",
+    "nombre": "Extension de triceps a una mano en polea baja",
     "grupo": "Triceps",
     "equipo": "polea",
     "dificultad": "intermedio",

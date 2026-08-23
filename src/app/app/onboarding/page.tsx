@@ -82,15 +82,19 @@ export default function OnboardingPage() {
   // asi no se siente como si se pidiera el mismo dato dos veces seguidas.
   useEffect(() => {
     (async () => {
-      const supabase = createClient();
-      const userId = await getCurrentUserId(supabase);
-      if (!userId) return;
-      const { data } = await supabase
-        .from("profiles")
-        .select("username")
-        .eq("user_id", userId)
-        .maybeSingle();
-      if (data?.username) setName((prev) => prev || data.username);
+      try {
+        const supabase = createClient();
+        const userId = await getCurrentUserId(supabase);
+        if (!userId) return;
+        const { data } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (data?.username) setName((prev) => prev || data.username);
+      } catch {
+        // Precarga cosmetica del nombre: si falla, el usuario lo escribe.
+      }
     })();
   }, []);
 

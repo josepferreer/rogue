@@ -62,11 +62,20 @@ export function CustomExercisesProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    (async () => {
+    const supabase = createClient();
+
+    const cargar = async () => {
       try {
-        const supabase = createClient();
         const userId = await getCurrentUserId(supabase);
-        if (!userId || !active) return;
+        if (!active) return;
+        if (!userId) {
+          // Sin sesion no puede quedar nada: `registerCustomExercises` escribe
+          // en un global de modulo que sobrevive a la navegacion, asi que al
+          // cerrar sesion hay que vaciarlo o la siguiente cuenta veria los
+          // ejercicios de la anterior.
+          apply([]);
+          return;
+        }
         const list = await listCustomExercises(supabase);
         if (!active) return;
         apply(list);
@@ -76,9 +85,23 @@ export function CustomExercisesProvider({ children }: { children: ReactNode }) {
       } finally {
         if (active) setLoading(false);
       }
-    })();
+    };
+
+    cargar();
+
+    // Recargar (o vaciar) en cada cambio de sesion, no solo al montar.
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (!active) return;
+      if (event === "SIGNED_OUT") {
+        apply([]);
+        return;
+      }
+      if (event === "SIGNED_IN" || event === "USER_UPDATED") cargar();
+    });
+
     return () => {
       active = false;
+      data.subscription.unsubscribe();
     };
   }, [apply]);
 

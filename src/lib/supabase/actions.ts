@@ -28,12 +28,12 @@ export async function signIn(
       .ilike("username", identifier)
       .maybeSingle();
     // No revelamos si el username existe o no: mismo error generico.
-    if (!data) return { error: "Usuario/email o contrasena incorrectos." };
+    if (!data) return { error: "Usuario/email o contraseña incorrectos." };
     email = data.email;
   }
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: "Usuario/email o contrasena incorrectos." };
+  if (error) return { error: "Usuario/email o contraseña incorrectos." };
 
   redirect("/app");
 }
@@ -52,7 +52,7 @@ export async function signUp(
     };
   }
   if (password.length < 8) {
-    return { error: "La contrasena debe tener al menos 8 caracteres." };
+    return { error: "La contraseña debe tener al menos 8 caracteres." };
   }
 
   const supabase = await createClient();
@@ -65,7 +65,23 @@ export async function signUp(
     if (error.message.includes("Database error")) {
       return { error: "Ese nombre de usuario ya esta en uso." };
     }
-    return { error: error.message };
+    // `error.message` viene de Supabase Auth en INGLES y acababa en pantalla
+    // ("User already registered", "Password should be at least..."). Se traducen
+    // los casos conocidos y el resto cae en un mensaje generico en español.
+    const m = error.message.toLowerCase();
+    if (m.includes("already registered") || m.includes("already been registered")) {
+      return { error: "Ese email ya tiene una cuenta." };
+    }
+    if (m.includes("password")) {
+      return { error: "La contraseña no cumple los requisitos minimos." };
+    }
+    if (m.includes("email") && m.includes("invalid")) {
+      return { error: "El email no es valido." };
+    }
+    if (m.includes("rate limit") || m.includes("too many")) {
+      return { error: "Demasiados intentos. Prueba dentro de un rato." };
+    }
+    return { error: "No se pudo crear la cuenta. Intentalo de nuevo." };
   }
 
   redirect("/app/onboarding");

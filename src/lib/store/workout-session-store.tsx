@@ -14,6 +14,8 @@ import {
   useRogue,
   type LogResult,
 } from "@/lib/store/rogue-store";
+import { getExerciseByIdSync } from "@/lib/exercises/repo";
+import type { ExerciseCategory } from "@/lib/exercises/types";
 import { convertWeight, fromKg, toKg } from "@/lib/units";
 import {
   requestNotifyPermission,
@@ -27,6 +29,7 @@ import type {
   LoggedSet,
   RoutineDay,
   WeightUnit,
+  WorkoutSession,
 } from "@/lib/workout/types";
 
 /** `weight` guarda el numero tal como se muestra/edita, en la unidad ACTIVA DE
@@ -188,13 +191,33 @@ function clearWorkoutSnapshot() {
   }
 }
 
+/** Categoria con la que se guardo ese ejercicio la ultima vez, si existe. El
+ *  historial viene del servidor, asi que su categoria es la buena. */
+function ultimaCategoriaConocida(
+  sessions: WorkoutSession[],
+  exerciseId: string,
+): ExerciseCategory | null {
+  for (let i = sessions.length - 1; i >= 0; i -= 1) {
+    for (const set of sessions[i].sets) {
+      if (set.exerciseId === exerciseId) return set.grupo;
+    }
+  }
+  return null;
+}
+
 export function WorkoutSessionProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { logSession, preferences, exerciseNotes, acknowledgeReminders, stats } =
-    useRogue();
+  const {
+    logSession,
+    preferences,
+    exerciseNotes,
+    acknowledgeReminders,
+    stats,
+    sessions,
+  } = useRogue();
 
   // Unidad con la que se escribieron los pesos que hay en `rows`. Se fija al
   // empezar y solo cambia por el efecto de reconversion de mas abajo, nunca
@@ -662,6 +685,15 @@ export function WorkoutSessionProvider({
     const topWeightByEx: Record<string, number> = {};
     for (const ex of day.exercises) {
       const info = getExerciseInfo(ex.exerciseId);
+      // `getExerciseInfo` degrada a "Core" cuando no conoce el ejercicio, y esa
+      // categoria SE PERSISTE en workout_sets. Pasa si la hidratacion de los
+      // ejercicios personalizados fallo (sin red al arrancar). Antes de tragarnos
+      // el "Core" inventado, miramos que categoria se uso la ultima vez para ese
+      // mismo ejercicio: el historial ya la trae resuelta del servidor.
+      const grupo =
+        getExerciseByIdSync(ex.exerciseId)?.grupo ??
+        ultimaCategoriaConocida(sessions, ex.exerciseId) ??
+        info.grupo;
       for (const s of rows[ex.exerciseId] ?? []) {
         if (!s.done) continue;
         const reps = Number(s.reps) || 0;
@@ -673,7 +705,7 @@ export function WorkoutSessionProvider({
           topWeightByEx[ex.exerciseId] ?? 0,
           weightKg,
         );
-        sets.push({ exerciseId: ex.exerciseId, grupo: info.grupo, weightKg, reps });
+        sets.push({ exerciseId: ex.exerciseId, grupo, weightKg, reps });
       }
     }
     // Antes esto era un `return` mudo: el boton estaba habilitado (hay series
@@ -705,7 +737,7 @@ export function WorkoutSessionProvider({
     setMinimized(false);
     setPhase("done");
     return { ok: true };
-  }, [day, rows, logSession, sessionUnit, startedAt, noteDrafts]);
+  }, [day, rows, logSession, sessionUnit, startedAt, noteDrafts, sessions]);
 
   const { doneCount, totalCount } = useMemo(() => {
     const all = Object.values(rows).flat();

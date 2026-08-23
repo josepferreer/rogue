@@ -16,19 +16,19 @@ const FEATURES = [
     variant: "lilac" as const,
     icon: Dumbbell,
     title: "Entrenamientos",
-    text: "Crea rutinas, ordena tu semana y registra series, peso y repeticiones sobre una biblioteca de ejercicios con imagenes.",
+    text: "Crea rutinas, ordena tu semana y registra series, peso y repeticiones sobre una biblioteca de ejercicios con imágenes.",
   },
   {
     variant: "blue" as const,
     icon: Barcode,
     title: "Escaner de alimentos",
-    text: "Escanea el codigo de barras y obten al instante calorias y macros. Guardalo en tu despensa y planifica la semana.",
+    text: "Escanea el código de barras y obtén al instante calorías y macros. Guárdalo en tu despensa y planifica la semana.",
   },
   {
     variant: "mint" as const,
     icon: Flame,
     title: "Nutricion y macros",
-    text: "Suma el valor nutricional de cada comida y sigue tus objetivos diarios de calorias y proteina.",
+    text: "Suma el valor nutricional de cada comida y sigue tus objetivos diarios de calorías y proteina.",
   },
   {
     variant: "neutral" as const,
@@ -47,12 +47,12 @@ const STEPS = [
   {
     n: "02",
     title: "Entrena y registra",
-    text: "Monta tu rutina, apunta cada serie y anota tus comidas escaneando el codigo de barras.",
+    text: "Monta tu rutina, apunta cada serie y anota tus comidas escaneando el código de barras.",
   },
   {
     n: "03",
     title: "Sigue tu progreso",
-    text: "Revisa tu volumen, tus macros y tus rutas. La app instalada te acompana cada dia.",
+    text: "Revisa tu volumen, tus macros y tus rutas. La app instalada te acompaña cada día.",
   },
 ];
 
@@ -63,11 +63,11 @@ const FAQ = [
   },
   {
     q: "¿De donde salen los datos nutricionales?",
-    a: "Al escanear el codigo de barras buscamos el producto en Open Food Facts y traemos sus calorias y macros para que solo tengas que confirmar la cantidad.",
+    a: "Al escanear el código de barras buscamos el producto en Open Food Facts y traemos sus calorías y macros para que solo tengas que confirmar la cantidad.",
   },
   {
     q: "¿Como registro una ruta de cardio?",
-    a: "Inicia una actividad y la app registra tu recorrido con GPS: distancia, tiempo y ritmo, con el mapa de cada sesion guardado.",
+    a: "Inicia una actividad y la app registra tu recorrido con GPS: distancia, tiempo y ritmo, con el mapa de cada sesión guardado.",
   },
   {
     q: "¿Es gratis?",
@@ -226,14 +226,14 @@ const DEEP_DIVES = [
     eyebrow: "Entreno",
     variant: "lilac" as const,
     title: "Tu rutina y tu biblioteca de ejercicios",
-    text: "Organiza tu semana por dias, arrastra para reordenar y registra cada serie con su peso y repeticiones. Cada ejercicio incluye imagenes del movimiento y su grupo muscular.",
+    text: "Organiza tu semana por días, arrastra para reordenar y registra cada serie con su peso y repeticiones. Cada ejercicio incluye imágenes del movimiento y su grupo muscular.",
     Panel: WorkoutPanel,
   },
   {
     eyebrow: "Comidas",
     variant: "blue" as const,
     title: "Escanea, suma macros y no te compliques",
-    text: "Apunta lo que comes escaneando el codigo de barras: calorias y macros al instante. Guarda tus alimentos y platos en la despensa y planifica la semana con objetivos diarios.",
+    text: "Apunta lo que comes escaneando el código de barras: calorías y macros al instante. Guarda tus alimentos y platos en la despensa y planifica la semana con objetivos diarios.",
     Panel: MacrosPanel,
   },
   {
@@ -267,7 +267,7 @@ export default function LandingPage() {
           </span>
           <nav className="flex items-center gap-2">
             <Link href="/login" className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-              Iniciar sesion
+              Iniciar sesión
             </Link>
             <Link href="/login" className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-transform active:scale-[0.98]">
               Crear cuenta
@@ -286,7 +286,7 @@ export default function LandingPage() {
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
             Controla tus rutinas y tu biblioteca de ejercicios, escanea alimentos
-            por codigo de barras con sus macros y registra tus rutas de cardio.
+            por código de barras con sus macros y registra tus rutas de cardio.
             Todo en una app que instalas en el movil.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -396,7 +396,7 @@ export default function LandingPage() {
             Instala Rogue y empieza hoy
           </h2>
           <p className="mx-auto mt-3 max-w-md text-base leading-relaxed text-muted-foreground">
-            Crea tu cuenta gratis y llevalo todo contigo: entrenos, comida y cardio
+            Crea tu cuenta gratis y llévalo todo contigo: entrenos, comida y cardio
             en una sola app.
           </p>
           <div className="mx-auto mt-7 flex max-w-xs flex-col gap-3">

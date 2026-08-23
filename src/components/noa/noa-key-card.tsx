@@ -72,8 +72,8 @@ export function NoaKeyCard() {
       <div className="flex flex-col gap-1">
         <p className="text-sm font-medium">Clave de Gemini</p>
         <p className="text-xs text-muted-foreground">
-          NOA usa tu propia clave de Gemini. Es gratuita, se guarda cifrada y solo
-          tú la ves. Consíguela en Google AI Studio.
+          NOA usa tu propia clave de Gemini. Es gratuita y solo se usa desde tu
+          cuenta. Consíguela en Google AI Studio.
         </p>
       </div>
 

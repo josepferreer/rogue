@@ -1,6 +1,6 @@
 import "server-only";
 import type { NoaToolContext, ToolDef, ToolModule } from "@/lib/noa/types";
-import { getExerciseMuscles } from "@/lib/exercises/repo";
+import { buildMuscleResolver } from "@/lib/exercises/custom-server";
 import { MUSCLE_LABELS, type MuscleId } from "@/lib/exercises/types";
 import {
   computeMuscleRecovery,
@@ -47,12 +47,16 @@ const getMuscleRecovery: ToolDef = {
   kind: "read",
   sensitivity: "safe",
   async handler(args, ctx: NoaToolContext) {
-    const [sessions, recoveryHours] = await Promise.all([
+    // El resolvedor cubre catalogo publico + ejercicios propios del usuario: en
+    // servidor el global de repo.ts no tiene los personalizados, y sin esto una
+    // serie hecha con uno de ellos no contaba para ningun musculo.
+    const [sessions, recoveryHours, resolveMuscles] = await Promise.all([
       readSessions(ctx),
       readRecoveryHours(ctx),
+      buildMuscleResolver(ctx.supabase, ctx.userId),
     ]);
 
-    const recovery = computeMuscleRecovery(sessions, getExerciseMuscles, {
+    const recovery = computeMuscleRecovery(sessions, resolveMuscles, {
       now: ctx.now.getTime(),
       recoveryHours,
     });

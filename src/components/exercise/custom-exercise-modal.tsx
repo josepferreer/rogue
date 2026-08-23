@@ -52,10 +52,27 @@ export function CustomExerciseModal({
 
   if (!open) return null;
 
+  // Los mismos topes que aplica validateCustomExercise. Sin esto el formulario
+  // dejaba marcar los 17 musculos y la validacion recortaba a 4 en silencio: el
+  // usuario guardaba y perdia parte de lo que habia elegido sin enterarse.
+  const MAX_PRIMARIOS = 4;
+  const MAX_SECUNDARIOS = 6;
+
   const toggleMuscle = (key: "musculosPrimarios" | "musculosSecundarios", m: MuscleId) => {
+    setError(null);
     setForm((f) => {
       const list = f[key] ?? [];
-      const next = list.includes(m) ? list.filter((x) => x !== m) : [...list, m];
+      const quitando = list.includes(m);
+      const tope = key === "musculosPrimarios" ? MAX_PRIMARIOS : MAX_SECUNDARIOS;
+      if (!quitando && list.length >= tope) {
+        setError(
+          key === "musculosPrimarios"
+            ? `Maximo ${MAX_PRIMARIOS} musculos principales.`
+            : `Maximo ${MAX_SECUNDARIOS} musculos secundarios.`,
+        );
+        return f;
+      }
+      const next = quitando ? list.filter((x) => x !== m) : [...list, m];
       // Un musculo no puede ser principal y secundario a la vez.
       const other = key === "musculosPrimarios" ? "musculosSecundarios" : "musculosPrimarios";
       return {
@@ -159,13 +176,13 @@ export function CustomExerciseModal({
         </div>
 
         <MusclePicker
-          label="Musculos principales"
+          label={`Musculos principales (${form.musculosPrimarios.length}/${MAX_PRIMARIOS})`}
           hint="Obligatorio. Alimentan el mapa de calor y la recuperacion muscular."
           selected={form.musculosPrimarios as MuscleId[]}
           onToggle={(m) => toggleMuscle("musculosPrimarios", m)}
         />
         <MusclePicker
-          label="Musculos secundarios"
+          label={`Musculos secundarios (${(form.musculosSecundarios ?? []).length}/${MAX_SECUNDARIOS})`}
           selected={(form.musculosSecundarios ?? []) as MuscleId[]}
           onToggle={(m) => toggleMuscle("musculosSecundarios", m)}
         />

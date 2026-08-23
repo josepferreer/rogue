@@ -126,7 +126,7 @@ export default function LoginPage() {
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="password" className="text-sm text-muted-foreground">
-            Contrasena
+            Contraseña
           </label>
           <input
             id="password"
