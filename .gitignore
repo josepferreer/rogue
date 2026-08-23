@@ -35,6 +35,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# datos generados por scripts (se regeneran con fetch-exercisedb.mjs)
+/scripts/data/
+
+# IDE
+.idea/
+
 # AI assistant files
 .claude/
 CLAUDE.md
