@@ -18,6 +18,7 @@ import {
 } from "@/lib/exercises/types";
 import { cn } from "@/lib/utils";
 import { useAppShellPortal } from "@/lib/use-app-shell-portal";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 import { useEscapeToClose } from "@/lib/use-escape-to-close";
 import { usePresence } from "@/lib/use-presence";
 
@@ -179,6 +180,7 @@ export function ExerciseSelectorModal({
   const portalTarget = useAppShellPortal();
   const { mounted, state } = usePresence(open);
   useEscapeToClose(open, onClose);
+  const panelRef = useFocusTrap<HTMLDivElement>(open);
 
   if (!mounted) return null;
 
@@ -191,6 +193,8 @@ export function ExerciseSelectorModal({
       {/* Mismo margen lateral (px-5) que las tarjetas de contenido. */}
       <div className="sheet-anim w-full md:max-w-lg" data-state={state}>
         <div
+          ref={panelRef}
+          tabIndex={-1}
           className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:max-h-[85dvh] md:rounded-3xl"
           onClick={(e) => e.stopPropagation()}
         >

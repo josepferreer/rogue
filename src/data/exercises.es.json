@@ -4989,7 +4989,7 @@
     "consejos": [
       "El torso debe mantenerse horizontal durante todo el tirón."
     ],
-    "fuenteId": "Pendlay_Row"
+    "fuenteId": null
   },
   {
     "id": "dominadas-con-lastre",
@@ -5036,7 +5036,7 @@
     "consejos": [
       "Al pasar por detrás, la polea mantiene tensión constante en el deltoides lateral."
     ],
-    "fuenteId": "Cable_Rear_Drive"
+    "fuenteId": null
   },
   {
     "id": "curl-concentrado-inclinado",
@@ -5102,7 +5102,7 @@
     "consejos": [
       "Mantén la columna en posición neutra en todo momento."
     ],
-    "fuenteId": "Dumbbell_Romanian_Deadlift"
+    "fuenteId": null
   },
   {
     "id": "paseo-del-granjero",

@@ -10,6 +10,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
@@ -87,6 +88,7 @@ export default function AmigosPage({
 }) {
   const {
     hydrated,
+    loadError,
     friends,
     incoming,
     outgoing,
@@ -212,19 +214,28 @@ export default function AmigosPage({
           {/* ── Amigos ────────────────────────────────────────────────── */}
           {tab === "amigos" && (
             <div className="flex flex-col gap-3">
-              {friends.length === 0 ? (
+              {loadError ? (
+                // Un fallo de carga NO es una lista vacia: decirle a alguien
+                // que no tiene amigos cuando lo que fallo fue la consulta es
+                // peor que no decir nada.
+                <div className="flex flex-col items-center gap-2 rounded-3xl border border-dashed border-border p-8 text-center">
+                  <Users className="size-6 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    No se pudieron cargar tus amigos.
+                  </p>
+                  <Button size="sm" onClick={() => location.reload()}>
+                    Reintentar
+                  </Button>
+                </div>
+              ) : friends.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 rounded-3xl border border-dashed border-border p-8 text-center">
                   <Users className="size-6 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
                     Aún no tienes amigos.
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => setTab("buscar")}
-                    className="mt-1 rounded-full bg-foreground px-4 py-2 text-xs font-semibold text-background"
-                  >
+                  <Button size="sm" onClick={() => setTab("buscar")}>
                     Buscar personas
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 friends.map((f) => (

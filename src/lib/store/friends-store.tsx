@@ -81,6 +81,9 @@ export type FriendProfileResult = FriendProfile | FriendProfileError;
 
 export type FriendsContextValue = {
   hydrated: boolean;
+  /** La carga de amistades fallo: la pantalla debe decirlo en vez de pintar
+   *  "aun no tienes amigos", que es mentira. */
+  loadError: boolean;
   /** Amistades aceptadas. */
   friends: Friendship[];
   /** Solicitudes que me han enviado y estan pendientes de respuesta. */
@@ -130,17 +133,23 @@ export function FriendsProvider({ children }: { children: React.ReactNode }) {
 
   const [items, setItems] = useState<Friendship[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const userIdRef = useRef<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
 
+  /** Devuelve si la carga fue bien. El llamante lo necesita: si falla, NO debe
+   *  darse el usuario por suscrito, o no se reintenta nunca mas. */
   const refresh = useCallback(async () => {
     const list = await supabase.rpc("my_friendships");
 
     if (list.error) {
       console.error("No se pudieron cargar las amistades:", list.error);
-      return;
+      setLoadError(true);
+      return false;
     }
+    setLoadError(false);
     setItems(((list.data ?? []) as RpcRow[]).map(toFriendship));
+    return true;
   }, [supabase]);
 
   // Carga inicial + suscripcion Realtime. Se re-comprueba en cada navegacion
@@ -172,10 +181,15 @@ export function FriendsProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      userIdRef.current = user.id;
-      await refresh();
+      // El sello va DESPUES de una carga con exito. Antes se marcaba primero, y
+      // si la RPC fallaba el usuario quedaba "ya suscrito": en cada navegacion
+      // se cortaba arriba y la pantalla decia "Aun no tienes amigos" el resto
+      // de la sesion, sin reintentar ni avisar.
+      const ok = await refresh();
       if (!active) return;
       setHydrated(true);
+      if (!ok) return;
+      userIdRef.current = user.id;
 
       if (channelRef.current) supabase.removeChannel(channelRef.current);
 
@@ -328,6 +342,7 @@ export function FriendsProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<FriendsContextValue>(
     () => ({
       hydrated,
+      loadError,
       friends,
       incoming,
       outgoing,
@@ -340,6 +355,7 @@ export function FriendsProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       hydrated,
+      loadError,
       friends,
       incoming,
       outgoing,

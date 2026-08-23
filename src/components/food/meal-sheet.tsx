@@ -6,6 +6,7 @@ import { X, Plus, Trash2, Search, Pencil, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppShellPortal } from "@/lib/use-app-shell-portal";
 import { usePresence } from "@/lib/use-presence";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 import { useEscapeToClose } from "@/lib/use-escape-to-close";
 import { Button } from "@/components/ui/button";
 import { usePantry, platoMacros, isReadyPlato } from "@/lib/store/pantry-store";
@@ -38,6 +39,7 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
   const portalTarget = useAppShellPortal();
   const { mounted, state } = usePresence(open);
   useEscapeToClose(open, onClose);
+  const panelRef = useFocusTrap<HTMLDivElement>(open);
   const { notify } = useToast();
   const [view, setView] = useState<"list" | "add">("list");
   const [search, setSearch] = useState("");
@@ -169,6 +171,8 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
     >
       <div className="sheet-anim w-full md:max-w-lg" data-state={state}>
         <div
+          ref={panelRef}
+          tabIndex={-1}
           className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:max-h-[85dvh] md:rounded-3xl"
           onClick={e => e.stopPropagation()}
         >
@@ -510,7 +514,7 @@ function EntryRow({
           >
             <Check className="size-4" />
           </button>
-          <button onClick={handleCancel} className="flex size-8 items-center justify-center rounded-full bg-surface hover:bg-muted transition-colors">
+          <button onClick={handleCancel} aria-label="Cancelar edicion" className="flex size-8 items-center justify-center rounded-full bg-surface hover:bg-muted transition-colors">
             <X className="size-4" />
           </button>
         </div>
@@ -534,7 +538,7 @@ function EntryRow({
             ))}
           </div>
           <div className="flex shrink-0 items-center gap-3 p-4 pt-0">
-            <button type="button" onClick={handleCancel} className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface hover:bg-muted transition-colors">
+            <button type="button" onClick={handleCancel} aria-label="Cancelar" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface hover:bg-muted transition-colors">
               <X className="size-4 text-muted-foreground" />
             </button>
             <Button onClick={handleSavePlato} disabled={draftTotal <= 0} className="flex-1">

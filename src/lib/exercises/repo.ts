@@ -68,7 +68,17 @@ export function filterExercises(
     if (filters.equipo && exercise.equipo !== filters.equipo) return false;
     if (filters.dificultad && exercise.dificultad !== filters.dificultad)
       return false;
-    if (query && !normalize(exercise.nombre).includes(query)) return false;
+    if (query) {
+      // Tambien por el nombre y el agarre de las variantes: un ejercicio puede
+      // integrar "agarre en V" o "supinado" como variante, y buscar eso no
+      // devolvia nada aunque la ficha si lo tuviera.
+      const enVariantes = (exercise.variantes ?? []).some((v) =>
+        normalize(`${v.nombre} ${v.agarre ?? ""}`).includes(query),
+      );
+      if (!normalize(exercise.nombre).includes(query) && !enVariantes) {
+        return false;
+      }
+    }
     return true;
   });
 }

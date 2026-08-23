@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/exercise/exercise-filter-bar";
 import { useAppShellPortal } from "@/lib/use-app-shell-portal";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 import { useEscapeToClose } from "@/lib/use-escape-to-close";
 import { usePresence } from "@/lib/use-presence";
 import {
@@ -61,6 +62,7 @@ export function CustomExerciseModal({
   const portalTarget = useAppShellPortal();
   const { mounted, state } = usePresence(open);
   useEscapeToClose(open, onClose);
+  const panelRef = useFocusTrap<HTMLDivElement>(open);
 
   // Los mismos topes que aplica validateCustomExercise. Sin esto el formulario
   // dejaba marcar los 17 musculos y la validacion recortaba a 4 en silencio: el
@@ -122,6 +124,8 @@ export function CustomExerciseModal({
     >
       <div className="sheet-anim w-full md:max-w-lg" data-state={state}>
         <div
+          ref={panelRef}
+          tabIndex={-1}
           className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:max-h-[85dvh] md:rounded-3xl overflow-y-auto p-5"
           onClick={(e) => e.stopPropagation()}
         >

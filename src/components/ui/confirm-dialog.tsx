@@ -2,6 +2,7 @@
 
 import { createPortal } from "react-dom";
 import { useAppShellPortal } from "@/lib/use-app-shell-portal";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 import { useEscapeToClose } from "@/lib/use-escape-to-close";
 import { usePresence } from "@/lib/use-presence";
 
@@ -28,6 +29,8 @@ export function ConfirmDialog({
   const portalTarget = useAppShellPortal();
   const { mounted, state } = usePresence(open);
   useEscapeToClose(open, onCancel);
+  // El dialogo declara aria-modal: el foco tiene que quedarse dentro de verdad.
+  const panelRef = useFocusTrap<HTMLDivElement>(open);
 
   if (!mounted) return null;
 
@@ -38,6 +41,8 @@ export function ConfirmDialog({
       onClick={onCancel}
     >
       <div
+        ref={panelRef}
+        tabIndex={-1}
         role="alertdialog"
         aria-modal="true"
         aria-label={title}

@@ -6,6 +6,7 @@ import { X, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppShellPortal } from "@/lib/use-app-shell-portal";
 import { usePresence } from "@/lib/use-presence";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 import { useEscapeToClose } from "@/lib/use-escape-to-close";
 import { useMeals, type MealType, MEAL_TYPES, dayKey, splitMacros } from "@/lib/store/meals-store";
 import { MealSheet } from "@/components/food/meal-sheet";
@@ -41,6 +42,7 @@ export function WeekPlannerModal({ open, onClose, initialDate }: Props) {
   const portalTarget = useAppShellPortal();
   const { mounted, state } = usePresence(open);
   useEscapeToClose(open, onClose);
+  const panelRef = useFocusTrap<HTMLDivElement>(open);
   const [monday, setMonday] = useState<Date>(() => getMondayOf(initialDate));
   const [sheetTarget, setSheetTarget] = useState<{ date: string; mealType: MealType; mealLabel: string } | null>(null);
 
@@ -73,7 +75,9 @@ export function WeekPlannerModal({ open, onClose, initialDate }: Props) {
       >
         <div className="sheet-anim w-full md:max-w-2xl" data-state={state}>
           <div
-            className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:max-h-[85dvh] md:rounded-3xl"
+            ref={panelRef}
+          tabIndex={-1}
+          className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:max-h-[85dvh] md:rounded-3xl"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
@@ -101,7 +105,7 @@ export function WeekPlannerModal({ open, onClose, initialDate }: Props) {
 
             {/* Week nav */}
             <div className="flex items-center gap-2 px-5 pb-3">
-              <button onClick={prevWeek} className="flex size-10 items-center justify-center rounded-full bg-surface hover:bg-muted transition-colors">
+              <button onClick={prevWeek} aria-label="Semana anterior" className="flex size-10 items-center justify-center rounded-full bg-surface hover:bg-muted transition-colors">
                 <ChevronLeft className="size-4" />
               </button>
               <div className="flex flex-1 gap-1">
@@ -112,7 +116,7 @@ export function WeekPlannerModal({ open, onClose, initialDate }: Props) {
                   </div>
                 ))}
               </div>
-              <button onClick={nextWeek} className="flex size-10 items-center justify-center rounded-full bg-surface hover:bg-muted transition-colors">
+              <button onClick={nextWeek} aria-label="Semana siguiente" className="flex size-10 items-center justify-center rounded-full bg-surface hover:bg-muted transition-colors">
                 <ChevronRight className="size-4" />
               </button>
             </div>

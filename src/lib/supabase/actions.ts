@@ -31,6 +31,17 @@ export async function signIn(
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(identifier)) {
       return { error: "Usuario/email o contraseña incorrectos." };
     }
+    // `createAdminClient` lanza si falta SUPABASE_SECRET_KEY, y esa variable
+    // esta documentada como OPCIONAL en la pantalla de setup. Sin este guard,
+    // entrar con nombre de usuario en un despliegue sin la clave reventaba la
+    // Server Action y mandaba al error boundary, mientras entrar con email
+    // seguia funcionando: parecia un fallo aleatorio.
+    if (!process.env.SUPABASE_SECRET_KEY) {
+      return {
+        error:
+          "El acceso por nombre de usuario no esta disponible. Entra con tu email.",
+      };
+    }
     const admin = createAdminClient();
     const { data } = await admin
       .from("profiles")

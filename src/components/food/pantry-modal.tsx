@@ -6,6 +6,7 @@ import { Search, X, Heart, Pencil, Trash2, Plus, Check, Barcode } from "lucide-r
 import { cn } from "@/lib/utils";
 import { useAppShellPortal } from "@/lib/use-app-shell-portal";
 import { usePresence } from "@/lib/use-presence";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 import { useEscapeToClose } from "@/lib/use-escape-to-close";
 import { Button } from "@/components/ui/button";
 import { usePantry, platoMacros, Alimento, Plato, PlatoFood, isReadyPlato } from "@/lib/store/pantry-store";
@@ -368,6 +369,7 @@ export function PantryModal({ open, onClose }: Props) {
   const portalTarget = useAppShellPortal();
   const { mounted, state } = usePresence(open);
   useEscapeToClose(open, onClose);
+  const panelRef = useFocusTrap<HTMLDivElement>(open);
 
   // Sort: favorites first, then by name
   const filteredAlimentos = useMemo(() => {
@@ -398,6 +400,8 @@ export function PantryModal({ open, onClose }: Props) {
     >
       <div className="sheet-anim w-full md:max-w-lg" data-state={state}>
         <div
+          ref={panelRef}
+          tabIndex={-1}
           className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:max-h-[85dvh] md:rounded-3xl"
           onClick={(e) => e.stopPropagation()}
         >
