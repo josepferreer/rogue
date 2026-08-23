@@ -32,7 +32,7 @@ export function CardioMiniPlayer() {
       {/* Stats */}
       <div className="flex flex-1 items-center justify-between">
         <div className="flex flex-col items-start">
-          <span className="text-2xs font-mono tracking-wider text-muted-foreground">
+          <span className="font-mono text-2xs font-medium tracking-[0.15em] text-muted-foreground">
             {isPaused ? "PAUSADO" : "GRABANDO RUTA"}
           </span>
           <span className="font-mono text-sm font-semibold">

@@ -569,7 +569,7 @@ export default function MapView({
         topBar ? (
           <div className="absolute inset-x-0 top-0 z-[400] flex items-start justify-between p-5 pt-[calc(env(safe-area-inset-top)+1rem)] bg-gradient-to-b from-background/80 via-background/40 to-transparent pointer-events-none">
             <div className="flex items-center gap-2 pointer-events-auto">
-              <span className="rounded-full bg-surface/80 px-4 py-1.5 font-mono text-xs font-semibold tracking-widest backdrop-blur-md shadow-sm border border-border/40">
+              <span className="rounded-full bg-surface/80 px-4 py-1.5 font-mono text-xs tracking-[0.2em] backdrop-blur-md shadow-sm border border-border/40">
                 {topBar.title}
               </span>
               <button

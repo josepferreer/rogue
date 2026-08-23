@@ -35,7 +35,7 @@ export function WorkoutMiniPlayer() {
 
       <div className="flex flex-1 items-center justify-between">
         <div className="flex flex-col items-start">
-          <span className="flex items-center gap-1 font-mono text-2xs tracking-wider text-muted-foreground">
+          <span className="flex items-center gap-1 font-mono text-2xs font-medium tracking-[0.15em] text-muted-foreground">
             <Clock className="size-3" />
             <span className="tabular-nums">{formatDuration(elapsedSec)}</span>
           </span>

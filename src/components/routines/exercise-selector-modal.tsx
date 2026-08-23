@@ -63,7 +63,7 @@ function ExerciseItem({
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
             {ex.grupo} · {EQUIPMENT_LABELS[ex.equipo]}
           </p>
-          <p className="mt-1 font-mono text-2xs tracking-wide text-muted-foreground">
+          <p className="mt-1 font-mono text-2xs font-medium tracking-[0.15em] text-muted-foreground">
             {DIFFICULTY_LABELS[ex.dificultad].toUpperCase()}
           </p>
         </button>

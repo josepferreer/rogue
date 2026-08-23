@@ -179,7 +179,7 @@ export default function CardioPage() {
             onClick={() => setEditingGoal((v) => !v)}
             className="flex flex-col text-left"
           >
-            <span className="font-mono text-2xs font-medium tracking-wider text-muted-foreground">
+            <span className="font-mono text-2xs font-medium tracking-[0.15em] text-muted-foreground">
               OBJETIVO
             </span>
             <span className="flex items-center gap-1.5 text-sm font-medium">

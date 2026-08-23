@@ -200,7 +200,7 @@ export default function ActivityDetailsPage({
           <p className="mt-1 font-mono text-3xl font-semibold">
             {formatTime(session.durationSec)}
           </p>
-          <p className="text-2xs font-medium tracking-widest text-muted-foreground">
+          <p className="font-mono text-2xs font-medium tracking-[0.15em] text-muted-foreground">
             TIEMPO
           </p>
         </div>
@@ -210,21 +210,21 @@ export default function ActivityDetailsPage({
             {session.distanceKm.toFixed(2)}
             <span className="text-lg">km</span>
           </p>
-          <p className="text-2xs font-medium tracking-widest text-muted-foreground">
+          <p className="font-mono text-2xs font-medium tracking-[0.15em] text-muted-foreground">
             DISTANCIA
           </p>
         </div>
         <div className="flex flex-col items-center justify-center gap-1 rounded-3xl border border-border bg-surface p-5">
           <Activity className="size-5 text-muted-foreground" />
           <p className="mt-1 font-mono text-3xl font-semibold">{paceDisplay}</p>
-          <p className="text-2xs font-medium tracking-widest text-muted-foreground">
+          <p className="font-mono text-2xs font-medium tracking-[0.15em] text-muted-foreground">
             RITMO MEDIO
           </p>
         </div>
         <div className="flex flex-col items-center justify-center gap-1 rounded-3xl border border-border bg-surface p-5">
           <Flame className="size-5 text-muted-foreground" />
           <p className="mt-1 font-mono text-3xl font-semibold">{calories}</p>
-          <p className="text-2xs font-medium tracking-widest text-muted-foreground">
+          <p className="font-mono text-2xs font-medium tracking-[0.15em] text-muted-foreground">
             KCAL
           </p>
         </div>

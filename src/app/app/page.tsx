@@ -803,7 +803,7 @@ export default function Home() {
               variant={variant}
               className="flex flex-col gap-2"
             >
-              <p className="text-2xs font-medium tracking-wide opacity-70">
+              <p className="font-mono text-2xs font-medium tracking-[0.15em] opacity-70">
                 {ex.grupo.toUpperCase()}
               </p>
               <p className="text-sm font-semibold leading-snug">{ex.nombre}</p>

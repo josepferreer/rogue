@@ -252,7 +252,7 @@ export function BarcodeScanner({
         <div className="flex flex-col items-center">
           <p className="text-sm font-medium text-white">Escanear código</p>
           {!isNative && !("BarcodeDetector" in window) && supported && !manual && (
-            <span className="text-2xs text-white/50 uppercase tracking-widest">Modo PWA</span>
+            <span className="font-mono text-2xs font-medium uppercase tracking-[0.15em] text-white/50">Modo PWA</span>
           )}
         </div>
         <button

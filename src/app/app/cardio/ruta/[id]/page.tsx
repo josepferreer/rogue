@@ -108,7 +108,7 @@ export default function SavedRouteDetailPage({
             {route.distanceKm.toFixed(2)}
             <span className="text-lg">km</span>
           </p>
-          <p className="text-2xs font-medium tracking-widest text-muted-foreground">
+          <p className="font-mono text-2xs font-medium tracking-[0.15em] text-muted-foreground">
             DISTANCIA
           </p>
         </div>
@@ -118,7 +118,7 @@ export default function SavedRouteDetailPage({
             {route.elevationGainM != null ? route.elevationGainM : "--"}
             <span className="text-lg">m</span>
           </p>
-          <p className="text-2xs font-medium tracking-widest text-muted-foreground">
+          <p className="font-mono text-2xs font-medium tracking-[0.15em] text-muted-foreground">
             DESNIVEL +
           </p>
         </div>

@@ -84,7 +84,7 @@ function BodyView({
           style={{ width: "100%" }}
         />
       </div>
-      <p className="font-mono text-2xs tracking-[0.2em] text-muted-foreground">
+      <p className="font-mono text-2xs font-medium tracking-[0.15em] text-muted-foreground">
         {label}
       </p>
     </div>
@@ -154,7 +154,7 @@ export function MuscleHeatmap({ className }: { className?: string }) {
   return (
     <div className={cn("flex flex-col gap-3", className)}>
       <div className="flex items-center justify-between">
-        <h2 className="text-xs font-semibold tracking-wide text-muted-foreground">
+        <h2 className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
           RECUPERACIÓN MUSCULAR
         </h2>
         {!nunca && (

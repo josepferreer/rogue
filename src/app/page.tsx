@@ -89,7 +89,7 @@ function MacrosPanel({ onSurface = false }: { onSurface?: boolean }) {
   return (
     <div className={`w-full max-w-xs rounded-3xl border border-border p-5 ${t.card}`}>
       <div className="mb-4 flex items-center justify-between">
-        <span className="font-mono text-xs tracking-wider text-muted-foreground">
+        <span className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
           HOY · COMIDAS
         </span>
         <Barcode className="size-4" />
@@ -159,7 +159,7 @@ function WorkoutPanel({ onSurface = false }: { onSurface?: boolean }) {
   return (
     <div className={`w-full max-w-xs rounded-3xl border border-border p-5 ${t.card}`}>
       <div className="mb-4 flex items-center justify-between">
-        <span className="font-mono text-xs tracking-wider text-muted-foreground">
+        <span className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
           HOY · EMPUJE
         </span>
         <Dumbbell className="size-4" />
@@ -189,7 +189,7 @@ function CardioPanel({ onSurface = false }: { onSurface?: boolean }) {
   const t = panelTones(onSurface);
   return (
     <div className={`w-full max-w-xs rounded-3xl border border-border p-5 ${t.card}`}>
-      <span className="font-mono text-xs tracking-wider text-muted-foreground">
+      <span className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
         CARDIO · CARRERA
       </span>
       <div className={`mt-3 h-40 overflow-hidden rounded-2xl ${t.row}`}>
@@ -212,7 +212,7 @@ function CardioPanel({ onSurface = false }: { onSurface?: boolean }) {
           { l: "RITMO", v: "5:14" },
         ].map((s) => (
           <div key={s.l}>
-            <p className="font-mono text-2xs tracking-wider text-muted-foreground">{s.l}</p>
+            <p className="font-mono text-2xs font-medium tracking-[0.15em] text-muted-foreground">{s.l}</p>
             <p className="font-mono text-lg font-medium">{s.v}</p>
           </div>
         ))}
@@ -327,7 +327,7 @@ export default function LandingPage() {
             <Container>
               <div className="flex flex-col items-center gap-8 py-14 md:flex-row md:gap-14 md:py-20">
                 <div className={`flex-1 text-left ${i % 2 === 1 ? "md:order-2" : ""}`}>
-                  <span className={`inline-block rounded-full px-3 py-1 font-mono text-xs tracking-wider ${EYEBROW_PILL[d.variant]}`}>
+                  <span className={`inline-block rounded-full px-3 py-1 font-mono text-xs tracking-[0.2em] ${EYEBROW_PILL[d.variant]}`}>
                     {d.eyebrow}
                   </span>
                   <h2 className="mt-4 text-2xl font-semibold tracking-tight md:text-3xl">
