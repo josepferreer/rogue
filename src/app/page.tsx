@@ -123,7 +123,7 @@ function MacrosPanel({ onSurface = false }: { onSurface?: boolean }) {
             { l: "Grasas", v: "48g", w: "44%" },
           ].map((m) => (
             <div key={m.l}>
-              <div className="mb-1 flex justify-between text-[11px] text-muted-foreground">
+              <div className="mb-1 flex justify-between text-xs text-muted-foreground">
                 <span>{m.l}</span>
                 <span>{m.v}</span>
               </div>
@@ -140,7 +140,7 @@ function MacrosPanel({ onSurface = false }: { onSurface?: boolean }) {
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-medium">Yogur skyr natural</p>
-          <p className="text-[11px] text-muted-foreground">escaneado · 96 kcal · 17g prot</p>
+          <p className="text-xs text-muted-foreground">escaneado · 96 kcal · 17g prot</p>
         </div>
         <Plus className="size-4 text-muted-foreground" />
       </div>
@@ -212,7 +212,7 @@ function CardioPanel({ onSurface = false }: { onSurface?: boolean }) {
           { l: "RITMO", v: "5:14" },
         ].map((s) => (
           <div key={s.l}>
-            <p className="font-mono text-[10px] tracking-wider text-muted-foreground">{s.l}</p>
+            <p className="font-mono text-2xs tracking-wider text-muted-foreground">{s.l}</p>
             <p className="font-mono text-lg font-medium">{s.v}</p>
           </div>
         ))}
@@ -327,7 +327,7 @@ export default function LandingPage() {
             <Container>
               <div className="flex flex-col items-center gap-8 py-14 md:flex-row md:gap-14 md:py-20">
                 <div className={`flex-1 text-left ${i % 2 === 1 ? "md:order-2" : ""}`}>
-                  <span className={`inline-block rounded-full px-3 py-1 font-mono text-[11px] tracking-wider ${EYEBROW_PILL[d.variant]}`}>
+                  <span className={`inline-block rounded-full px-3 py-1 font-mono text-xs tracking-wider ${EYEBROW_PILL[d.variant]}`}>
                     {d.eyebrow}
                   </span>
                   <h2 className="mt-4 text-2xl font-semibold tracking-tight md:text-3xl">

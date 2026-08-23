@@ -69,7 +69,7 @@ function BodyView({
           style={{ width: "100%" }}
         />
       </div>
-      <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground">
+      <p className="font-mono text-2xs tracking-[0.2em] text-muted-foreground">
         {label}
       </p>
     </div>

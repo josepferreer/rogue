@@ -86,7 +86,7 @@ function SortableExercise({
       {...listeners}
       aria-label="Arrastra para reordenar el ejercicio"
       title="Arrastra para reordenar"
-      className="flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing"
+      className="flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing"
     >
       <GripVertical className="size-4" />
     </span>
@@ -309,7 +309,7 @@ export function WorkoutSessionModal() {
         </button>
         <div className="text-center">
           <p className="text-sm font-semibold">{day.label}</p>
-          <p className="flex items-center justify-center gap-1.5 font-mono text-[11px] text-muted-foreground">
+          <p className="flex items-center justify-center gap-1.5 font-mono text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1 tabular-nums">
               <Clock className="size-3" />
               {formatDuration(elapsedSec)}
@@ -353,14 +353,14 @@ export function WorkoutSessionModal() {
                   {info.nombre}
                 </p>
                 <div className="flex shrink-0 items-center gap-2">
-                  <p className="font-mono text-[11px] text-muted-foreground">
+                  <p className="font-mono text-xs text-muted-foreground">
                     {info.grupo}
                   </p>
                   <button
                     type="button"
                     onClick={() => setSwapForExId(ex.exerciseId)}
                     aria-label={`Cambiar ${info.nombre}`}
-                    className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+                    className="flex size-8 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
                   >
                     <Repeat2 className="size-4" />
                   </button>
@@ -373,7 +373,7 @@ export function WorkoutSessionModal() {
                       type="button"
                       aria-label={`Eliminar serie ${i + 1}`}
                       onClick={() => removeSet(ex.exerciseId, i)}
-                      className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive active:scale-95"
+                      className="flex size-8 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive active:scale-95"
                     >
                       <Trash2 className="size-3.5" />
                     </button>

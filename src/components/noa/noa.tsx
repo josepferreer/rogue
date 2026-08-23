@@ -469,7 +469,7 @@ function NoaSheet({
                   <div className="flex flex-col gap-2">
                     {groupProposals(pending).map((g) => (
                       <div key={g.label} className="flex flex-col gap-0.5">
-                        <p className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
+                        <p className="font-mono text-xs uppercase tracking-wide text-muted-foreground">
                           {g.label} ({g.items.length})
                         </p>
                         <p className="text-sm">

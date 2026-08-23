@@ -211,7 +211,7 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
               <span className="text-muted-foreground">C: {Math.round(totals.carbs)}g</span>
               <span className="text-muted-foreground">G: {Math.round(totals.fat)}g</span>
               {planned.kcal >= 1 && (
-                <span className="font-mono text-[11px] text-muted-foreground/70">
+                <span className="font-mono text-xs text-muted-foreground/70">
                   +{Math.round(planned.kcal)} sin marcar
                 </span>
               )}
@@ -299,7 +299,7 @@ export function MealSheet({ open, onClose, mealType, mealLabel, date }: Props) {
                                 ? `${Math.round(macros.kcal)} kcal/100g · ${(p.ingredients ?? []).length} ingredientes`
                                 : `${Math.round(macros.kcal)} kcal · ${p.foods.length - macros.missing} ingredientes`}
                               {macros.missing > 0 && (
-                                <span className="text-red-500"> · {macros.missing} sin despensa</span>
+                                <span className="text-destructive"> · {macros.missing} sin despensa</span>
                               )}
                             </p>
                           </div>
@@ -483,7 +483,7 @@ function EntryRow({
         </button>
         <button
           onClick={() => onRemove(entry.id)}
-          className="flex size-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-colors"
+          className="flex size-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
         >
           <Trash2 className="size-4" />
         </button>

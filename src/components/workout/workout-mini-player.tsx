@@ -24,7 +24,7 @@ export function WorkoutMiniPlayer() {
   return (
     <button
       onClick={maximize}
-      className={`absolute inset-x-4 z-30 flex items-center gap-3 rounded-2xl border border-border bg-background/80 px-4 py-3 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.25)] backdrop-blur-xl transition-transform active:scale-[0.98] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] md:inset-x-auto md:left-auto md:right-6 md:w-96 ${bottom}`}
+      className={`absolute inset-x-4 z-30 flex items-center gap-3 rounded-2xl border border-border bg-background/80 px-4 py-3 shadow-float backdrop-blur-xl transition-transform active:scale-[0.98] md:inset-x-auto md:left-auto md:right-6 md:w-96 ${bottom}`}
     >
       <div className="relative flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent/15">
         <Dumbbell className="size-4 text-accent" />
@@ -35,7 +35,7 @@ export function WorkoutMiniPlayer() {
 
       <div className="flex flex-1 items-center justify-between">
         <div className="flex flex-col items-start">
-          <span className="flex items-center gap-1 font-mono text-[10px] tracking-wider text-muted-foreground">
+          <span className="flex items-center gap-1 font-mono text-2xs tracking-wider text-muted-foreground">
             <Clock className="size-3" />
             <span className="tabular-nums">{formatDuration(elapsedSec)}</span>
           </span>
@@ -49,7 +49,7 @@ export function WorkoutMiniPlayer() {
         </div>
       </div>
 
-      <div className="ml-1 rounded-lg bg-muted px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
+      <div className="ml-1 rounded-xl bg-muted px-2.5 py-1 text-2xs font-medium text-muted-foreground">
         Abrir
       </div>
 

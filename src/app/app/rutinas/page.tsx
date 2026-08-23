@@ -66,7 +66,7 @@ function RoutinePanel() {
                 <div className="flex items-center gap-2">
                   <p className="text-base font-semibold">{day.label}</p>
                   {isToday && (
-                    <span className="rounded-full bg-black/10 px-2 py-0.5 font-mono text-[10px] font-medium dark:bg-white/15">
+                    <span className="rounded-full bg-black/10 px-2 py-0.5 font-mono text-2xs font-medium dark:bg-white/15">
                       HOY
                     </span>
                   )}
@@ -79,7 +79,7 @@ function RoutinePanel() {
                     <span
                       key={wd}
                       className={cn(
-                        "flex size-5 items-center justify-center rounded-full text-[10px] font-medium",
+                        "flex size-5 items-center justify-center rounded-full text-2xs font-medium",
                         day.weekdays.includes(wd)
                           ? "bg-black/15 dark:bg-white/25"
                           : "text-muted-foreground/50",
@@ -95,7 +95,7 @@ function RoutinePanel() {
                   type="button"
                   onClick={() => startWorkout(day)}
                   aria-label={`Empezar ${day.label}`}
-                  className="flex size-10 items-center justify-center rounded-full bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                  className="flex size-10 items-center justify-center rounded-full bg-accent text-accent-foreground"
                 >
                   <Play className="size-4" />
                 </button>
@@ -185,18 +185,18 @@ function SessionCard({ session }: { session: WorkoutSession }) {
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <p className="text-base font-semibold">{session.dayLabel}</p>
-            <span className="font-mono text-[10px] text-muted-foreground">
+            <span className="font-mono text-2xs text-muted-foreground">
               {timeStr}
             </span>
           </div>
-          <p className="mt-0.5 font-mono text-[11px] uppercase text-muted-foreground">
+          <p className="mt-0.5 font-mono text-xs uppercase text-muted-foreground">
             {dateStr}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           {session.durationSec !== undefined && (
-            <span className="rounded-full bg-muted px-2.5 py-1 font-mono text-[10px] font-medium text-muted-foreground">
+            <span className="rounded-full bg-muted px-2.5 py-1 font-mono text-2xs font-medium text-muted-foreground">
               {Math.floor(session.durationSec / 60)} MIN
             </span>
           )}
@@ -218,13 +218,13 @@ function SessionCard({ session }: { session: WorkoutSession }) {
         className="flex cursor-pointer items-center justify-between border-t border-border/40 pt-2.5 text-xs text-muted-foreground"
         onClick={() => setExpanded(!expanded)}
       >
-        <span className="flex items-center gap-1.5 font-mono text-[11px]">
+        <span className="flex items-center gap-1.5 font-mono text-xs">
           <Dumbbell className="size-3.5 opacity-70" />
           {groupedExercises.length} {groupedExercises.length === 1 ? "ejercicio" : "ejercicios"} · {session.sets.length} series
         </span>
 
         {totalVolumeKg > 0 && (
-          <span className="font-mono text-[11px] font-medium text-foreground">
+          <span className="font-mono text-xs font-medium text-foreground">
             {totalVolumeKg.toLocaleString("es-ES")} kg volcados
           </span>
         )}
@@ -246,7 +246,7 @@ function SessionCard({ session }: { session: WorkoutSession }) {
                       {group.name}
                     </p>
                     {maxWeight > 0 && (
-                      <span className="font-mono text-[10px] font-medium text-muted-foreground">
+                      <span className="font-mono text-2xs font-medium text-muted-foreground">
                         Máx. {maxWeight} kg
                       </span>
                     )}
@@ -256,7 +256,7 @@ function SessionCard({ session }: { session: WorkoutSession }) {
                     {group.sets.map((set, setIdx) => (
                       <div
                         key={setIdx}
-                        className="flex items-center justify-between rounded-xl border border-border/30 bg-background/70 px-2.5 py-1.5 font-mono text-[11px]"
+                        className="flex items-center justify-between rounded-xl border border-border/30 bg-background/70 px-2.5 py-1.5 font-mono text-xs"
                       >
                         <span className="text-muted-foreground/70">#{setIdx + 1}</span>
                         <span className="font-semibold text-foreground">
@@ -272,20 +272,20 @@ function SessionCard({ session }: { session: WorkoutSession }) {
 
           <div className="flex items-center justify-end border-t border-border/40 pt-2">
             {confirmDelete ? (
-              <div className="flex w-full items-center justify-between gap-2 rounded-xl bg-red-500/10 p-2 text-xs text-red-500">
+              <div className="flex w-full items-center justify-between gap-2 rounded-xl bg-destructive/10 p-2 text-xs text-destructive">
                 <span>¿Eliminar esta sesión?</span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => deleteSession(session.id)}
-                    className="rounded-lg bg-red-500 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-600"
+                    className="rounded-full bg-destructive px-3 py-1 text-xs font-medium text-destructive-foreground transition-opacity hover:opacity-90"
                   >
                     Sí, borrar
                   </button>
                   <button
                     type="button"
                     onClick={() => setConfirmDelete(false)}
-                    className="rounded-lg bg-muted px-3 py-1 text-xs font-medium text-foreground"
+                    className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground"
                   >
                     Cancelar
                   </button>
@@ -295,7 +295,7 @@ function SessionCard({ session }: { session: WorkoutSession }) {
               <button
                 type="button"
                 onClick={() => setConfirmDelete(true)}
-                className="flex items-center gap-1 font-mono text-[11px] font-medium text-muted-foreground transition-colors hover:text-red-500"
+                className="flex items-center gap-1 font-mono text-xs font-medium text-muted-foreground transition-colors hover:text-destructive"
               >
                 <Trash2 className="size-3.5" />
                 Eliminar sesión

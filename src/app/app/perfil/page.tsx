@@ -444,7 +444,7 @@ export default function PerfilPage({
       .toUpperCase() || "R";
 
   return (
-    <div className="flex flex-col gap-6 pt-2 pb-4">
+    <div className="flex flex-col gap-5 pt-2">
       <div className="flex flex-col items-center text-center gap-3 pt-2 pb-2">
         <span className="flex size-24 shrink-0 items-center justify-center rounded-full bg-accent text-3xl font-semibold text-accent-foreground shadow-sm">
           {initials}
@@ -511,7 +511,7 @@ export default function PerfilPage({
             </p>
           </div>
           {friendRequests > 0 && (
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-destructive font-mono text-[11px] font-semibold text-destructive-foreground">
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-destructive font-mono text-xs font-semibold text-destructive-foreground">
               {friendRequests}
             </span>
           )}
@@ -525,7 +525,7 @@ export default function PerfilPage({
           <p className="font-mono text-lg font-medium leading-none">
             {stats.totalSessions}
           </p>
-          <p className="text-[11px] text-muted-foreground">entrenos</p>
+          <p className="text-xs text-muted-foreground">entrenos</p>
         </PastelCard>
         <PastelCard variant="neutral" className="flex flex-col gap-1.5">
           <Weight className="size-4 text-muted-foreground" />
@@ -533,7 +533,7 @@ export default function PerfilPage({
             {formatWeight(profile.bodyweightKg, preferences.unit)}
             <span className="text-xs font-normal">{preferences.unit}</span>
           </p>
-          <p className="text-[11px] text-muted-foreground">peso</p>
+          <p className="text-xs text-muted-foreground">peso</p>
         </PastelCard>
       </div>
 
@@ -622,7 +622,7 @@ export default function PerfilPage({
           Reiniciar datos de demo
         </Button>
         {/* Para poder saber que build ejecutaba el usuario cuando reporte algo. */}
-        <p className="pt-2 text-center font-mono text-[11px] text-muted-foreground/70">
+        <p className="pt-2 text-center font-mono text-xs text-muted-foreground/70">
           Rogue {APP_VERSION}
         </p>
       </div>

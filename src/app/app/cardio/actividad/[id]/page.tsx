@@ -142,7 +142,7 @@ export default function ActivityDetailsPage({
   }
 
   return (
-    <div className="flex flex-col gap-6 pt-2 pb-8">
+    <div className="flex flex-col gap-5 pt-2">
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.push("/app/cardio")}
@@ -200,7 +200,7 @@ export default function ActivityDetailsPage({
           <p className="mt-1 font-mono text-3xl font-semibold">
             {formatTime(session.durationSec)}
           </p>
-          <p className="text-[10px] font-medium tracking-widest text-muted-foreground">
+          <p className="text-2xs font-medium tracking-widest text-muted-foreground">
             TIEMPO
           </p>
         </div>
@@ -210,21 +210,21 @@ export default function ActivityDetailsPage({
             {session.distanceKm.toFixed(2)}
             <span className="text-lg">km</span>
           </p>
-          <p className="text-[10px] font-medium tracking-widest text-muted-foreground">
+          <p className="text-2xs font-medium tracking-widest text-muted-foreground">
             DISTANCIA
           </p>
         </div>
         <div className="flex flex-col items-center justify-center gap-1 rounded-3xl border border-border bg-surface p-5">
           <Activity className="size-5 text-muted-foreground" />
           <p className="mt-1 font-mono text-3xl font-semibold">{paceDisplay}</p>
-          <p className="text-[10px] font-medium tracking-widest text-muted-foreground">
+          <p className="text-2xs font-medium tracking-widest text-muted-foreground">
             RITMO MEDIO
           </p>
         </div>
         <div className="flex flex-col items-center justify-center gap-1 rounded-3xl border border-border bg-surface p-5">
           <Flame className="size-5 text-muted-foreground" />
           <p className="mt-1 font-mono text-3xl font-semibold">{calories}</p>
-          <p className="text-[10px] font-medium tracking-widest text-muted-foreground">
+          <p className="text-2xs font-medium tracking-widest text-muted-foreground">
             KCAL
           </p>
         </div>

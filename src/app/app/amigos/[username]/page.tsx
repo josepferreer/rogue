@@ -34,7 +34,7 @@ function StatTile({
     <div className="flex flex-1 flex-col items-center gap-1 rounded-3xl border border-border bg-surface px-2 py-3.5 text-center">
       <span className="text-muted-foreground">{icon}</span>
       <p className="text-lg font-semibold leading-none">{value}</p>
-      <p className="text-[11px] leading-none text-muted-foreground">{label}</p>
+      <p className="text-xs leading-none text-muted-foreground">{label}</p>
     </div>
   );
 }
@@ -82,8 +82,8 @@ export default function FriendProfilePage() {
         {header}
         <div className="flex flex-col items-center gap-3 pt-6">
           <Skeleton className="size-20 rounded-full" />
-          <Skeleton className="h-4 w-36 rounded-lg" />
-          <Skeleton className="h-3 w-24 rounded-lg" />
+          <Skeleton className="h-4 w-36 rounded-xl" />
+          <Skeleton className="h-3 w-24 rounded-xl" />
         </div>
       </div>
     );
@@ -127,7 +127,7 @@ export default function FriendProfilePage() {
           </p>
         </div>
         {since && (
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Amigos desde {since}
           </p>
         )}

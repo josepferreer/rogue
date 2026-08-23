@@ -72,7 +72,7 @@ export function NoaExactAlarmCard() {
       <Button variant="ghost" onClick={() => void openExactAlarmSettings()}>
         Abrir ajustes de Android
       </Button>
-      <p className="px-1 text-[11px] text-muted-foreground">
+      <p className="px-1 text-xs text-muted-foreground">
         Se abrirá «Alarmas y recordatorios». Al volver, la app se reinicia: es
         cosa de Android, no se ha roto nada.
       </p>

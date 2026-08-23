@@ -100,7 +100,7 @@ export default function ComidasPage() {
 
   return (
     <PantryProvider>
-      <div className="flex flex-col gap-5 pt-2 pb-24">
+      <div className="flex flex-col gap-5 pt-2">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Comidas</h1>
@@ -135,7 +135,7 @@ export default function ComidasPage() {
                 : "text-muted-foreground hover:bg-muted",
             )}
           >
-            <span className="text-[11px]">{d.letter}</span>
+            <span className="text-xs">{d.letter}</span>
             <span
               className={cn(
                 "text-sm font-medium",
@@ -161,7 +161,7 @@ export default function ComidasPage() {
             </span>
           </p>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[11px] text-muted-foreground">
+            <span className="font-mono text-xs text-muted-foreground">
               quedan {kcalLeft}
               {planned.kcal >= 1 && (
                 <span className="opacity-60"> · +{Math.round(planned.kcal)} sin marcar</span>
@@ -280,7 +280,7 @@ function MacroBar({
   const pct = goal > 0 ? Math.min(100, (value / goal) * 100) : 0;
   return (
     <div className="flex-1">
-      <p className="mb-1 text-[11px] text-muted-foreground">
+      <p className="mb-1 text-xs text-muted-foreground">
         {label} {Math.round(value)}/{goal}g
       </p>
       <div className="h-1.5 overflow-hidden rounded-full bg-muted">
@@ -408,7 +408,7 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
                     <p className="text-xs text-muted-foreground line-clamp-1">{shownProduct.brand}</p>
                   )}
                   {shownProduct.isReadyMeal && (
-                    <span className="w-fit rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-foreground">
+                    <span className="w-fit rounded-full bg-accent px-2 py-0.5 text-2xs font-semibold text-accent-foreground">
                       Producto listo
                     </span>
                   )}
@@ -427,24 +427,24 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
                 <div className="flex gap-5 text-sm">
                   <div className="flex flex-col">
                     <span className="font-semibold">{shownProduct.kcal100 ?? "—"}</span>
-                    <span className="text-[10px] text-muted-foreground">Kcal/100g</span>
+                    <span className="text-2xs text-muted-foreground">Kcal/100g</span>
                   </div>
                   <div className="flex flex-col">
                     <span className="font-semibold">{shownProduct.protein100 ?? 0}g</span>
-                    <span className="text-[10px] text-muted-foreground">Proteína</span>
+                    <span className="text-2xs text-muted-foreground">Proteína</span>
                   </div>
                   <div className="flex flex-col">
                     <span className="font-semibold">{shownProduct.carbs100 ?? 0}g</span>
-                    <span className="text-[10px] text-muted-foreground">Carbos</span>
+                    <span className="text-2xs text-muted-foreground">Carbos</span>
                   </div>
                   <div className="flex flex-col">
                     <span className="font-semibold">{shownProduct.fat100 ?? 0}g</span>
-                    <span className="text-[10px] text-muted-foreground">Grasas</span>
+                    <span className="text-2xs text-muted-foreground">Grasas</span>
                   </div>
                 </div>
 
                 {shownProduct.kcal100 == null && (
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     Open Food Facts no declara las calorías de este producto. Se
                     guardará a 0 kcal: edítalo en la despensa.
                   </p>
@@ -468,14 +468,14 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
 
                 {shownProduct.ingredients.length > 0 && (
                   <div className="flex flex-col gap-1.5">
-                    <p className="font-mono text-[11px] tracking-[0.2em] text-muted-foreground">
+                    <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
                       INGREDIENTES{shownProduct.servingG > 0 && ` · RACIÓN ${shownProduct.servingG} G`}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {shownProduct.ingredients.map((ing, i) => (
                         <span
                           key={i}
-                          className="rounded-full bg-surface border border-border px-2.5 py-1 text-[11px] text-muted-foreground"
+                          className="rounded-full bg-surface border border-border px-2.5 py-1 text-xs text-muted-foreground"
                         >
                           {ing.grams != null && (
                             <span className="font-medium text-foreground">{ing.grams}g </span>
@@ -484,7 +484,7 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
                         </span>
                       ))}
                     </div>
-                    <p className="text-[11px] text-muted-foreground/70">
+                    <p className="text-xs text-muted-foreground/70">
                       Los gramos, cuando aparecen, están estimados a partir del % declarado.
                     </p>
                   </div>

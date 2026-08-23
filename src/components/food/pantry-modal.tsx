@@ -147,7 +147,7 @@ function AlimentoForm({
             />
           ))}
           {healthScore && (
-            <button type="button" onClick={() => setHealthScore(undefined)} className="ml-2 rounded-lg px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted">
+            <button type="button" onClick={() => setHealthScore(undefined)} className="ml-2 rounded-xl px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted">
               Quitar
             </button>
           )}
@@ -236,7 +236,7 @@ function PlatoForm({
           {selectedFoods.map(f => {
             const a = alimentos.find(x => x.id === f.alimentoId);
             return (
-              <div key={f.alimentoId} className="flex items-center gap-2 rounded-lg bg-surface px-2 py-1.5">
+              <div key={f.alimentoId} className="flex items-center gap-2 rounded-xl bg-surface px-2 py-1.5">
                 <span className="flex-1 text-xs font-medium">{a?.name || "Desconocido"}</span>
                 <div className="flex items-center gap-1">
                   <input 
@@ -245,8 +245,8 @@ function PlatoForm({
                     onChange={e => updateQuantity(f.alimentoId, e.target.value)}
                     className="w-16 rounded-xl border border-border bg-background px-2 py-1.5 text-sm text-right outline-none"
                   />
-                  <span className="text-[10px] text-muted-foreground mr-1">g</span>
-                  <X className="size-3.5 cursor-pointer text-muted-foreground hover:text-red-500" onClick={() => toggleFood(f.alimentoId)} />
+                  <span className="text-2xs text-muted-foreground mr-1">g</span>
+                  <X className="size-3.5 cursor-pointer text-muted-foreground hover:text-destructive" onClick={() => toggleFood(f.alimentoId)} />
                 </div>
               </div>
             );
@@ -286,7 +286,7 @@ function PlatoForm({
                   type="button"
                   onClick={() => toggleFood(a.id)}
                   aria-pressed={elegido}
-                  className="flex w-full items-center justify-between p-2 rounded-lg hover:bg-muted text-xs text-left"
+                  className="flex w-full items-center justify-between p-2 rounded-xl hover:bg-muted text-xs text-left"
                 >
                   <span>{a.name}</span>
                   {elegido && <Check className="size-3 text-accent" />}
@@ -310,7 +310,7 @@ function PlatoForm({
       </div>
 
       <div className="flex items-center gap-2 mt-1">
-        <span className="text-[10px] text-muted-foreground mr-1">Nutri-Score:</span>
+        <span className="text-2xs text-muted-foreground mr-1">Nutri-Score:</span>
         {(["green", "yellow", "orange", "red"] as const).map((c) => (
           <button
             key={c}
@@ -326,7 +326,7 @@ function PlatoForm({
             )}
           />
         ))}
-        {healthScore && <button type="button" onClick={() => setHealthScore(undefined)} className="ml-1 text-[10px] text-muted-foreground underline">Quitar</button>}
+        {healthScore && <button type="button" onClick={() => setHealthScore(undefined)} className="ml-1 text-2xs text-muted-foreground underline">Quitar</button>}
       </div>
 
       <div className="mt-6 flex justify-end gap-3">
@@ -526,13 +526,13 @@ export function PantryModal({ open, onClose }: Props) {
                       </div>
                     </div>
                     <div className="flex gap-1 shrink-0">
-                      <button type="button" onClick={() => toggleFavoriteAlimento(alimento.id)} className="flex size-10 items-center justify-center text-muted-foreground hover:text-red-500 transition-colors">
-                        <Heart className={cn("size-4", alimento.isFavorite && "fill-red-500 text-red-500")} />
+                      <button type="button" onClick={() => toggleFavoriteAlimento(alimento.id)} className="flex size-10 items-center justify-center text-muted-foreground hover:text-destructive transition-colors">
+                        <Heart className={cn("size-4", alimento.isFavorite && "fill-destructive text-destructive")} />
                       </button>
                       <button type="button" onClick={() => setEditingId(editingId === alimento.id ? null : alimento.id)} className="flex size-10 items-center justify-center text-muted-foreground hover:text-foreground">
                         <Pencil className="size-4" />
                       </button>
-                      <button type="button" onClick={() => pedirBorrado(alimento)} className="flex size-10 items-center justify-center text-muted-foreground hover:text-red-500">
+                      <button type="button" onClick={() => pedirBorrado(alimento)} className="flex size-10 items-center justify-center text-muted-foreground hover:text-destructive">
                         <Trash2 className="size-4" />
                       </button>
                     </div>
@@ -541,7 +541,7 @@ export function PantryModal({ open, onClose }: Props) {
                   {alimento.ingredients && alimento.ingredients.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {alimento.ingredients.map((ing, i) => (
-                        <span key={i} className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        <span key={i} className="rounded-full bg-muted px-2 py-0.5 text-2xs font-medium text-muted-foreground">
                           {ing.grams != null && <span className="text-foreground">{ing.grams}g </span>}
                           {ing.name}
                         </span>
@@ -572,22 +572,22 @@ export function PantryModal({ open, onClose }: Props) {
                         {plato.healthScore === "yellow" && <span className="size-2.5 rounded-full bg-score-yellow" title="Moderado" />}
                         {plato.healthScore === "orange" && <span className="size-2.5 rounded-full bg-score-orange" title="Poco sano" />}
                         {plato.healthScore === "red" && <span className="size-2.5 rounded-full bg-score-red" title="Ultraprocesado" />}
-                        {ready && <span className="rounded-full bg-accent px-2 py-0.5 text-[9px] font-semibold text-accent-foreground">Listo</span>}
+                        {ready && <span className="rounded-full bg-accent px-2 py-0.5 text-2xs font-semibold text-accent-foreground">Listo</span>}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {ready
                           ? `${Math.round(macros.kcal)} kcal (100g)`
                           : `${Math.round(macros.kcal)} kcal totales · ${macros.weightG}g`}
                         {macros.missing > 0 && (
-                          <span className="text-red-500">
+                          <span className="text-destructive">
                             {" "}· {macros.missing} ingrediente{macros.missing > 1 ? "s" : ""} sin despensa
                           </span>
                         )}
                       </p>
                     </div>
                     <div className="flex gap-1 shrink-0">
-                      <button type="button" onClick={() => toggleFavoritePlato(plato.id)} className="flex size-10 items-center justify-center text-muted-foreground hover:text-red-500 transition-colors">
-                        <Heart className={cn("size-4", plato.isFavorite && "fill-red-500 text-red-500")} />
+                      <button type="button" onClick={() => toggleFavoritePlato(plato.id)} className="flex size-10 items-center justify-center text-muted-foreground hover:text-destructive transition-colors">
+                        <Heart className={cn("size-4", plato.isFavorite && "fill-destructive text-destructive")} />
                       </button>
                       {/* Los platos "listos" no se editan por ingredientes (no los
                           tienen enlazados); se borran y se reescanean si hace falta. */}
@@ -596,7 +596,7 @@ export function PantryModal({ open, onClose }: Props) {
                           <Pencil className="size-4" />
                         </button>
                       )}
-                      <button type="button" onClick={() => deletePlato(plato.id)} className="flex size-10 items-center justify-center text-muted-foreground hover:text-red-500">
+                      <button type="button" onClick={() => deletePlato(plato.id)} className="flex size-10 items-center justify-center text-muted-foreground hover:text-destructive">
                         <Trash2 className="size-4" />
                       </button>
                     </div>
@@ -605,7 +605,7 @@ export function PantryModal({ open, onClose }: Props) {
                   <div className="flex flex-wrap gap-1 mt-2">
                     {ready
                       ? (plato.ingredients ?? []).map((ing, i) => (
-                          <span key={i} className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          <span key={i} className="rounded-full bg-muted px-2 py-0.5 text-2xs font-medium text-muted-foreground">
                             {ing.grams != null && <span className="text-foreground">{ing.grams}g </span>}
                             {ing.name}
                           </span>
@@ -613,12 +613,12 @@ export function PantryModal({ open, onClose }: Props) {
                       : plato.foods.map((food, i) => {
                           const a = alimentos.find(x => x.id === food.alimentoId);
                           return (
-                            <span key={i} className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground flex items-center gap-1">
+                            <span key={i} className="rounded-full bg-muted px-2 py-0.5 text-2xs font-medium text-muted-foreground flex items-center gap-1">
                               {food.quantityG}g {a?.name || "Desconocido"}
-                              {a?.healthScore === "green" && <span className="size-1.5 rounded-full bg-green-500" />}
-                              {a?.healthScore === "yellow" && <span className="size-1.5 rounded-full bg-yellow-400" />}
-                              {a?.healthScore === "orange" && <span className="size-1.5 rounded-full bg-orange-500" />}
-                              {a?.healthScore === "red" && <span className="size-1.5 rounded-full bg-red-500" />}
+                              {a?.healthScore === "green" && <span className="size-1.5 rounded-full bg-score-green" />}
+                              {a?.healthScore === "yellow" && <span className="size-1.5 rounded-full bg-score-yellow" />}
+                              {a?.healthScore === "orange" && <span className="size-1.5 rounded-full bg-score-orange" />}
+                              {a?.healthScore === "red" && <span className="size-1.5 rounded-full bg-destructive" />}
                             </span>
                           );
                         })}

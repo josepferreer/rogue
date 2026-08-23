@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/exercise/exercise-filter-bar";
+import { useAppShellPortal } from "@/lib/use-app-shell-portal";
+import { useEscapeToClose } from "@/lib/use-escape-to-close";
+import { usePresence } from "@/lib/use-presence";
 import {
   DIFFICULTY_IDS,
   EQUIPMENT_IDS,
@@ -16,7 +22,6 @@ import {
   type MuscleId,
 } from "@/lib/exercises/types";
 import { useCustomExercises } from "@/lib/store/custom-exercises-store";
-import { cn } from "@/lib/utils";
 
 /**
  * Alta de un ejercicio propio.
@@ -50,7 +55,12 @@ export function CustomExerciseModal({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  if (!open) return null;
+  // Mismo andamiaje que el resto de hojas de la app: portal del AppShell para
+  // que el scrim tape la barra inferior, animacion de entrada/salida y cierre
+  // con Escape. Antes era un fixed suelto sin nada de esto.
+  const portalTarget = useAppShellPortal();
+  const { mounted, state } = usePresence(open);
+  useEscapeToClose(open, onClose);
 
   // Los mismos topes que aplica validateCustomExercise. Sin esto el formulario
   // dejaba marcar los 17 musculos y la validacion recortaba a 4 en silencio: el
@@ -102,16 +112,27 @@ export function CustomExerciseModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 sm:items-center">
-      <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-y-auto rounded-t-3xl bg-surface p-5 sm:rounded-3xl">
+  if (!mounted || !portalTarget) return null;
+
+  const content = (
+    <div
+      className="overlay-anim absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
+      data-state={state}
+      style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+      onClick={onClose}
+    >
+      <div className="sheet-anim w-full md:max-w-lg" data-state={state}>
+        <div
+          className="flex max-h-[90dvh] flex-col overflow-y-auto rounded-t-3xl border border-border bg-background p-5 shadow-2xl md:max-h-[80dvh] md:rounded-3xl"
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Nuevo ejercicio</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Nuevo ejercicio</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Cerrar"
-            className="flex size-9 items-center justify-center rounded-full bg-muted"
+            className="flex size-10 items-center justify-center rounded-full bg-surface transition-colors hover:bg-muted"
           >
             <X className="size-4" />
           </button>
@@ -122,7 +143,7 @@ export function CustomExerciseModal({
           value={form.nombre}
           onChange={(e) => setForm({ ...form, nombre: e.target.value })}
           placeholder="Sentadilla con cinturon en maquina"
-          className="mb-4 rounded-2xl bg-muted px-4 py-3 text-sm outline-none"
+          className="mb-4 rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-foreground"
         />
 
         <div className="mb-4 grid grid-cols-2 gap-3">
@@ -131,7 +152,7 @@ export function CustomExerciseModal({
             <select
               value={form.grupo}
               onChange={(e) => setForm({ ...form, grupo: e.target.value })}
-              className="rounded-2xl bg-muted px-3 py-3 text-sm outline-none"
+              className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-foreground"
             >
               {EXERCISE_CATEGORIES.map((g) => (
                 <option key={g} value={g}>{g}</option>
@@ -143,7 +164,7 @@ export function CustomExerciseModal({
             <select
               value={form.equipo}
               onChange={(e) => setForm({ ...form, equipo: e.target.value })}
-              className="rounded-2xl bg-muted px-3 py-3 text-sm outline-none"
+              className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-foreground"
             >
               {EQUIPMENT_IDS.map((q) => (
                 <option key={q} value={q}>{EQUIPMENT_LABELS[q]}</option>
@@ -155,7 +176,7 @@ export function CustomExerciseModal({
             <select
               value={form.dificultad}
               onChange={(e) => setForm({ ...form, dificultad: e.target.value })}
-              className="rounded-2xl bg-muted px-3 py-3 text-sm outline-none"
+              className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-foreground"
             >
               {DIFFICULTY_IDS.map((d) => (
                 <option key={d} value={d}>{DIFFICULTY_LABELS[d]}</option>
@@ -167,7 +188,7 @@ export function CustomExerciseModal({
             <select
               value={form.mecanica}
               onChange={(e) => setForm({ ...form, mecanica: e.target.value })}
-              className="rounded-2xl bg-muted px-3 py-3 text-sm outline-none"
+              className="rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-foreground"
             >
               <option value="compuesto">Compuesto</option>
               <option value="aislamiento">Aislamiento</option>
@@ -194,22 +215,28 @@ export function CustomExerciseModal({
           value={instrucciones}
           onChange={(e) => setInstrucciones(e.target.value)}
           rows={3}
-          className="mb-4 resize-none rounded-2xl bg-muted px-4 py-3 text-sm outline-none"
+          className="mb-4 resize-none rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-foreground"
         />
 
-        {error && <p className="mb-3 text-sm text-red-500">{error}</p>}
+        {error && <p className="mb-3 text-xs text-destructive">{error}</p>}
 
-        <button
-          type="button"
+        <Button
+          fullWidth
           onClick={submit}
-          disabled={saving || form.nombre.trim().length < 3 || form.musculosPrimarios.length === 0}
-          className="rounded-full bg-foreground py-3.5 text-sm font-medium text-background disabled:opacity-40"
+          disabled={
+            saving ||
+            form.nombre.trim().length < 3 ||
+            form.musculosPrimarios.length === 0
+          }
         >
           {saving ? "Guardando..." : "Crear ejercicio"}
-        </button>
+        </Button>
+        </div>
       </div>
     </div>
   );
+
+  return createPortal(content, portalTarget);
 }
 
 function MusclePicker({
@@ -226,22 +253,16 @@ function MusclePicker({
   return (
     <div className="mb-3">
       <p className="mb-1 text-xs font-medium text-muted-foreground">{label}</p>
-      {hint && <p className="mb-2 text-[11px] text-muted-foreground">{hint}</p>}
+      {hint && <p className="mb-2 text-xs text-muted-foreground">{hint}</p>}
       <div className="flex flex-wrap gap-1.5">
         {MUSCLE_IDS.map((m) => (
-          <button
+          <Chip
             key={m}
-            type="button"
+            active={selected.includes(m)}
             onClick={() => onToggle(m)}
-            className={cn(
-              "rounded-full px-3 py-1.5 text-xs transition-colors",
-              selected.includes(m)
-                ? "bg-foreground text-background"
-                : "bg-muted text-muted-foreground",
-            )}
           >
             {MUSCLE_LABELS[m]}
-          </button>
+          </Chip>
         ))}
       </div>
     </div>

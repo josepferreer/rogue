@@ -80,7 +80,7 @@ export function ExerciseDetailView({ exercise }: { exercise: Exercise }) {
       {/* Selector de Variantes / Agarres */}
       {exercise.variantes && exercise.variantes.length > 0 && (
         <div className="flex flex-col gap-2 rounded-3xl border border-border bg-surface p-3 shadow-sm">
-          <div className="flex items-center gap-1.5 px-1 font-mono text-[11px] font-medium text-muted-foreground">
+          <div className="flex items-center gap-1.5 px-1 font-mono text-xs font-medium text-muted-foreground">
             <SlidersHorizontal className="size-3.5" />
             <span>VARIANTES DE AGARRE DISPONIBLES:</span>
           </div>
@@ -104,7 +104,7 @@ export function ExerciseDetailView({ exercise }: { exercise: Exercise }) {
                   {variant.agarre && (
                     <span
                       className={cn(
-                        "rounded-full px-1.5 py-0.5 font-mono text-[9px]",
+                        "rounded-full px-1.5 py-0.5 font-mono text-2xs",
                         isSelected
                           ? "bg-background/20 text-background"
                           : "bg-black/5 dark:bg-white/10 text-muted-foreground"

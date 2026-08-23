@@ -79,7 +79,7 @@ export function ExerciseMedia({
       >
         {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
       </button>
-      <span className="absolute bottom-3 left-3 rounded-full bg-black/60 px-2.5 py-1 font-mono text-[10px] tracking-wider text-white backdrop-blur-sm">
+      <span className="absolute bottom-3 left-3 rounded-full bg-black/60 px-2.5 py-1 font-mono text-2xs tracking-wider text-white backdrop-blur-sm">
         {frame === 0 ? "INICIO" : "FIN"}
       </span>
     </div>

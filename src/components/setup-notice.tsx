@@ -31,7 +31,7 @@ export function SetupNotice({ missing }: { missing: string[] }) {
               className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3 py-2.5"
             >
               <code className="font-mono text-xs">{key}</code>
-              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 font-mono text-[11px] uppercase text-muted-foreground">
+              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 font-mono text-xs uppercase text-muted-foreground">
                 falta
               </span>
             </li>
@@ -44,7 +44,7 @@ export function SetupNotice({ missing }: { missing: string[] }) {
             Project Settings &rarr; API
           </span>
           . Para el login por nombre de usuario tambien hara falta{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">
+          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
             SUPABASE_SECRET_KEY
           </code>{" "}
           (opcional). Reinicia el servidor de desarrollo tras crear el archivo.

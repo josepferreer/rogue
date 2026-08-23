@@ -195,11 +195,11 @@ function PersonalitySheet({
                       No se pudo guardar: {error}
                     </p>
                   ) : status === "saving" ? (
-                    <p className="font-mono text-[11px] text-muted-foreground">
+                    <p className="font-mono text-xs text-muted-foreground">
                       Guardando…
                     </p>
                   ) : status === "saved" ? (
-                    <p className="font-mono text-[11px] text-muted-foreground">
+                    <p className="font-mono text-xs text-muted-foreground">
                       Guardado · se aplica en tu próxima conversación
                     </p>
                   ) : null}

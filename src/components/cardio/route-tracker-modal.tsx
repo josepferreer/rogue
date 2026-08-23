@@ -99,7 +99,7 @@ export function RouteTrackerModal() {
       </div>
 
       {!gpsError && progress?.started && progress.offRoute && (
-        <div className="absolute inset-x-5 top-[calc(env(safe-area-inset-top)+4.5rem)] z-[400] rounded-2xl bg-amber-500/90 px-4 py-3 text-white shadow-lg backdrop-blur-md border border-amber-400/30">
+        <div className="absolute inset-x-5 top-[calc(env(safe-area-inset-top)+4.5rem)] z-[400] rounded-2xl bg-accent-amber/90 px-4 py-3 text-white shadow-lg backdrop-blur-md border border-accent-amber/30">
           <div className="flex items-start gap-2">
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
             <p className="text-xs leading-snug">
@@ -110,7 +110,7 @@ export function RouteTrackerModal() {
       )}
 
       {gpsError && (
-        <div className="absolute inset-x-5 top-[calc(env(safe-area-inset-top)+4.5rem)] z-[400] rounded-2xl bg-red-600/90 px-4 py-3 text-white shadow-lg backdrop-blur-md border border-red-500/30">
+        <div className="absolute inset-x-5 top-[calc(env(safe-area-inset-top)+4.5rem)] z-[400] rounded-2xl bg-destructive/90 px-4 py-3 text-white shadow-lg backdrop-blur-md border border-destructive/30">
           <div className="flex items-start gap-2">
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
             <p className="text-xs leading-snug">{gpsError}</p>
@@ -127,7 +127,7 @@ export function RouteTrackerModal() {
       )}
 
       {/* Bottom floating glass panel */}
-      <div className="absolute inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-[400] rounded-[2.5rem] bg-surface/85 p-6 backdrop-blur-xl border border-border/60 shadow-2xl md:mx-auto md:w-full md:max-w-xl">
+      <div className="absolute inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-[400] rounded-3xl bg-surface/85 p-6 backdrop-blur-xl border border-border/60 shadow-2xl md:mx-auto md:w-full md:max-w-xl">
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 text-center">
           <div className="flex flex-col items-center gap-1">
@@ -156,21 +156,21 @@ export function RouteTrackerModal() {
               <button
                 onClick={() => setConfirmarDescarte(true)}
                 aria-label="Descartar ruta"
-                className="flex size-16 items-center justify-center rounded-full bg-neutral-200 text-red-600 shadow-lg transition-transform active:scale-95 dark:bg-neutral-800 dark:text-red-400"
+                className="flex size-16 items-center justify-center rounded-full bg-muted text-destructive shadow-float transition-transform active:scale-95"
               >
                 <Trash2 className="size-6" />
               </button>
               <button
                 onClick={() => stopTracking()}
                 aria-label="Terminar ruta"
-                className="flex size-16 items-center justify-center rounded-full bg-neutral-200 text-neutral-900 shadow-lg transition-transform active:scale-95 dark:bg-neutral-800 dark:text-white"
+                className="flex size-16 items-center justify-center rounded-full bg-muted text-foreground shadow-float transition-transform active:scale-95"
               >
                 <Square className="size-6 fill-current" />
               </button>
               <button
                 onClick={resumeTracking}
                 aria-label="Reanudar ruta"
-                className="flex size-20 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl shadow-blue-600/30 transition-transform active:scale-95"
+                className="flex size-20 items-center justify-center rounded-full bg-card-blue-foreground text-background shadow-xl transition-transform active:scale-95"
               >
                 <Play className="size-8 fill-current ml-1" />
               </button>
@@ -179,7 +179,7 @@ export function RouteTrackerModal() {
             <button
               onClick={pauseTracking}
               aria-label="Pausar ruta"
-              className="flex size-20 items-center justify-center rounded-full bg-amber-500 text-white shadow-xl shadow-amber-500/30 transition-transform active:scale-95"
+              className="flex size-20 items-center justify-center rounded-full bg-accent-amber text-white shadow-xl shadow-accent-amber/30 transition-transform active:scale-95"
             >
               <Pause className="size-8 fill-current" />
             </button>

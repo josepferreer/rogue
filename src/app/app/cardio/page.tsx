@@ -146,7 +146,7 @@ export default function CardioPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 pt-2 pb-24">
+    <div className="flex flex-col gap-5 pt-2">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
           Cardio y Actividad
@@ -159,7 +159,7 @@ export default function CardioPage() {
       {/* Main card */}
       <div className="rounded-3xl p-5 bg-surface text-foreground border border-border">
         <div className="flex items-start justify-between">
-          <span className="rounded-full bg-muted px-3 py-1.5 font-mono text-[10px] font-medium tracking-[0.15em] text-muted-foreground">
+          <span className="rounded-full bg-muted px-3 py-1.5 font-mono text-2xs font-medium tracking-[0.15em] text-muted-foreground">
             HOY
           </span>
           <Footprints className="size-5 text-muted-foreground" />
@@ -179,7 +179,7 @@ export default function CardioPage() {
             onClick={() => setEditingGoal((v) => !v)}
             className="flex flex-col text-left"
           >
-            <span className="font-mono text-[10px] font-medium tracking-wider text-muted-foreground">
+            <span className="font-mono text-2xs font-medium tracking-wider text-muted-foreground">
               OBJETIVO
             </span>
             <span className="flex items-center gap-1.5 text-sm font-medium">
@@ -189,7 +189,7 @@ export default function CardioPage() {
           </button>
           <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
             <div
-              className="h-full rounded-full bg-blue-500 transition-[width] duration-500"
+              className="h-full rounded-full bg-card-blue-foreground transition-[width] duration-500"
               style={{ width: `${goalPct}%` }}
             />
           </div>
@@ -274,7 +274,7 @@ export default function CardioPage() {
                   href={`/app/cardio/actividad/${session.id}`}
                   className="flex min-w-0 flex-1 items-center gap-4 p-4 active:bg-muted"
                 >
-                  <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                  <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-card-blue text-card-blue-foreground">
                     <Activity className="size-5" />
                   </span>
                   <div className="min-w-0">

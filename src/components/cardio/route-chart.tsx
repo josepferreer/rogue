@@ -149,7 +149,7 @@ export function RouteChart({ coordinates }: RouteChartProps) {
         </svg>
 
         {/* Labels for Pace (fastest at top, slowest at bottom) */}
-        <div className="absolute inset-y-0 left-0 flex flex-col justify-between text-[9px] font-mono text-muted-foreground">
+        <div className="absolute inset-y-0 left-0 flex flex-col justify-between text-2xs font-mono text-muted-foreground">
           <span>{MIN_PACE}&apos;/km</span>
           <span>{MAX_PACE}&apos;/km</span>
         </div>

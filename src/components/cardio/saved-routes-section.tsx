@@ -100,7 +100,7 @@ export function SavedRoutesSection() {
           // cambia es el envoltorio (Link o div inerte).
           const contenido = (
             <>
-              <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-card-lilac text-card-lilac-foreground">
                 <Route className="size-5" />
               </span>
               <div className="min-w-0 flex-1">
@@ -122,7 +122,7 @@ export function SavedRoutesSection() {
           >
             {editingId === r.id && !isTracking ? (
               <div className="flex min-w-0 flex-1 items-center gap-4 p-4">
-                <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-card-lilac text-card-lilac-foreground">
                   <Route className="size-5" />
                 </span>
                 <input
@@ -134,7 +134,7 @@ export function SavedRoutesSection() {
                     if (e.key === "Enter") commitRename(r.id);
                     if (e.key === "Escape") setEditingId(null);
                   }}
-                  className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm outline-none focus:border-foreground"
+                  className="w-full rounded-xl border border-border bg-background px-2 py-1 text-sm outline-none focus:border-foreground"
                 />
               </div>
             ) : isTracking ? (

@@ -252,7 +252,7 @@ export function BarcodeScanner({
         <div className="flex flex-col items-center">
           <p className="text-sm font-medium text-white">Escanear código</p>
           {!isNative && !("BarcodeDetector" in window) && supported && !manual && (
-            <span className="text-[10px] text-white/50 uppercase tracking-widest">Modo PWA</span>
+            <span className="text-2xs text-white/50 uppercase tracking-widest">Modo PWA</span>
           )}
         </div>
         <button
@@ -309,7 +309,7 @@ export function BarcodeScanner({
           </p>
           {isSoftwareScanning && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 rounded-full bg-black/40 px-3 py-1 backdrop-blur-sm">
-              <p className="text-[10px] text-white/70">Procesando por software...</p>
+              <p className="text-2xs text-white/70">Procesando por software...</p>
             </div>
           )}
         </div>

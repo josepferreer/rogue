@@ -33,8 +33,10 @@ const VARIANT_META: Record<
   ToastVariant,
   { icon: typeof Info; dot: string }
 > = {
-  success: { icon: CheckCircle2, dot: "text-green-500" },
-  error: { icon: AlertCircle, dot: "text-red-500" },
+  // Tokens semanticos: el toast es el componente canonico de feedback y no
+  // puede ser el que use paleta cruda mientras el aviso de sync usa destructive.
+  success: { icon: CheckCircle2, dot: "text-accent-green" },
+  error: { icon: AlertCircle, dot: "text-destructive" },
   info: { icon: Info, dot: "text-muted-foreground" },
 };
 

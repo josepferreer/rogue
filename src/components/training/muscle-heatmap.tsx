@@ -84,7 +84,7 @@ function BodyView({
           style={{ width: "100%" }}
         />
       </div>
-      <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground">
+      <p className="font-mono text-2xs tracking-[0.2em] text-muted-foreground">
         {label}
       </p>
     </div>
@@ -158,7 +158,7 @@ export function MuscleHeatmap({ className }: { className?: string }) {
           RECUPERACIÓN MUSCULAR
         </h2>
         {!nunca && (
-          <span className="font-mono text-[11px] text-muted-foreground">
+          <span className="font-mono text-xs text-muted-foreground">
             {(porEstado.listo ?? []).length}/{recovery.length} listos
           </span>
         )}

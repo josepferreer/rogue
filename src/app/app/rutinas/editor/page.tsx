@@ -194,7 +194,7 @@ export default function ConstructorPage() {
   };
 
   return (
-    <div className="flex flex-col gap-5 pt-2 pb-28">
+    <div className="flex flex-col gap-5 pt-2">
       {/* Cabecera */}
       <div className="flex items-center justify-between">
         <button
@@ -381,7 +381,7 @@ function SortableDay({
           {...listeners}
           aria-label="Arrastra para reordenar el día"
           title="Arrastra para reordenar"
-          className="flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing"
+          className="flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing"
         >
           <GripVertical className="size-4" />
         </span>
@@ -392,7 +392,7 @@ function SortableDay({
         >
           <div className="flex-1 text-left">
             <p className="text-sm font-semibold">{day.label}</p>
-            <p className="font-mono text-[11px] text-muted-foreground">
+            <p className="font-mono text-xs text-muted-foreground">
               {day.exercises.length} ejercicios · {day.focus}
             </p>
           </div>
@@ -410,7 +410,7 @@ function SortableDay({
           {/* Nombre y enfoque */}
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1">
-              <label className="font-mono text-[10px] text-muted-foreground">
+              <label className="font-mono text-2xs text-muted-foreground">
                 NOMBRE
               </label>
               <input
@@ -420,7 +420,7 @@ function SortableDay({
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="font-mono text-[10px] text-muted-foreground">
+              <label className="font-mono text-2xs text-muted-foreground">
                 ENFOQUE
               </label>
               <input
@@ -433,7 +433,7 @@ function SortableDay({
 
           {/* Dias de la semana */}
           <div className="flex flex-col gap-1.5">
-            <label className="font-mono text-[10px] text-muted-foreground">
+            <label className="font-mono text-2xs text-muted-foreground">
               DIAS DE LA SEMANA
             </label>
             <div className="flex gap-1.5">
@@ -463,7 +463,7 @@ function SortableDay({
                 );
               })}
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Sin dias marcados: solo disponible como entreno libre.
             </p>
           </div>
@@ -578,7 +578,7 @@ function ExerciseRow({
           {...listeners}
           aria-label="Arrastra para reordenar el ejercicio"
           title="Arrastra para reordenar"
-          className="flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing"
+          className="flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing"
         >
           <GripVertical className="size-4" />
         </span>
@@ -628,7 +628,7 @@ function ExerciseRow({
           {exercise.instrucciones.length > 0 && (
             <ol className="flex flex-col gap-1 pb-1">
               {exercise.instrucciones.map((step, i) => (
-                <li key={i} className="flex gap-2 text-[11px] text-muted-foreground">
+                <li key={i} className="flex gap-2 text-xs text-muted-foreground">
                   <span className="font-mono font-bold text-foreground">{i + 1}.</span>
                   <span>{step}</span>
                 </li>
@@ -706,7 +706,7 @@ function Stepper({
 
   return (
     <div className="flex flex-1 flex-col gap-1">
-      <span className="font-mono text-[10px] text-muted-foreground">{label}</span>
+      <span className="font-mono text-2xs text-muted-foreground">{label}</span>
       <div className="flex items-center gap-1">
         <button
           type="button"

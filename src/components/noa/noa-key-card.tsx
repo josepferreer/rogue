@@ -109,7 +109,7 @@ export function NoaKeyCard() {
           expone el consumo de una clave, así que se cuenta lo que sí sabemos:
           las herramientas que NOA ha ejecutado. */}
       {!editing && masked && usage?.hoy != null && (
-        <p className="font-mono text-[11px] text-muted-foreground">
+        <p className="font-mono text-xs text-muted-foreground">
           {usage.hoy} acciones hoy · {usage.semana} esta semana
         </p>
       )}

@@ -156,7 +156,7 @@ export default function AmigosPage({
   ];
 
   return (
-    <div className="flex flex-col gap-5 pt-2 pb-24">
+    <div className="flex flex-col gap-5 pt-2">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Amigos</h1>
         <p className="font-mono text-xs tracking-[0.2em] text-muted-foreground">
@@ -182,7 +182,7 @@ export default function AmigosPage({
             {t.badge !== undefined && (
               <span
                 className={
-                  "rounded-full px-1.5 py-0.5 font-mono text-[10px] " +
+                  "rounded-full px-1.5 py-0.5 font-mono text-2xs " +
                   (tab === t.id ? "bg-background/20" : "bg-background/60")
                 }
               >
@@ -201,8 +201,8 @@ export default function AmigosPage({
             <div key={i} className="flex items-center gap-3 rounded-3xl border border-border bg-surface p-3">
               <Skeleton className="size-11 shrink-0 rounded-full" />
               <div className="flex min-w-0 flex-1 flex-col gap-2">
-                <Skeleton className="h-3.5 w-32 rounded-lg" />
-                <Skeleton className="h-3 w-20 rounded-lg" />
+                <Skeleton className="h-3.5 w-32 rounded-xl" />
+                <Skeleton className="h-3 w-20 rounded-xl" />
               </div>
             </div>
           ))}
@@ -308,7 +308,7 @@ export default function AmigosPage({
                       displayName={f.otherDisplayName}
                       username={f.otherUsername}
                     >
-                      <span className="rounded-full bg-muted px-2.5 py-1 font-mono text-[10px] text-muted-foreground">
+                      <span className="rounded-full bg-muted px-2.5 py-1 font-mono text-2xs text-muted-foreground">
                         PENDIENTE
                       </span>
                       <button
@@ -373,7 +373,7 @@ export default function AmigosPage({
                     username={u.username}
                   >
                     {yaRelacionado ? (
-                      <span className="rounded-full bg-muted px-2.5 py-1 font-mono text-[10px] text-muted-foreground">
+                      <span className="rounded-full bg-muted px-2.5 py-1 font-mono text-2xs text-muted-foreground">
                         YA AÑADIDO
                       </span>
                     ) : (

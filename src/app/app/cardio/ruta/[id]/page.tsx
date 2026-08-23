@@ -44,12 +44,12 @@ export default function SavedRouteDetailPage({
   // tarjetas y CTA): al llegar los datos nada se mueve de sitio.
   if (route === "loading") {
     return (
-      <div className="flex flex-col gap-6 pt-2 pb-8">
+      <div className="flex flex-col gap-5 pt-2">
         <div className="flex items-center gap-3">
           <Skeleton className="size-10 shrink-0 rounded-full" />
           <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <Skeleton className="h-5 w-40 rounded-lg" />
-            <Skeleton className="h-3 w-24 rounded-lg" />
+            <Skeleton className="h-5 w-40 rounded-xl" />
+            <Skeleton className="h-3 w-24 rounded-xl" />
           </div>
         </div>
         <Skeleton className="h-[46dvh] max-h-[520px] min-h-[300px] w-full rounded-3xl" />
@@ -83,7 +83,7 @@ export default function SavedRouteDetailPage({
   }
 
   return (
-    <div className="flex flex-col gap-6 pt-2 pb-8">
+    <div className="flex flex-col gap-5 pt-2">
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.push("/app/cardio")}
@@ -108,7 +108,7 @@ export default function SavedRouteDetailPage({
             {route.distanceKm.toFixed(2)}
             <span className="text-lg">km</span>
           </p>
-          <p className="text-[10px] font-medium tracking-widest text-muted-foreground">
+          <p className="text-2xs font-medium tracking-widest text-muted-foreground">
             DISTANCIA
           </p>
         </div>
@@ -118,7 +118,7 @@ export default function SavedRouteDetailPage({
             {route.elevationGainM != null ? route.elevationGainM : "--"}
             <span className="text-lg">m</span>
           </p>
-          <p className="text-[10px] font-medium tracking-widest text-muted-foreground">
+          <p className="text-2xs font-medium tracking-widest text-muted-foreground">
             DESNIVEL +
           </p>
         </div>

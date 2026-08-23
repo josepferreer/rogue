@@ -117,7 +117,7 @@ function TodayCard({
   return (
     <div className="h-full min-h-[212px] rounded-3xl p-5 bg-surface text-foreground border border-border">
       <div className="flex items-start justify-between">
-        <span className="rounded-full bg-muted px-3 py-1.5 font-mono text-[10px] font-medium tracking-[0.15em] text-muted-foreground">
+        <span className="rounded-full bg-muted px-3 py-1.5 font-mono text-2xs font-medium tracking-[0.15em] text-muted-foreground">
           HOY · {todayDay.label.toUpperCase()}
         </span>
       </div>
@@ -229,7 +229,7 @@ function WeekCalendarCard({ sessions }: { sessions: WorkoutSession[] }) {
         onClick={() => setExpanded((v) => !v)}
         className="flex w-full items-start justify-between"
       >
-        <span className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 font-mono text-[10px] font-medium tracking-[0.15em] text-muted-foreground">
+        <span className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 font-mono text-2xs font-medium tracking-[0.15em] text-muted-foreground">
           <Calendar className="size-3" />
           {expanded ? "MES COMPLETO" : "ULTIMOS 7 DIAS"}
         </span>
@@ -249,17 +249,17 @@ function WeekCalendarCard({ sessions }: { sessions: WorkoutSession[] }) {
           <div className="mt-5 flex items-center justify-between">
             {days.map((d) => (
               <div key={d.key} className="flex flex-col items-center gap-1.5">
-                <span className="font-mono text-[10px] text-muted-foreground">
+                <span className="font-mono text-2xs text-muted-foreground">
                   {d.letter}
                 </span>
                 <span
                   className={cn(
                     "flex size-9 items-center justify-center rounded-full font-mono text-xs font-medium transition-colors",
                     d.trained
-                      ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                      ? "bg-accent text-accent-foreground"
                       : "bg-muted text-muted-foreground",
                     d.isToday && !d.trained &&
-                      "ring-2 ring-neutral-900 ring-offset-2 ring-offset-surface dark:ring-white",
+                      "ring-2 ring-accent ring-offset-2 ring-offset-surface",
                   )}
                 >
                   {d.num}
@@ -304,7 +304,7 @@ function WeekCalendarCard({ sessions }: { sessions: WorkoutSession[] }) {
           </p>
           <div className="mt-4 grid grid-cols-7 gap-y-2 text-center">
             {WEEKDAY_LETTERS.map((l, i) => (
-              <span key={i} className="font-mono text-[10px] text-muted-foreground">
+              <span key={i} className="font-mono text-2xs text-muted-foreground">
                 {l}
               </span>
             ))}
@@ -321,17 +321,17 @@ function WeekCalendarCard({ sessions }: { sessions: WorkoutSession[] }) {
                       setSelectedKey((prev) => (prev === d.key ? null : d.key));
                     }}
                     className={cn(
-                      "flex size-7 items-center justify-center rounded-full font-mono text-[11px] font-medium transition-colors",
+                      "flex size-7 items-center justify-center rounded-full font-mono text-xs font-medium transition-colors",
                       d.trained
-                        ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                        ? "bg-accent text-accent-foreground"
                         : d.isFuture
-                          ? "text-neutral-200 dark:text-neutral-700"
+                          ? "text-muted-foreground/40"
                           : "text-muted-foreground",
                       d.isToday && !d.trained &&
-                        "ring-2 ring-neutral-900 ring-offset-1 ring-offset-surface dark:ring-white",
+                        "ring-2 ring-accent ring-offset-1 ring-offset-surface",
                       d.trained &&
                         selectedKey === d.key &&
-                        "ring-2 ring-neutral-900 ring-offset-1 ring-offset-surface dark:ring-white",
+                        "ring-2 ring-accent ring-offset-1 ring-offset-surface",
                     )}
                   >
                     {d.num}
@@ -357,7 +357,7 @@ function WeekCalendarCard({ sessions }: { sessions: WorkoutSession[] }) {
                     <div key={s.id} className="flex items-center gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium">{s.dayLabel}</p>
-                        <p className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+                        <p className="flex items-center gap-1 font-mono text-2xs text-muted-foreground">
                           {s.durationSec !== undefined && (
                             <>
                               <Timer className="size-2.5" />
@@ -372,7 +372,7 @@ function WeekCalendarCard({ sessions }: { sessions: WorkoutSession[] }) {
                         <p className="font-mono text-xs font-medium">
                           {s.sets.length} series
                         </p>
-                        <p className="font-mono text-[10px] text-muted-foreground">
+                        <p className="font-mono text-2xs text-muted-foreground">
                           {formatWeight(volume, preferences.unit)} {preferences.unit}
                         </p>
                       </div>
@@ -495,7 +495,7 @@ function WeekVolumeCard({
         {deltaPct !== null && (
           <span
             className={cn(
-              "font-mono text-[11px] font-medium",
+              "font-mono text-xs font-medium",
               deltaPct >= 0 ? "text-accent-green" : "text-muted-foreground",
             )}
           >
@@ -513,7 +513,7 @@ function WeekVolumeCard({
           <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
             <div className="flex h-14 w-full items-end">
               <div
-                className="w-full rounded-md transition-[height] duration-300"
+                className="w-full rounded-xl transition-[height] duration-300"
                 style={{
                   height: `${Math.max(6, Math.round((v / max) * 100))}%`,
                   background:
@@ -523,7 +523,7 @@ function WeekVolumeCard({
             </div>
             <span
               className={cn(
-                "font-mono text-[10px]",
+                "font-mono text-2xs",
                 i === todayIndex ? "text-foreground" : "text-muted-foreground",
               )}
             >
@@ -568,7 +568,7 @@ function NutritionCard({
             style={{ width: `${pct}%`, background: "var(--card-mint-foreground)" }}
           />
         </div>
-        <p className="text-[11px] opacity-80">quedan {left.toLocaleString("es-ES")} kcal</p>
+        <p className="text-xs opacity-80">quedan {left.toLocaleString("es-ES")} kcal</p>
       </PastelCard>
     </Link>
   );
@@ -679,7 +679,7 @@ export default function Home() {
       .toUpperCase() || "R";
 
   return (
-    <div className="flex flex-col gap-6 pt-2">
+    <div className="flex flex-col gap-5 pt-2">
       <Link href="/app/perfil" className="flex w-fit items-center gap-3">
         <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-accent text-base font-semibold text-accent-foreground">
           {initials}
@@ -803,14 +803,14 @@ export default function Home() {
               variant={variant}
               className="flex flex-col gap-2"
             >
-              <p className="text-[10px] font-medium tracking-wide opacity-70">
+              <p className="text-2xs font-medium tracking-wide opacity-70">
                 {ex.grupo.toUpperCase()}
               </p>
               <p className="text-sm font-semibold leading-snug">{ex.nombre}</p>
               <p className="font-mono text-xs opacity-80">
                 {EQUIPMENT_LABELS[ex.equipo]}
               </p>
-              <p className="text-[11px] opacity-70">
+              <p className="text-xs opacity-70">
                 {DIFFICULTY_LABELS[ex.dificultad]} ·{" "}
                 {ex.mecanica === "compuesto" ? "Compuesto" : "Aislamiento"}
               </p>

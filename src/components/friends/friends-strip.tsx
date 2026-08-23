@@ -30,7 +30,7 @@ export function FriendsStrip() {
         >
           {pendingCount > 0 ? (
             <>
-              <span className="flex size-4 items-center justify-center rounded-full bg-destructive font-mono text-[10px] font-semibold text-destructive-foreground">
+              <span className="flex size-4 items-center justify-center rounded-full bg-destructive font-mono text-2xs font-semibold text-destructive-foreground">
                 {pendingCount}
               </span>
               Solicitudes
@@ -50,7 +50,7 @@ export function FriendsStrip() {
           <span className="flex size-14 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground">
             <UserPlus className="size-5" />
           </span>
-          <p className="max-w-[60px] truncate text-[11px] text-muted-foreground">
+          <p className="max-w-[60px] truncate text-xs text-muted-foreground">
             Añadir
           </p>
         </Link>
@@ -67,7 +67,7 @@ export function FriendsStrip() {
                 {initials(f.otherDisplayName)}
               </span>
             </span>
-            <p className="max-w-[60px] truncate text-[11px] font-medium">
+            <p className="max-w-[60px] truncate text-xs font-medium">
               {f.otherUsername}
             </p>
           </Link>

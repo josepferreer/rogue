@@ -580,7 +580,7 @@ export default function MapView({
               >
                 {mapMode === "2.5d" ? (
                   <>
-                    <Box className="size-3.5 text-blue-500" />
+                    <Box className="size-3.5 text-card-blue-foreground" />
                     <span>2.5D</span>
                   </>
                 ) : (
@@ -609,7 +609,7 @@ export default function MapView({
             >
               {mapMode === "2.5d" ? (
                 <>
-                  <Box className="size-3.5 text-blue-500" />
+                  <Box className="size-3.5 text-card-blue-foreground" />
                   <span>2.5D</span>
                 </>
               ) : (

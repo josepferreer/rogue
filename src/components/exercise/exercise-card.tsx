@@ -28,7 +28,7 @@ export function ExerciseCard({
       {badge && (
         <span
           className={cn(
-            "absolute right-2.5 top-2.5 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
+            "absolute right-2.5 top-2.5 flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-medium",
             badge === "favorito"
               ? "bg-accent-red/15 text-accent-red"
               : "bg-muted text-muted-foreground",
@@ -50,7 +50,7 @@ export function ExerciseCard({
         <p className="mt-0.5 truncate text-xs text-muted-foreground">
           {exercise.grupo} · {EQUIPMENT_LABELS[exercise.equipo]}
         </p>
-        <p className="mt-1 font-mono text-[10px] tracking-wide text-muted-foreground">
+        <p className="mt-1 font-mono text-2xs tracking-wide text-muted-foreground">
           {DIFFICULTY_LABELS[exercise.dificultad].toUpperCase()}
         </p>
       </div>

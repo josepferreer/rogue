@@ -45,7 +45,7 @@ export function SkeletonText({
       {Array.from({ length: lines }, (_, i) => (
         <Skeleton
           key={i}
-          className={cn("h-3.5 rounded-lg", i === lines - 1 && "w-2/3")}
+          className={cn("h-3.5 rounded-xl", i === lines - 1 && "w-2/3")}
         />
       ))}
     </div>

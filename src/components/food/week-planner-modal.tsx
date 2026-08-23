@@ -108,7 +108,7 @@ export function WeekPlannerModal({ open, onClose, initialDate }: Props) {
               <div className="flex flex-1 gap-1">
                 {days.map(d => (
                   <div key={d.key} className={cn("flex flex-1 flex-col items-center rounded-2xl py-1.5", d.isToday && "bg-accent")}>
-                    <span className={cn("text-[10px]", d.isToday ? "text-accent-foreground" : "text-muted-foreground")}>{d.short}</span>
+                    <span className={cn("text-2xs", d.isToday ? "text-accent-foreground" : "text-muted-foreground")}>{d.short}</span>
                     <span className={cn("text-sm font-semibold", d.isToday ? "text-accent-foreground" : "text-foreground")}>{d.num}</span>
                   </div>
                 ))}
@@ -145,9 +145,9 @@ export function WeekPlannerModal({ open, onClose, initialDate }: Props) {
                           >
                             {hasItems ? (
                               <>
-                                <span className="text-[10px] font-semibold leading-tight">{kcal}</span>
-                                <span className="text-[9px] text-muted-foreground">kcal</span>
-                                <span className="text-[9px] text-muted-foreground">
+                                <span className="text-2xs font-semibold leading-tight">{kcal}</span>
+                                <span className="text-2xs text-muted-foreground">kcal</span>
+                                <span className="text-2xs text-muted-foreground">
                                   {plannedKcal >= 1 ? `+${plannedKcal}` : `${dayItems.length}×`}
                                 </span>
                               </>

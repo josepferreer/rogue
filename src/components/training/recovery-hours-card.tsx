@@ -142,7 +142,7 @@ export function RecoveryHoursCard() {
                         <span className="min-w-0 flex-1 truncate">
                           {MUSCLE_LABELS[m]}
                           {cambiado && (
-                            <span className="ml-1.5 font-mono text-[10px] text-muted-foreground">
+                            <span className="ml-1.5 font-mono text-2xs text-muted-foreground">
                               (fábrica {porDefecto} h)
                             </span>
                           )}

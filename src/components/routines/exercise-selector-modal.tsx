@@ -63,7 +63,7 @@ function ExerciseItem({
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
             {ex.grupo} · {EQUIPMENT_LABELS[ex.equipo]}
           </p>
-          <p className="mt-1 font-mono text-[10px] tracking-wide text-muted-foreground">
+          <p className="mt-1 font-mono text-2xs tracking-wide text-muted-foreground">
             {DIFFICULTY_LABELS[ex.dificultad].toUpperCase()}
           </p>
         </button>
@@ -132,7 +132,7 @@ function ExerciseItem({
               {ex.instrucciones.map((step, i) => (
                 <li
                   key={i}
-                  className="flex gap-2 text-[11px] text-muted-foreground"
+                  className="flex gap-2 text-xs text-muted-foreground"
                 >
                   <span className="shrink-0 font-mono font-bold text-foreground">
                     {i + 1}.
