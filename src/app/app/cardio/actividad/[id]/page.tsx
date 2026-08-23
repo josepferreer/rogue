@@ -77,7 +77,7 @@ export default function ActivityDetailsPage({
     return (
       <div className="flex flex-col items-center justify-center gap-4 pt-24 text-center">
         <p className="text-muted-foreground">Actividad no encontrada.</p>
-        <Button onClick={() => router.push("/app/cardio")} className="px-6 py-2">
+        <Button onClick={() => router.push("/app/cardio")} size="sm">
           Volver a Cardio
         </Button>
       </div>

@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 /** Estilo compartido de tarjeta de aviso. Cualquier aviso nuevo deberia usarlo
  *  para que todos se vean igual. */
 export const NOTIFICATION_CARD_CLASS =
-  "pointer-events-auto flex w-full max-w-sm items-center gap-2.5 rounded-2xl border border-border bg-surface px-4 py-3 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.25)] backdrop-blur-xl dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)]";
+  "pointer-events-auto flex w-full max-w-sm items-center gap-2.5 rounded-2xl border border-border bg-surface px-4 py-3 shadow-float backdrop-blur-xl";
 
 /** Escalones verticales segun cuantos mini-players haya debajo. Deben ser
  *  cadenas literales: Tailwind no genera clases construidas dinamicamente. */
@@ -49,3 +49,12 @@ export function NotificationStack() {
     />
   );
 }
+
+/**
+ * Panel de hoja/modal. Habia cinco recetas distintas repartidas por la app
+ * (unas con shadow-2xl y otras sin sombra, unas con bg-background y otras con
+ * bg-surface, y el alto maximo de escritorio en 80dvh o 85dvh segun el sitio).
+ * Cualquier hoja nueva deberia usar esto.
+ */
+export const SHEET_PANEL_CLASS =
+  "flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:max-h-[85dvh] md:rounded-3xl";

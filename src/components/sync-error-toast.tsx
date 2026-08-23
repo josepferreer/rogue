@@ -56,7 +56,7 @@ export function SyncErrorToast() {
           No se pudo guardar: {labels}.
         </p>
       </div>
-      <Button onClick={retryFailedWrites} className="shrink-0 px-3 py-1.5 text-xs">
+      <Button onClick={retryFailedWrites} size="sm" className="shrink-0">
         Reintentar
       </Button>
       <button

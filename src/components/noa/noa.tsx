@@ -427,7 +427,6 @@ function NoaSheet({
     <div
       className="overlay-anim absolute inset-0 z-[70] flex flex-col justify-end md:items-center md:justify-center"
       data-state={state}
-      style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       <div
@@ -487,11 +486,11 @@ function NoaSheet({
                   variant="secondary"
                   fullWidth
                   onClick={discardPending}
-                  className="py-2"
+                  size="sm"
                 >
                   Descartar
                 </Button>
-                <Button fullWidth onClick={() => confirmActions(pending)} className="py-2">
+                <Button fullWidth onClick={() => confirmActions(pending)} size="sm">
                   <Check className="size-4" />
                   {pending.length > 1 ? "Confirmar todo" : "Confirmar"}
                 </Button>

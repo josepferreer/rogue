@@ -35,7 +35,6 @@ export function ConfirmDialog({
     <div
       className="overlay-anim absolute inset-0 z-[60] flex items-center justify-center px-8"
       data-state={state}
-      style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
       onClick={onCancel}
     >
       <div

@@ -99,7 +99,7 @@ function SortableExercise({
       className={cn(
         "rounded-3xl border bg-surface p-4",
         isDragging
-          ? "z-10 border-foreground/40 shadow-[0_16px_40px_-12px_rgba(23,24,28,0.35)]"
+          ? "z-10 border-foreground/40 shadow-drag"
           : "border-border",
       )}
     >
@@ -240,7 +240,7 @@ export function WorkoutSessionModal() {
         </div>
 
         <div className="mx-auto w-full shrink-0 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 md:max-w-2xl">
-          <Button fullWidth onClick={close} className="py-4">
+          <Button fullWidth size="lg" onClick={close}>
             Volver al inicio
             <ArrowRight className="size-4" />
           </Button>
@@ -291,7 +291,7 @@ export function WorkoutSessionModal() {
                 </div>
               ))}
             </div>
-            <Button fullWidth onClick={dismissReminders} className="mt-4 py-3.5">
+            <Button fullWidth onClick={dismissReminders} className="mt-4">
               Entendido
               <Check className="size-4" />
             </Button>

@@ -127,7 +127,7 @@ export function DownloadAppModal({ className }: { className?: string }) {
             type="button"
             aria-label="Cerrar"
             onClick={() => setOpen(false)}
-            className="overlay-anim absolute inset-0 bg-black/40 backdrop-blur-sm"
+            className="overlay-anim scrim absolute inset-0"
             data-state={state}
           />
 

@@ -32,7 +32,7 @@ function RoutinePanel() {
 
   if (routineDays.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-3xl border border-border bg-surface py-12 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-3xl border border-border bg-surface p-8 text-center">
         <CalendarPlus className="size-8 text-muted-foreground" />
         <div>
           <p className="text-sm font-semibold">Aún no tienes días de rutina</p>
@@ -313,7 +313,7 @@ function HistoryPanel() {
 
   if (sessions.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-3xl border border-border bg-surface py-12 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-3xl border border-border bg-surface p-8 text-center">
         <div className="flex size-12 items-center justify-center rounded-full bg-muted">
           <span className="font-mono text-xl opacity-30">0</span>
         </div>
@@ -385,7 +385,7 @@ export default function EntrenoPage({
             className={cn(
               "flex-1 rounded-full py-2 text-xs font-medium transition-colors",
               tab === id
-                ? "bg-background text-foreground shadow-sm"
+                ? "bg-segment-thumb text-foreground shadow-sm"
                 : "text-muted-foreground",
             )}
           >

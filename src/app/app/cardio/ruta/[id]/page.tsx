@@ -65,7 +65,7 @@ export default function SavedRouteDetailPage({
     return (
       <div className="flex flex-col items-center justify-center gap-4 pt-24 text-center">
         <p className="text-muted-foreground">Ruta no encontrada.</p>
-        <Button onClick={() => router.push("/app/cardio")} className="px-6 py-2">
+        <Button onClick={() => router.push("/app/cardio")} size="sm">
           Volver a Cardio
         </Button>
       </div>
@@ -130,7 +130,7 @@ export default function SavedRouteDetailPage({
         fullWidth
         onClick={repeat}
         disabled={isTracking}
-        className="py-4 text-base font-semibold shadow-lg"
+        size="lg"
       >
         <Play className="size-5 fill-current" />
         {isTracking ? "Ya tienes un cardio en marcha" : "Repetir esta ruta"}

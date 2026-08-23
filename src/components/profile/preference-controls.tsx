@@ -13,7 +13,7 @@ export function UnitToggle() {
   ];
 
   return (
-    <div className="flex items-center gap-1 rounded-2xl border border-border bg-muted/60 p-1">
+    <div className="flex items-center gap-1 rounded-full bg-muted p-1">
       {options.map((option) => (
         <button
           key={option.value}

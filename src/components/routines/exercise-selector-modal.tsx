@@ -184,15 +184,14 @@ export function ExerciseSelectorModal({
 
   const content = (
     <div
-      className="overlay-anim absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
+      className="overlay-anim scrim absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
       data-state={state}
-      style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       {/* Mismo margen lateral (px-5) que las tarjetas de contenido. */}
       <div className="sheet-anim w-full md:max-w-lg" data-state={state}>
         <div
-          className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:max-h-[80dvh] md:rounded-3xl"
+          className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:max-h-[85dvh] md:rounded-3xl"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between px-5 pb-3 pt-4">

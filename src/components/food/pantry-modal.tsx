@@ -392,14 +392,13 @@ export function PantryModal({ open, onClose }: Props) {
 
   const content = (
     <div
-      className="overlay-anim absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
+      className="overlay-anim scrim absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
       data-state={state}
-      style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       <div className="sheet-anim w-full md:max-w-lg" data-state={state}>
         <div
-          className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:max-h-[80dvh] md:rounded-3xl"
+          className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:max-h-[85dvh] md:rounded-3xl"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between px-5 pb-3 pt-4">
@@ -417,11 +416,11 @@ export function PantryModal({ open, onClose }: Props) {
           </div>
 
           <div className="flex flex-col gap-3 px-5 pb-3">
-            <div className="flex w-full rounded-2xl bg-surface p-1">
+            <div className="flex w-full rounded-full bg-muted p-1">
               <button
                 className={cn(
-                  "flex-1 rounded-xl py-2 text-sm font-medium transition-colors",
-                  tab === "alimentos" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  "flex-1 rounded-full py-2 text-xs font-medium transition-colors",
+                  tab === "alimentos" ? "bg-segment-thumb text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 )}
                 onClick={() => { setTab("alimentos"); setCreating(false); setEditingId(null); }}
               >
@@ -429,8 +428,8 @@ export function PantryModal({ open, onClose }: Props) {
               </button>
               <button
                 className={cn(
-                  "flex-1 rounded-xl py-2 text-sm font-medium transition-colors",
-                  tab === "platos" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  "flex-1 rounded-full py-2 text-xs font-medium transition-colors",
+                  tab === "platos" ? "bg-segment-thumb text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 )}
                 onClick={() => { setTab("platos"); setCreating(false); setEditingId(null); }}
               >

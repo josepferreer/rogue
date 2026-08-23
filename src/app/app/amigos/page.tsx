@@ -164,8 +164,8 @@ export default function AmigosPage({
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1.5">
+      {/* Tabs: misma pista pill que Perfil, Entreno y la despensa. */}
+      <div className="flex rounded-full bg-muted p-1">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -174,8 +174,8 @@ export default function AmigosPage({
             className={
               "flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium transition-colors " +
               (tab === t.id
-                ? "bg-foreground text-background"
-                : "bg-muted text-muted-foreground hover:text-foreground")
+                ? "bg-segment-thumb text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground")
             }
           >
             {t.label}

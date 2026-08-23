@@ -369,7 +369,7 @@ function SortableDay({
       className={cn(
         "rounded-3xl border bg-surface overflow-hidden",
         isDragging
-          ? "z-10 border-foreground/40 shadow-[0_16px_40px_-12px_rgba(23,24,28,0.35)]"
+          ? "z-10 border-foreground/40 shadow-drag"
           : "border-border",
       )}
     >

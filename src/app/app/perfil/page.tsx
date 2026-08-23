@@ -189,7 +189,6 @@ function EditIdentityModal({
     <div
       className="overlay-anim absolute inset-0 z-[60] flex flex-col justify-end md:items-center md:justify-center"
       data-state={state}
-      style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       <div
@@ -308,7 +307,6 @@ function EditPhysicalModal({
     <div
       className="overlay-anim absolute inset-0 z-[60] flex flex-col justify-end md:items-center md:justify-center"
       data-state={state}
-      style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       <div
@@ -469,7 +467,7 @@ export default function PerfilPage({
             className={cn(
               "flex-1 rounded-full py-2 text-xs font-medium transition-colors",
               tab === id
-                ? "bg-background text-foreground shadow-sm"
+                ? "bg-segment-thumb text-foreground shadow-sm"
                 : "text-muted-foreground",
             )}
           >

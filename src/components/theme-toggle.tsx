@@ -16,7 +16,7 @@ export function ThemeToggle() {
   const [mounted] = useState(() => typeof document !== "undefined");
 
   return (
-    <div className="flex items-center gap-1 rounded-2xl border border-border bg-muted/60 p-1">
+    <div className="flex items-center gap-1 rounded-full bg-muted p-1">
       {OPTIONS.map((option) => {
         const Icon = option.icon;
         const active = mounted && theme === option.value;
@@ -26,7 +26,7 @@ export function ThemeToggle() {
             type="button"
             onClick={() => setTheme(option.value)}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm transition-colors",
+              "flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium transition-colors",
               active
                 ? "bg-segment-thumb text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"

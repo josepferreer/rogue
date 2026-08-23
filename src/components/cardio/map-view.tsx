@@ -569,14 +569,14 @@ export default function MapView({
         topBar ? (
           <div className="absolute inset-x-0 top-0 z-[400] flex items-start justify-between p-5 pt-[calc(env(safe-area-inset-top)+1rem)] bg-gradient-to-b from-background/80 via-background/40 to-transparent pointer-events-none">
             <div className="flex items-center gap-2 pointer-events-auto">
-              <span className="rounded-full bg-surface/80 px-4 py-1.5 font-mono text-xs tracking-[0.2em] backdrop-blur-md shadow-sm border border-border/40">
+              <span className="rounded-full bg-surface/90 backdrop-blur-md border border-border shadow-sm px-4 py-1.5 font-mono text-xs tracking-[0.2em]">
                 {topBar.title}
               </span>
               <button
                 onClick={toggleMapMode}
                 type="button"
                 aria-label={`Cambiar a modo ${mapMode === "2d" ? "2.5D" : "2D"}`}
-                className="flex items-center gap-1.5 rounded-full bg-surface/80 px-3 py-1.5 text-xs font-semibold shadow-sm backdrop-blur-md transition-all active:scale-95 border border-border/40 hover:bg-surface"
+                className="flex items-center gap-1.5 rounded-full bg-surface/90 backdrop-blur-md border border-border shadow-sm px-3 py-1.5 text-xs font-medium transition-all active:scale-95 hover:bg-surface"
               >
                 {mapMode === "2.5d" ? (
                   <>
@@ -594,7 +594,7 @@ export default function MapView({
             <button
               onClick={topBar.onAction}
               aria-label={topBar.actionAriaLabel || "Acción"}
-              className="pointer-events-auto flex size-10 items-center justify-center rounded-full bg-surface/80 hover:bg-surface shadow-sm backdrop-blur-md border border-border/40 transition-transform active:scale-95"
+              className="pointer-events-auto flex size-10 items-center justify-center rounded-full bg-surface/90 backdrop-blur-md border border-border shadow-sm hover:bg-surface transition-transform active:scale-95"
             >
               {topBar.actionIcon}
             </button>
@@ -605,7 +605,7 @@ export default function MapView({
               onClick={toggleMapMode}
               type="button"
               aria-label={`Cambiar a modo ${mapMode === "2d" ? "2.5D" : "2D"}`}
-              className="flex items-center gap-1.5 rounded-full bg-surface/90 px-3 py-1.5 text-xs font-semibold shadow-md backdrop-blur-md transition-all active:scale-95 border border-border hover:bg-surface"
+              className="flex items-center gap-1.5 rounded-full bg-surface/90 backdrop-blur-md border border-border shadow-sm px-3 py-1.5 text-xs font-medium transition-all active:scale-95 hover:bg-surface"
             >
               {mapMode === "2.5d" ? (
                 <>

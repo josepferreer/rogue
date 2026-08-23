@@ -67,12 +67,11 @@ export function WeekPlannerModal({ open, onClose, initialDate }: Props) {
   const content = (
     <>
       <div
-        className="overlay-anim absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
+        className="overlay-anim scrim absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
         data-state={state}
-        style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
         onClick={onClose}
       >
-        <div className="sheet-anim w-full px-5 md:w-full md:max-w-2xl md:px-0" data-state={state}>
+        <div className="sheet-anim w-full md:max-w-2xl" data-state={state}>
           <div
             className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:max-h-[85dvh] md:rounded-3xl"
             onClick={e => e.stopPropagation()}

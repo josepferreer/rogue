@@ -115,7 +115,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full flex-1 flex-col px-6 pb-8 pt-10 md:max-w-md md:justify-center md:pt-8">
+    <div className="mx-auto flex w-full flex-1 flex-col px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-10 md:max-w-md md:justify-center md:pt-8">
       <div className="mb-4 h-10">
         {step > 0 && (
           <button

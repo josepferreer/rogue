@@ -95,7 +95,7 @@ export function LibraryPanel() {
       </div>
 
       {sorted.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-3xl border border-border bg-surface py-12 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-3xl border border-border bg-surface p-8 text-center">
           <SearchX className="size-8 text-muted-foreground" />
           <div>
             <p className="text-sm font-semibold">Sin resultados</p>
@@ -114,7 +114,7 @@ export function LibraryPanel() {
           )}
         </div>
       ) : (
-        <div className="flex flex-col gap-2.5 md:grid md:grid-cols-2 md:gap-3">
+        <div className="flex flex-col gap-3 md:grid md:grid-cols-2 md:gap-3">
           {sorted.map((exercise) => (
             <ExerciseCard
               key={exercise.id}

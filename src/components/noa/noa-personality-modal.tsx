@@ -112,12 +112,11 @@ function PersonalitySheet({
     <div
       className="overlay-anim absolute inset-0 z-[60] flex flex-col justify-end md:items-center md:justify-center"
       data-state={state}
-      style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       <div className="sheet-anim w-full md:max-w-md" data-state={state}>
         <div
-          className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-surface md:max-h-[85dvh] md:rounded-3xl"
+          className="flex max-h-[90dvh] flex-col rounded-t-3xl border border-border bg-background shadow-2xl md:max-h-[85dvh] md:rounded-3xl"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-start justify-between px-5 pb-2 pt-5">

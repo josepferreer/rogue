@@ -3,10 +3,18 @@ import { cn } from "@/lib/utils";
 
 type ButtonVariant = "primary" | "secondary" | "ghost";
 
+type ButtonSize = "sm" | "md" | "lg";
+
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
   /** Ocupa todo el ancho disponible (CTAs de pie de modal/pantalla). */
   fullWidth?: boolean;
+  /**
+   * Altura. Tres escalones y nada mas: los call sites venian pisando el padding
+   * con className (py-1.5, py-2, py-3.5, py-4), y el mismo boton salia con
+   * cinco alturas distintas segun la pantalla.
+   */
+  size?: ButtonSize;
 };
 
 // Estilo unico para botones de accion (texto). Los circulares icon-only siguen
@@ -14,7 +22,13 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 // y no pasan por aqui. La forma pill + bg-accent es la convencion dominante de
 // la app; secondary/ghost comparten forma para que la jerarquia sea coherente.
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-medium transition-transform active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50";
+  "inline-flex items-center justify-center gap-2 rounded-full font-medium transition-transform active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50";
+
+const SIZES: Record<ButtonSize, string> = {
+  sm: "px-3 py-1.5 text-xs",
+  md: "px-5 py-3 text-sm",
+  lg: "px-6 py-4 text-base",
+};
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary: "bg-accent text-accent-foreground",
@@ -26,6 +40,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
 export function Button({
   className,
   variant = "primary",
+  size = "md",
   fullWidth,
   type = "button",
   ...props
@@ -33,7 +48,13 @@ export function Button({
   return (
     <button
       type={type}
-      className={cn(BASE, VARIANTS[variant], fullWidth && "w-full", className)}
+      className={cn(
+        BASE,
+        SIZES[size],
+        VARIANTS[variant],
+        fullWidth && "w-full",
+        className,
+      )}
       {...props}
     />
   );

@@ -149,7 +149,7 @@ export default function ComidasPage() {
       </div>
 
       {/* Resumen del dia / objetivo */}
-      <div className="rounded-3xl border border-border bg-surface p-4">
+      <div className="rounded-3xl border border-border bg-surface p-5">
         <div className="flex items-baseline justify-between">
           <p>
             <span className="text-2xl font-semibold">
@@ -208,7 +208,10 @@ export default function ComidasPage() {
       {/* Botones de acción (Escáner y Despensa) */}
       <PageActions setPantryOpen={setPantryOpen} />
 
-      {/* Tarjetas por comida (resumen; se abren para ver el detalle) */}
+      {/* Tarjetas por comida. Van en su propio contenedor para que la lista
+          tenga ritmo de lista (gap-3) y no herede el gap-5 de la pagina, que las
+          separaba tanto como a los bloques distintos entre si. */}
+      <div className="flex flex-col gap-3">
       {MEAL_TYPES.map(({ type, label }) => {
         const meta = MEAL_META[type];
         const Icon = meta.icon;
@@ -250,6 +253,7 @@ export default function ComidasPage() {
           </PastelCard>
         );
       })}
+      </div>
 
       <PantryModal open={pantryOpen} onClose={() => setPantryOpen(false)} />
       <NutritionGoalsModal open={goalsOpen} onClose={() => setGoalsOpen(false)} />
@@ -391,9 +395,8 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
 
       {sheetMounted && shownProduct && portalTarget && createPortal(
         <div
-          className="overlay-anim absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
+          className="overlay-anim scrim absolute inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center"
           data-state={sheetState}
-          style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
           onClick={() => setScannedProduct(null)}
         >
           <div className="sheet-anim w-full md:max-w-lg" data-state={sheetState}>

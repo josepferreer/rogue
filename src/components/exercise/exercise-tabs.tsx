@@ -28,16 +28,16 @@ export function ExerciseTabs({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex rounded-2xl border border-border bg-surface p-1">
+      <div className="flex rounded-full bg-muted p-1">
         {TABS.map((tab) => (
           <button
             key={tab}
             type="button"
             onClick={() => setActive(tab)}
             className={cn(
-              "flex-1 rounded-xl py-2 text-xs font-medium transition-colors",
+              "flex-1 rounded-full py-2 text-xs font-medium transition-colors",
               active === tab
-                ? "bg-accent text-accent-foreground"
+                ? "bg-segment-thumb text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
