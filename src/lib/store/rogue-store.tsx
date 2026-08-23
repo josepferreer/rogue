@@ -227,6 +227,11 @@ function bestEst1RMByExercise(sessions: WorkoutSession[]): Map<string, number> {
 
 // --- Mapeo filas de Supabase <-> tipos de la app ---
 
+/** Lista blanca de columnas de `profiles`. Debe coincidir con ProfileRow: si
+ *  se anade un campo ahi, se anade aqui. Nunca `*`. */
+const PROFILE_COLUMNS =
+  "username, name, sex, bodyweight_kg, height_cm, goal, onboarded, unit, display_name_source, notify_reminders, notify_rest_end, notify_weekly_summary, share_stats, recovery_hours";
+
 type ProfileRow = {
   username: string;
   name: string;
@@ -335,9 +340,13 @@ async function fetchProfile(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<ProfileRow | null> {
+  // Columnas EXPLICITAS, no "*": la tabla profiles guarda tambien
+  // `noa_gemini_key` (la clave BYOK del usuario, en texto plano), y con el
+  // comodin viajaba al navegador en cada arranque de la app sin que nadie la
+  // necesitara. La lista es exactamente la de ProfileRow.
   const { data, error } = await supabase
     .from("profiles")
-    .select("*")
+    .select(PROFILE_COLUMNS)
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw error;

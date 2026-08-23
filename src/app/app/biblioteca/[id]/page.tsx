@@ -33,7 +33,9 @@ async function resolveExercise(id: string): Promise<Exercise | null> {
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;
   const exercise = await resolveExercise(id);
-  return { title: exercise ? `${exercise.nombre} · Rogue` : "Ejercicio" };
+  // Sin el sufijo: el layout raiz ya aplica la plantilla "%s · Rogue"
+  // (layout.tsx:24), asi que ponerlo aqui daba "... · Rogue · Rogue".
+  return { title: exercise ? exercise.nombre : "Ejercicio" };
 }
 
 export default async function ExercisePage({ params }: PageProps) {

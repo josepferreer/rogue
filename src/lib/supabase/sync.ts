@@ -182,12 +182,24 @@ function enqueue(write: PendingWrite) {
  * Encola una escritura. Nunca lanza: el fallo definitivo se reporta via
  * subscribeSyncFailures. `ops` se ejecuta en orden dentro del mismo bloque.
  */
+/**
+ * Ultimo usuario conocido. `getUser()` es async, asi que sin esta cache toda
+ * escritura nace con `userId: null` y solo se sella un tick despues; si la app
+ * se cierra en ese hueco, la escritura queda huerfana en localStorage. Con la
+ * cache, en la practica nace ya sellada.
+ */
+let cachedUserId: string | null = null;
+
+export function rememberSyncUser(userId: string | null) {
+  cachedUserId = userId;
+}
+
 export function syncWrite(label: string, ops: SyncOp | SyncOp[]) {
   const write: PendingWrite = {
     id: newId(),
     label,
     ops: Array.isArray(ops) ? ops : [ops],
-    userId: null,
+    userId: cachedUserId,
   };
   enqueue(write);
   // El usuario se sella dentro de la cola (getUser es async) para no arrastrar
@@ -198,6 +210,7 @@ export function syncWrite(label: string, ops: SyncOp | SyncOp[]) {
       data: { user },
     } = await supabase().auth.getUser();
     write.userId = user?.id ?? null;
+    cachedUserId = write.userId;
     persist();
   });
 }
@@ -233,7 +246,24 @@ export async function resumeStoredWrites() {
   const {
     data: { user },
   } = await supabase().auth.getUser();
-  const mine = (w: PendingWrite) => w.userId === null || w.userId === user?.id;
+  cachedUserId = user?.id ?? null;
+
+  /**
+   * Coincidencia EXACTA de usuario. Antes esto aceptaba tambien
+   * `w.userId === null`, y esas escrituras huerfanas (las que se guardaron
+   * antes de que `getUser()` sellara el id) se reproducian en la cuenta que
+   * estuviera abierta al volver: si el dispositivo lo comparten dos personas,
+   * los datos de una acababan en la cuenta de la otra. No se pueden atribuir,
+   * asi que se descartan.
+   */
+  const mine = (w: PendingWrite) => w.userId !== null && w.userId === user?.id;
+
+  const huerfanas = stored.pending.filter((w) => w.userId === null).length;
+  if (huerfanas > 0) {
+    console.warn(
+      `[sync] ${huerfanas} escrituras sin usuario descartadas: no se pueden atribuir a una cuenta.`,
+    );
+  }
 
   failed = stored.failed.filter(mine);
   const resume = stored.pending.filter(mine);

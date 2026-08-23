@@ -10,10 +10,12 @@ import { cn } from "@/lib/utils";
 import {
   dismissFailedWrites,
   getFailedWrites,
+  rememberSyncUser,
   resumeStoredWrites,
   retryFailedWrites,
   subscribeSyncFailures,
 } from "@/lib/supabase/sync";
+import { createClient } from "@/lib/supabase/client";
 
 /** Aviso persistente cuando alguna escritura a Supabase ha fallado tras los
  *  reintentos automaticos: lo que se ve en pantalla NO esta guardado. Se
@@ -38,6 +40,14 @@ export function SyncErrorToast() {
   // la zona autenticada y es quien muestra el resultado si vuelve a fallar.
   useEffect(() => {
     void resumeStoredWrites();
+
+    // Mantiene sellado el usuario de la cola. Sin esto, tras cambiar de cuenta
+    // las escrituras nuevas seguirian naciendo con el id anterior en cache.
+    const supabase = createClient();
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      rememberSyncUser(session?.user?.id ?? null);
+    });
+    return () => data.subscription.unsubscribe();
   }, []);
 
   if (failed.length === 0 || !portalTarget) return null;

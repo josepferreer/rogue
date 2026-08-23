@@ -21,14 +21,26 @@ export async function signIn(
     // que este lookup no sea invocable por cualquiera con la clave publica
     // (evitaria enumerar usernames/emails validos). Nunca se devuelve el
     // email al navegador: solo se usa aqui, en el servidor, para el login.
+    // `ilike` interpreta % y _ como comodines. Con identifier="%" esto casaba
+    // con un usuario arbitrario, y "a_c" casaba con "abc". No se puede usar
+    // `eq` a secas porque los usernames se guardan con mayusculas (el indice
+    // unico es sobre lower(username)), asi que:
+    //   1. se rechaza lo que no sea un username legal (esto ya descarta "%"),
+    //   2. y se comprueba la igualdad exacta sobre lo que devuelve la consulta,
+    //      porque "_" SI es un caracter valido de username.
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(identifier)) {
+      return { error: "Usuario/email o contraseña incorrectos." };
+    }
     const admin = createAdminClient();
     const { data } = await admin
       .from("profiles")
-      .select("email")
+      .select("email, username")
       .ilike("username", identifier)
       .maybeSingle();
     // No revelamos si el username existe o no: mismo error generico.
-    if (!data) return { error: "Usuario/email o contraseña incorrectos." };
+    if (!data || data.username.toLowerCase() !== identifier.toLowerCase()) {
+      return { error: "Usuario/email o contraseña incorrectos." };
+    }
     email = data.email;
   }
 
