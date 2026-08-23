@@ -495,7 +495,7 @@ export default function PerfilPage({
       <Section title="SOCIAL">
         <Link
           href="/app/amigos"
-          className="flex items-center gap-3 rounded-3xl border border-border bg-surface px-4 py-3 transition-colors hover:bg-muted/50"
+          className="flex items-center gap-3 rounded-3xl border border-border bg-surface p-4 transition-colors hover:bg-muted/50"
         >
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
             <Users className="size-4" />

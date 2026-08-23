@@ -58,7 +58,7 @@ function PersonRow({
   );
 
   return (
-    <div className="flex items-center gap-3 rounded-3xl border border-border bg-surface p-3">
+    <div className="flex items-center gap-3 rounded-3xl border border-border bg-surface p-4">
       {href ? (
         <Link
           href={href}
@@ -196,9 +196,9 @@ export default function AmigosPage({
       {!hydrated ? (
         // Filas con la silueta de PersonRow (avatar + dos líneas), para que la
         // lista real aparezca en su sitio en vez de empujar el layout.
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-3">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="flex items-center gap-3 rounded-3xl border border-border bg-surface p-3">
+            <div key={i} className="flex items-center gap-3 rounded-3xl border border-border bg-surface p-4">
               <Skeleton className="size-11 shrink-0 rounded-full" />
               <div className="flex min-w-0 flex-1 flex-col gap-2">
                 <Skeleton className="h-3.5 w-32 rounded-xl" />
@@ -211,7 +211,7 @@ export default function AmigosPage({
         <>
           {/* ── Amigos ────────────────────────────────────────────────── */}
           {tab === "amigos" && (
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-3">
               {friends.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 rounded-3xl border border-dashed border-border p-8 text-center">
                   <Users className="size-6 text-muted-foreground" />
