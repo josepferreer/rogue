@@ -29,6 +29,27 @@
 
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
+
+  /* Aviso/alerta. No existia, y por eso aparecian bg-amber-500 y bg-yellow-400
+     sueltos que no cambian en modo oscuro. */
+  --accent-amber: #b8801f;
+
+  /* Escala Nutri-Score. Estaba repetida a mano con paleta cruda en 4 sitios. */
+  --score-green: #3f8f4f;
+  --score-yellow: #b8801f;
+  --score-orange: #c2662b;
+  --score-red: #c0453c;
+
+  /* Control segmentado. En oscuro ningun token existente queda por encima de
+     --muted, y por eso el theme-toggle acababa parcheando con neutral-700. La
+     pista va HUNDIDA y la pastilla activa ELEVADA. */
+  --segment-track: #eeeef1;
+  --segment-thumb: #ffffff;
+
+  /* Elevacion. Las sombras eran literales rgba repetidos, algunos con el hex
+     del foreground CLARO, que en oscuro no existe. */
+  --elevation-float: 0 8px 32px -8px rgba(0, 0, 0, 0.25);
+  --elevation-drag: 0 16px 40px -12px rgba(0, 0, 0, 0.35);
 }
 
 .dark {
@@ -58,6 +79,21 @@
 
   --destructive: #f87171;
   --destructive-foreground: #17181c;
+
+  --accent-amber: #d8a441;
+
+  --score-green: #74c07e;
+  --score-yellow: #d8a441;
+  --score-orange: #dd8b58;
+  --score-red: #d98077;
+
+  /* Invertido respecto al claro: la pista mas oscura que la superficie y la
+     pastilla activa mas clara, para que "elevado" siga leyendose como elevado. */
+  --segment-track: #101014;
+  --segment-thumb: #2a2a30;
+
+  --elevation-float: 0 8px 32px -8px rgba(0, 0, 0, 0.6);
+  --elevation-drag: 0 16px 40px -12px rgba(0, 0, 0, 0.7);
 }
 
 @theme inline {
@@ -87,6 +123,21 @@
 
   --color-accent-green: var(--accent-green);
   --color-accent-red: var(--accent-red);
+  --color-accent-amber: var(--accent-amber);
+
+  --color-score-green: var(--score-green);
+  --color-score-yellow: var(--score-yellow);
+  --color-score-orange: var(--score-orange);
+  --color-score-red: var(--score-red);
+
+  --color-segment-track: var(--segment-track);
+  --color-segment-thumb: var(--segment-thumb);
+
+  --shadow-float: var(--elevation-float);
+  --shadow-drag: var(--elevation-drag);
+
+  /* Unico escalon por debajo de text-xs. Sustituye a los text-[10px] sueltos. */
+  --text-2xs: 0.625rem;
 
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);

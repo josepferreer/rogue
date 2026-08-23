@@ -13,7 +13,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { BarcodeScanner } from "@/components/food/barcode-scanner";
 import { useToast } from "@/components/ui/toast";
 import { lookupBarcode, lookupErrorMessage } from "@/lib/food/lookup";
-import { HEALTH_LABEL, type HealthScore } from "@/lib/food/health-score";
+import { HEALTH_BG, HEALTH_LABEL, type HealthScore } from "@/lib/food/health-score";
 
 type Props = {
   open: boolean;
@@ -141,7 +141,7 @@ function AlimentoForm({
               onClick={() => setHealthScore(c)}
               className={cn(
                 "size-8 rounded-full",
-                { green: "bg-green-500", yellow: "bg-yellow-400", orange: "bg-orange-500", red: "bg-red-500" }[c],
+                HEALTH_BG[c],
                 healthScore === c ? "ring-2 ring-foreground ring-offset-1 ring-offset-background" : "opacity-30",
               )}
             />
@@ -289,7 +289,7 @@ function PlatoForm({
                   className="flex w-full items-center justify-between p-2 rounded-lg hover:bg-muted text-xs text-left"
                 >
                   <span>{a.name}</span>
-                  {elegido && <Check className="size-3 text-primary" />}
+                  {elegido && <Check className="size-3 text-accent" />}
                 </button>
                 );
               })}
@@ -321,7 +321,7 @@ function PlatoForm({
             onClick={() => setHealthScore(c)}
             className={cn(
               "size-5 rounded-full",
-              { green: "bg-green-500", yellow: "bg-yellow-400", orange: "bg-orange-500", red: "bg-red-500" }[c],
+              HEALTH_BG[c],
               healthScore === c ? "ring-2 ring-foreground ring-offset-1 ring-offset-background" : "opacity-30",
             )}
           />
@@ -513,10 +513,10 @@ export function PantryModal({ open, onClose }: Props) {
                     <div className="min-w-0">
                       <p className="font-semibold flex items-center gap-2">
                         {alimento.name}
-                        {alimento.healthScore === "green" && <span className="size-2.5 rounded-full bg-green-500" title="Muy sano" />}
-                        {alimento.healthScore === "yellow" && <span className="size-2.5 rounded-full bg-yellow-400" title="Moderado" />}
-                        {alimento.healthScore === "orange" && <span className="size-2.5 rounded-full bg-orange-500" title="Poco sano" />}
-                        {alimento.healthScore === "red" && <span className="size-2.5 rounded-full bg-red-500" title="Ultraprocesado" />}
+                        {alimento.healthScore === "green" && <span className="size-2.5 rounded-full bg-score-green" title="Muy sano" />}
+                        {alimento.healthScore === "yellow" && <span className="size-2.5 rounded-full bg-score-yellow" title="Moderado" />}
+                        {alimento.healthScore === "orange" && <span className="size-2.5 rounded-full bg-score-orange" title="Poco sano" />}
+                        {alimento.healthScore === "red" && <span className="size-2.5 rounded-full bg-score-red" title="Ultraprocesado" />}
                       </p>
                       <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
                         <span>{alimento.kcal} kcal (100g)</span>
@@ -568,10 +568,10 @@ export function PantryModal({ open, onClose }: Props) {
                     <div className="min-w-0">
                       <p className="font-semibold flex items-center gap-2">
                         {plato.name}
-                        {plato.healthScore === "green" && <span className="size-2.5 rounded-full bg-green-500" title="Muy sano" />}
-                        {plato.healthScore === "yellow" && <span className="size-2.5 rounded-full bg-yellow-400" title="Moderado" />}
-                        {plato.healthScore === "orange" && <span className="size-2.5 rounded-full bg-orange-500" title="Poco sano" />}
-                        {plato.healthScore === "red" && <span className="size-2.5 rounded-full bg-red-500" title="Ultraprocesado" />}
+                        {plato.healthScore === "green" && <span className="size-2.5 rounded-full bg-score-green" title="Muy sano" />}
+                        {plato.healthScore === "yellow" && <span className="size-2.5 rounded-full bg-score-yellow" title="Moderado" />}
+                        {plato.healthScore === "orange" && <span className="size-2.5 rounded-full bg-score-orange" title="Poco sano" />}
+                        {plato.healthScore === "red" && <span className="size-2.5 rounded-full bg-score-red" title="Ultraprocesado" />}
                         {ready && <span className="rounded-full bg-accent px-2 py-0.5 text-[9px] font-semibold text-accent-foreground">Listo</span>}
                       </p>
                       <p className="text-xs text-muted-foreground">

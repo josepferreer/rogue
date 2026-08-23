@@ -100,7 +100,9 @@ export function ExerciseThumb({ src, alt, className }: ExerciseThumbProps) {
   return (
     <div
       className={cn(
-        "relative size-16 shrink-0 overflow-hidden rounded-2xl bg-white",
+        // bg-muted, igual que ExerciseMedia: con bg-white esto era un cuadro
+        // blanco en modo oscuro, y es la misma foto en los dos sitios.
+        "relative size-16 shrink-0 overflow-hidden rounded-2xl bg-muted",
         (failed || !src) && "flex items-center justify-center bg-muted",
         className,
       )}

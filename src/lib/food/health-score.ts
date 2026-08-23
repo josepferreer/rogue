@@ -33,3 +33,25 @@ export const HEALTH_LABEL: Record<HealthScore, string> = {
   orange: "Nutri-Score D",
   red: "Nutri-Score E",
 };
+
+/**
+ * Fondo del indicador de Nutri-Score.
+ *
+ * Estaba repetido a mano en cuatro ficheros con la paleta cruda de Tailwind
+ * (bg-green-500 / bg-yellow-400 / bg-orange-500 / bg-red-500), que no cambia en
+ * modo oscuro. Los tokens score-* si tienen version oscura (globals.css).
+ */
+export const HEALTH_BG: Record<HealthScore, string> = {
+  green: "bg-score-green",
+  yellow: "bg-score-yellow",
+  orange: "bg-score-orange",
+  red: "bg-score-red",
+};
+
+/** Color de texto a juego, para cuando el score va como texto y no como punto. */
+export const HEALTH_TEXT: Record<HealthScore, string> = {
+  green: "text-score-green",
+  yellow: "text-score-yellow",
+  orange: "text-score-orange",
+  red: "text-score-red",
+};

@@ -10,6 +10,7 @@ import { useEscapeToClose } from "@/lib/use-escape-to-close";
 import { Button } from "@/components/ui/button";
 import { usePantry, platoMacros, isReadyPlato } from "@/lib/store/pantry-store";
 import { useToast } from "@/components/ui/toast";
+import { HEALTH_BG } from "@/lib/food/health-score";
 import {
   useMeals,
   type MealType,
@@ -20,12 +21,8 @@ import {
   dayKey,
 } from "@/lib/store/meals-store";
 
-const HEALTH_DOT: Record<string, string> = {
-  green: "bg-green-500",
-  yellow: "bg-yellow-400",
-  orange: "bg-orange-500",
-  red: "bg-red-500",
-};
+// La escala vive en lib/food/health-score (tokens score-*, con modo oscuro).
+const HEALTH_DOT: Record<string, string> = HEALTH_BG;
 
 type Props = {
   open: boolean;

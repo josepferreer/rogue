@@ -219,7 +219,7 @@ export default function CardioPage() {
       {/* Grid of stats */}
       <div className="grid grid-cols-2 gap-3">
         <PastelCard variant="blue" className="flex flex-col gap-4">
-          <Flame className="size-4 text-blue-600/70" />
+          <Flame className="size-4 opacity-70" />
           <div>
             <p className="text-2xl font-semibold leading-none">{kcal}</p>
             <p className="mt-1 text-xs text-muted-foreground">kcal aprox.</p>
@@ -227,7 +227,7 @@ export default function CardioPage() {
         </PastelCard>
 
         <PastelCard variant="mint" className="flex flex-col gap-4">
-          <Timer className="size-4 text-green-600/70" />
+          <Timer className="size-4 opacity-70" />
           <div>
             <p className="text-2xl font-semibold leading-none">
               {activeMin}
@@ -238,7 +238,7 @@ export default function CardioPage() {
         </PastelCard>
 
         <PastelCard variant="lilac" className="flex flex-col gap-4">
-          <TrendingUp className="size-4 text-purple-600/70" />
+          <TrendingUp className="size-4 opacity-70" />
           <div>
             <p className="text-2xl font-semibold leading-none">
               {today.distanceKm.toFixed(1)}

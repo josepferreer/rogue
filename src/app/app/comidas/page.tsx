@@ -23,6 +23,7 @@ import {
 } from "@/lib/store/meals-store";
 import { cn } from "@/lib/utils";
 import { useAppShellPortal } from "@/lib/use-app-shell-portal";
+import { HEALTH_BG } from "@/lib/food/health-score";
 import { usePresence } from "@/lib/use-presence";
 
 const MEAL_META: Record<
@@ -35,7 +36,13 @@ const MEAL_META: Record<
   snack: { variant: "neutral", icon: Cookie },
 };
 
-const MACRO_COLORS = { protein: "#9fcdec", fat: "#cbbdf3", carbs: "#a3dcc0" };
+// Eran los hex de la variante OSCURA de los tokens pastel, fijos: en modo claro
+// las barras salian desvaidas. Con var() siguen al tema.
+const MACRO_COLORS = {
+  protein: "var(--card-blue-foreground)",
+  fat: "var(--card-lilac-foreground)",
+  carbs: "var(--card-mint-foreground)",
+};
 const WEEKDAY_LETTERS = ["L", "M", "X", "J", "V", "S", "D"];
 
 function buildWeek(selected: string) {
@@ -447,11 +454,12 @@ function PageActions({ setPantryOpen }: { setPantryOpen: (v: boolean) => void })
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">Nutriscore:</span>
                     <span className={cn(
-                      "px-2 py-0.5 rounded-md text-[10px] font-bold text-white uppercase",
-                      shownProduct.healthScore === "green" ? "bg-green-500" :
-                      shownProduct.healthScore === "yellow" ? "bg-yellow-400 text-yellow-900" :
-                      shownProduct.healthScore === "orange" ? "bg-orange-500" :
-                      "bg-red-500"
+                      // rounded-full como el resto de badges de la app, y el
+                      // fondo desde el token compartido en vez de paleta cruda.
+                      "px-2 py-0.5 rounded-full text-2xs font-bold text-white uppercase",
+                      shownProduct.healthScore
+                        ? HEALTH_BG[shownProduct.healthScore]
+                        : "bg-muted",
                     )}>
                       {shownProduct.nutriscore}
                     </span>
