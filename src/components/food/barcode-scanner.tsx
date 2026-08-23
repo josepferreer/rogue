@@ -237,7 +237,7 @@ export function BarcodeScanner({
   return (
     <div
       className={`barcode-scanner-ui fixed inset-0 z-[80] flex flex-col pt-[env(safe-area-inset-top)] ${
-        isNative ? "bg-transparent" : "bg-black"
+        isNative && !manual ? "bg-transparent" : "bg-black"
       }`}
     >
       <header className="flex shrink-0 items-center justify-between px-4 py-3 pt-8">

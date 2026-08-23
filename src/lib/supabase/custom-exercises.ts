@@ -7,6 +7,7 @@
  * FK a exercises(id): un ejercicio fuera de esa tabla no se podria usar en un
  * entreno ni en una rutina.
  */
+import { grupoFromDb, grupoToDb } from "@/lib/exercises/custom";
 import type { Exercise } from "@/lib/exercises/types";
 import { createClient } from "./client";
 
@@ -32,7 +33,7 @@ function rowToExercise(row: ExerciseRow): Exercise {
   return {
     id: row.id,
     nombre: row.nombre,
-    grupo: row.grupo as Exercise["grupo"],
+    grupo: grupoFromDb(row.grupo),
     equipo: row.equipo as Exercise["equipo"],
     dificultad: row.dificultad as Exercise["dificultad"],
     mecanica: row.mecanica as Exercise["mecanica"],
@@ -72,7 +73,8 @@ export async function insertCustomExercise(
     id: exercise.id,
     owner_id: userId,
     nombre: exercise.nombre,
-    grupo: exercise.grupo,
+    // FK a muscle_groups(id), que son minusculas.
+    grupo: grupoToDb(exercise.grupo),
     equipo: exercise.equipo,
     dificultad: exercise.dificultad,
     mecanica: exercise.mecanica,

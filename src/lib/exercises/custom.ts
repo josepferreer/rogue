@@ -27,6 +27,26 @@ export const DIFFICULTY_IDS = Object.keys(DIFFICULTY_LABELS) as DifficultyId[];
 /** Prefijo que garantiza que un id propio nunca colisione con el catalogo. */
 export const CUSTOM_ID_PREFIX = "custom-";
 
+/**
+ * `exercises.grupo` es una FK a `muscle_groups(id)`, y esos ids estan en
+ * MINUSCULA ("piernas"), mientras que en la app la categoria es "Piernas".
+ * El seed ya hacia el toLowerCase al sembrar; estas dos funciones cierran el
+ * viaje de vuelta para los ejercicios personalizados, que si se leen de la BD.
+ */
+export function grupoToDb(grupo: ExerciseCategory): string {
+  return grupo.toLowerCase();
+}
+
+export function grupoFromDb(raw: string): ExerciseCategory {
+  const found = EXERCISE_CATEGORIES.find(
+    (g) => g.toLowerCase() === raw.toLowerCase(),
+  );
+  if (!found) {
+    throw new CustomExerciseError(`Grupo desconocido en base de datos: "${raw}".`);
+  }
+  return found;
+}
+
 export type CustomExerciseInput = {
   nombre: string;
   grupo: string;

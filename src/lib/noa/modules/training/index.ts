@@ -5,6 +5,8 @@ import {
   DIFFICULTY_IDS,
   EQUIPMENT_IDS,
   MUSCLE_IDS,
+  grupoFromDb,
+  grupoToDb,
   validateCustomExercise,
 } from "@/lib/exercises/custom";
 import { EXERCISE_CATEGORIES, MUSCLE_LABELS } from "@/lib/exercises/types";
@@ -195,7 +197,7 @@ async function listCustomExercisesFor(ctx: NoaToolContext): Promise<Exercise[]> 
   return data.map((r) => ({
     id: r.id as string,
     nombre: r.nombre as string,
-    grupo: r.grupo as Exercise["grupo"],
+    grupo: grupoFromDb(r.grupo as string),
     equipo: r.equipo as Exercise["equipo"],
     dificultad: r.dificultad as Exercise["dificultad"],
     mecanica: r.mecanica as Exercise["mecanica"],
@@ -279,7 +281,8 @@ const createCustomExercise: ToolDef = {
       id: exercise.id,
       owner_id: ctx.userId,
       nombre: exercise.nombre,
-      grupo: exercise.grupo,
+      // FK a muscle_groups(id), que son minusculas.
+      grupo: grupoToDb(exercise.grupo),
       equipo: exercise.equipo,
       dificultad: exercise.dificultad,
       mecanica: exercise.mecanica,
