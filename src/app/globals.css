@@ -2,49 +2,60 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+  Paleta "Clean", la misma que usa Rogue v2 (src/theme/tokens.ts).
+
+  Los NOMBRES no cambian, solo los valores: asi la landing se repinta entera sin
+  tocar una sola clase. Se deja el blanco roto frio por uno CALIDO y el color
+  desaparece --los estados se separan por cantidad de tinta--, salvo el rojo de
+  lo que borra o falla, que es la unica excepcion.
+
+  Los tres tokens `card-*` quedan en el mismo neutro a proposito: en esta
+  direccion los paneles pastel pasan a ser superficies con hairline.
+*/
 :root {
-  --background: #f6f6f8;
-  --foreground: #17181c;
+  --background: #f2ecea;
+  --foreground: #17141a;
 
-  --surface: #ffffff;
-  --surface-foreground: #17181c;
+  --surface: #fbf7f6;
+  --surface-foreground: #17141a;
 
-  --muted: #eeeef1;
-  --muted-foreground: #71727a;
+  --muted: #e7dfdd;
+  --muted-foreground: #6e6672;
 
-  --border: #e6e6ec;
+  --border: #e2d9d7;
 
-  --accent: #17181c;
-  --accent-foreground: #ffffff;
+  --accent: #17141a;
+  --accent-foreground: #f2ecea;
 
-  --card-lilac: #ece9fb;
-  --card-lilac-foreground: #4b3e7a;
-  --card-blue: #e1f1fc;
-  --card-blue-foreground: #2c5d7a;
-  --card-mint: #e2f7ee;
-  --card-mint-foreground: #276e51;
+  --card-lilac: #ede6e4;
+  --card-lilac-foreground: #17141a;
+  --card-blue: #eae2e0;
+  --card-blue-foreground: #17141a;
+  --card-mint: #ede6e4;
+  --card-mint-foreground: #17141a;
 
-  --accent-green: #4e9d5e;
-  --accent-red: #b5594f;
+  --accent-green: #17141a;
+  --accent-red: #c62a1f;
 
-  --destructive: #dc2626;
+  --destructive: #c62a1f;
   --destructive-foreground: #ffffff;
 
   /* Aviso/alerta. No existia, y por eso aparecian bg-amber-500 y bg-yellow-400
      sueltos que no cambian en modo oscuro. */
-  --accent-amber: #b8801f;
+  --accent-amber: #6e6672;
 
   /* Escala Nutri-Score. Estaba repetida a mano con paleta cruda en 4 sitios. */
-  --score-green: #3f8f4f;
-  --score-yellow: #b8801f;
-  --score-orange: #c2662b;
-  --score-red: #c0453c;
+  --score-green: #bdb4b2;
+  --score-yellow: #9a9299;
+  --score-orange: #6e6672;
+  --score-red: #17141a;
 
   /* Control segmentado. En oscuro ningun token existente queda por encima de
      --muted, y por eso el theme-toggle acababa parcheando con neutral-700. La
      pista va HUNDIDA y la pastilla activa ELEVADA. */
-  --segment-track: #eeeef1;
-  --segment-thumb: #ffffff;
+  --segment-track: #e7dfdd;
+  --segment-thumb: #fbf7f6;
 
   /* Elevacion. Las sombras eran literales rgba repetidos, algunos con el hex
      del foreground CLARO, que en oscuro no existe. */
@@ -53,44 +64,44 @@
 }
 
 .dark {
-  --background: #0c0c0e;
-  --foreground: #f1f1f3;
+  --background: #131016;
+  --foreground: #f2ecea;
 
-  --surface: #18181c;
-  --surface-foreground: #f1f1f3;
+  --surface: #1c181f;
+  --surface-foreground: #f2ecea;
 
-  --muted: #202024;
-  --muted-foreground: #96979e;
+  --muted: #241f29;
+  --muted-foreground: #918995;
 
-  --border: #26262b;
+  --border: #2a242e;
 
-  --accent: #f1f1f3;
-  --accent-foreground: #17181c;
+  --accent: #f2ecea;
+  --accent-foreground: #17141a;
 
-  --card-lilac: #221f30;
-  --card-lilac-foreground: #cbbdf3;
-  --card-blue: #16232b;
-  --card-blue-foreground: #9fcdec;
-  --card-mint: #16241d;
-  --card-mint-foreground: #a3dcc0;
+  --card-lilac: #201b26;
+  --card-lilac-foreground: #f2ecea;
+  --card-blue: #241f29;
+  --card-blue-foreground: #f2ecea;
+  --card-mint: #201b26;
+  --card-mint-foreground: #f2ecea;
 
-  --accent-green: #74c07e;
-  --accent-red: #c87669;
+  --accent-green: #f2ecea;
+  --accent-red: #ff6b5e;
 
-  --destructive: #f87171;
-  --destructive-foreground: #17181c;
+  --destructive: #ff6b5e;
+  --destructive-foreground: #17141a;
 
-  --accent-amber: #d8a441;
+  --accent-amber: #918995;
 
-  --score-green: #74c07e;
-  --score-yellow: #d8a441;
-  --score-orange: #dd8b58;
-  --score-red: #d98077;
+  --score-green: #4a434e;
+  --score-yellow: #6e6672;
+  --score-orange: #918995;
+  --score-red: #f2ecea;
 
   /* Invertido respecto al claro: la pista mas oscura que la superficie y la
      pastilla activa mas clara, para que "elevado" siga leyendose como elevado. */
-  --segment-track: #101014;
-  --segment-thumb: #2a2a30;
+  --segment-track: #0e0b11;
+  --segment-thumb: #2a242e;
 
   --elevation-float: 0 8px 32px -8px rgba(0, 0, 0, 0.6);
   --elevation-drag: 0 16px 40px -12px rgba(0, 0, 0, 0.7);
@@ -139,8 +150,8 @@
   /* Unico escalon por debajo de text-xs. Sustituye a los text-[10px] sueltos. */
   --text-2xs: 0.625rem;
 
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-jetbrains-mono);
+  --font-sans: var(--font-jakarta);
+  --font-mono: var(--font-jbmono);
 }
 
 /* App mobile-first: ocultamos todas las scrollbars (en movil son overlay y no
@@ -171,27 +182,6 @@ input[type="number"] {
 body {
   background: var(--background);
   color: var(--foreground);
-}
-
-/* Sensacion de app nativa: solo cuando esta instalada como PWA (standalone)
-   se desactiva la seleccion de texto y el menu contextual de iOS. En el
-   navegador normal el texto sigue siendo seleccionable. Los campos editables
-   y lo marcado como .selectable conservan la seleccion. */
-@media (display-mode: standalone) {
-  body {
-    -webkit-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
-  }
-
-  input,
-  textarea,
-  [contenteditable="true"],
-  .selectable {
-    -webkit-user-select: text;
-    user-select: text;
-    -webkit-touch-callout: default;
-  }
 }
 
 * {

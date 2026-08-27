@@ -16,10 +16,10 @@ export default function NotFound() {
         </p>
       </div>
       <Link
-        href="/app"
+        href="/"
         className="rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background transition-opacity hover:opacity-80"
       >
-        Volver a la app
+        Volver al inicio
       </Link>
     </div>
   );

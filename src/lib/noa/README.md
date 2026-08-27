@@ -8,7 +8,7 @@ Toda la lógica de negocio queda detrás de las tools.
 ## Flujo
 
 ```
-POST /api/noa (guard: requireUser + rateLimit)
+POST /api/noa (guard: requireCaller [cookies o Bearer] + rateLimit)
   └─ engine.runNoa
        1. analyzeIntent      turno → módulos relevantes         intent/analyzer.ts
        2. registry.select    módulos → subconjunto de tools     registry.ts

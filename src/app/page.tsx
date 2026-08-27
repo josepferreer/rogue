@@ -1,4 +1,3 @@
-import Link from "next/link";
 import Image from "next/image";
 import {
   Barcode,
@@ -9,7 +8,16 @@ import {
   Plus,
 } from "lucide-react";
 import { PastelCard } from "@/components/ui/pastel-card";
-import { DownloadAppModal } from "@/components/download-app-modal";
+
+/**
+ * El instalador de Android, servido como fichero estatico desde public/.
+ *
+ * Lo genera Rogue v2 (`build-apk.sh`) y se copia aqui a mano al publicar una
+ * version. El peso se escribe al lado porque se ensena en la pagina: si cambia
+ * el fichero y no se toca este numero, la pagina miente.
+ */
+const APK = "/downloads/Rogue.apk";
+const APK_MB = 68;
 
 const FEATURES = [
   {
@@ -41,37 +49,43 @@ const FEATURES = [
 const STEPS = [
   {
     n: "01",
-    title: "Crea tu cuenta",
-    text: "Registrate en segundos y cuentanos tus datos basicos para ajustar tus objetivos.",
+    title: "Descarga el archivo",
+    text: "Un APK de Android. Al abrirlo, el móvil te pedirá permiso para instalar desde el navegador: acéptalo y sigue.",
   },
   {
     n: "02",
-    title: "Entrena y registra",
-    text: "Monta tu rutina, apunta cada serie y anota tus comidas escaneando el código de barras.",
+    title: "Crea tu cuenta",
+    text: "Se crea desde la propia app, en segundos. Te pide tus datos básicos para ajustar los objetivos.",
   },
   {
     n: "03",
-    title: "Sigue tu progreso",
-    text: "Revisa tu volumen, tus macros y tus rutas. La app instalada te acompaña cada día.",
+    title: "Entrena y registra",
+    text: "Monta tu rutina, apunta cada serie, escanea lo que comes y graba tus rutas. Todo se guarda en tu cuenta.",
   },
 ];
 
 const FAQ = [
   {
-    q: "¿Necesito conexion para usarla?",
-    a: "Rogue funciona como app instalable (PWA). Puedes consultar tus rutinas y tu historial sin conexion; los cambios se sincronizan cuando vuelves a tener red.",
+    // Se dice lo primero y sin rodeos: es lo que mas gente va a preguntar, y
+    // enterarse despues de descargar un archivo de 70 MB sienta peor.
+    q: "¿Hay versión para iPhone?",
+    a: "Todavía no. Ahora mismo Rogue es una aplicación Android. Publicar en la App Store exige un Mac y una cuenta de desarrollador de pago, así que llegará más adelante.",
   },
   {
-    q: "¿De donde salen los datos nutricionales?",
+    q: "¿Por qué no está en Google Play?",
+    a: "Se instala descargando el archivo directamente desde aquí. Android te avisará de que viene de fuera de la tienda; es normal al instalar así, y solo tienes que dar permiso una vez.",
+  },
+  {
+    q: "¿De dónde salen los datos nutricionales?",
     a: "Al escanear el código de barras buscamos el producto en Open Food Facts y traemos sus calorías y macros para que solo tengas que confirmar la cantidad.",
   },
   {
-    q: "¿Como registro una ruta de cardio?",
+    q: "¿Cómo registro una ruta de cardio?",
     a: "Inicia una actividad y la app registra tu recorrido con GPS: distancia, tiempo y ritmo, con el mapa de cada sesión guardado.",
   },
   {
     q: "¿Es gratis?",
-    a: "Puedes crear tu cuenta y empezar a entrenar y registrar comidas gratis.",
+    a: "Sí. Crear la cuenta y usar los entrenos, las comidas y el cardio no cuesta nada.",
   },
 ];
 
@@ -265,14 +279,15 @@ export default function LandingPage() {
             <Image src="/brand/logo-mark-white.png" alt="" width={26} height={26} className="hidden dark:block" />
             <span className="font-mono text-sm font-medium tracking-[0.2em]">ROGUE</span>
           </span>
-          <nav className="flex items-center gap-2">
-            <Link href="/login" className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-              Iniciar sesión
-            </Link>
-            <Link href="/login" className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-transform active:scale-[0.98]">
-              Crear cuenta
-            </Link>
-          </nav>
+          {/* Sin "iniciar sesion": ya no hay donde. La cuenta se crea y se usa
+              DENTRO de la app, y esta pagina solo sirve para llegar a ella. */}
+          <a
+            href={APK}
+            download
+            className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-transform active:scale-[0.98]"
+          >
+            Descargar
+          </a>
         </header>
       </Container>
 
@@ -281,21 +296,27 @@ export default function LandingPage() {
           <p className="mb-4 font-mono text-xs tracking-[0.18em] text-muted-foreground">
             ENTRENA · COME · REGISTRA
           </p>
-          <h1 className="mx-auto max-w-2xl text-4xl font-semibold leading-[1.05] tracking-tight md:text-6xl">
+          <h1 className="mx-auto max-w-2xl text-4xl font-extrabold leading-[1.05] tracking-tight md:text-6xl">
             Tu gimnasio y tu cocina, en el bolsillo.
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-            Controla tus rutinas y tu biblioteca de ejercicios, escanea alimentos
-            por código de barras con sus macros y registra tus rutas de cardio.
-            Todo en una app que instalas en el movil.
+            Rutinas y biblioteca de ejercicios, comidas por código de barras con
+            sus macros, y rutas de cardio sobre el mapa. Una aplicación Android,
+            nativa, que se instala en el móvil.
           </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link href="/login" className="w-full rounded-full bg-accent px-7 py-3.5 text-center text-sm font-medium text-accent-foreground transition-transform active:scale-[0.98] sm:w-auto">
-              Empezar gratis
-            </Link>
-            <Link href="/login" className="w-full rounded-full border border-border bg-surface px-7 py-3.5 text-center text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:w-auto">
-              Ya tengo cuenta
-            </Link>
+          <div className="mt-8 flex flex-col items-center justify-center gap-3">
+            <a
+              href={APK}
+              download
+              className="w-full rounded-full bg-accent px-7 py-3.5 text-center text-sm font-semibold text-accent-foreground transition-transform active:scale-[0.98] sm:w-auto"
+            >
+              Descargar para Android
+            </a>
+            {/* El peso va A LA VISTA y no escondido: son 70 MB, y enterarse a
+                mitad de descarga con datos moviles es una faena. */}
+            <p className="font-mono text-2xs tracking-[0.14em] text-muted-foreground">
+              APK · {APK_MB} MB · ANDROID 8 O SUPERIOR
+            </p>
           </div>
         </section>
       </Container>
@@ -391,19 +412,28 @@ export default function LandingPage() {
       </section>
 
       <Container>
-        <section className="my-14 rounded-3xl border border-border bg-surface px-6 py-14 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            Instala Rogue y empieza hoy
+        {/* Cierre invertido, como la tarjeta de "hoy" de la app: negra en claro y
+            crema en oscuro. Es la unica pieza de la pagina con ese peso, y por
+            eso funciona como final. */}
+        <section className="my-14 rounded-3xl bg-accent px-6 py-14 text-center text-accent-foreground">
+          <h2 className="text-2xl font-extrabold tracking-tight md:text-3xl">
+            Instálala y empieza hoy
           </h2>
-          <p className="mx-auto mt-3 max-w-md text-base leading-relaxed text-muted-foreground">
-            Crea tu cuenta gratis y llévalo todo contigo: entrenos, comida y cardio
-            en una sola app.
+          <p className="mx-auto mt-3 max-w-md text-base leading-relaxed opacity-70">
+            Entrenos, comida y cardio en una sola app. Gratis, y la cuenta se crea
+            desde dentro.
           </p>
-          <div className="mx-auto mt-7 flex max-w-xs flex-col gap-3">
-            <Link href="/login" className="rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-accent-foreground transition-transform active:scale-[0.98]">
-              Empezar gratis
-            </Link>
-            <DownloadAppModal className="flex w-full items-center justify-center gap-2 rounded-full border border-border bg-surface px-7 py-3.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" />
+          <div className="mx-auto mt-7 flex max-w-xs flex-col items-center gap-3">
+            <a
+              href={APK}
+              download
+              className="w-full rounded-full bg-background px-7 py-3.5 text-sm font-semibold text-foreground transition-transform active:scale-[0.98]"
+            >
+              Descargar para Android
+            </a>
+            <p className="font-mono text-2xs tracking-[0.14em] opacity-60">
+              APK · {APK_MB} MB
+            </p>
           </div>
         </section>
       </Container>

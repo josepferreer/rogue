@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import {
   rateLimit,
-  requireUser,
+  requireCaller,
   tooManyRequests,
   unauthorized,
 } from "@/lib/api/guard";
@@ -23,8 +23,13 @@ import type { NoaResponse, NoaTurn } from "@/lib/noa/types";
  */
 export const maxDuration = 60;
 export async function POST(req: NextRequest) {
-  const userId = await requireUser();
-  if (!userId) return unauthorized();
+  // Cookies (navegador) o `Authorization: Bearer` (la app movil, que no tiene
+  // cookies de este dominio). El cliente viene resuelto de la misma llamada: es
+  // el que lleva el token, y por tanto el que hace que la RLS se aplique a
+  // nombre de esta persona.
+  const llamante = await requireCaller(req);
+  if (!llamante) return unauthorized();
+  const { userId, supabase } = llamante;
   // Cada turno gasta al menos una llamada a Gemini: límite prudente por usuario.
   if (!rateLimit(`noa:${userId}`, 30, 60_000)) return tooManyRequests();
 
@@ -58,6 +63,7 @@ export async function POST(req: NextRequest) {
     try {
       const response = await runNoaConfirm({
         userId,
+        supabase,
         actions,
         history: sanitizeHistory(history),
         clientToday,
@@ -77,6 +83,7 @@ export async function POST(req: NextRequest) {
   try {
     const response = await runNoa({
       userId,
+      supabase,
       message: message.trim(),
       history: sanitizeHistory(history),
       clientToday,

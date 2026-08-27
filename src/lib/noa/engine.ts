@@ -9,6 +9,7 @@ import type {
   NoaTurn,
 } from "@/lib/noa/types";
 import { hasLiveCardio, hasLiveWorkout } from "@/lib/noa/live/snapshot";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { ToolRegistry } from "@/lib/noa/registry";
 import { ALL_MODULES } from "@/lib/noa/modules";
@@ -90,6 +91,18 @@ export interface RunNoaInput {
   /** Sesión en curso en el móvil (entreno abierto / ruta grabándose), ya
    *  saneada por la route. */
   live?: NoaLiveContext;
+  /**
+   * Cliente ya autenticado por quien llamo a la route.
+   *
+   * Se pasa desde fuera porque el motor no puede saber COMO se autentico esta
+   * peticion: el navegador va por cookies y la app movil por cabecera. Si se
+   * quedara creandolo el solo, la app movil consultaria sin sesion y la RLS le
+   * devolveria vacio en cada herramienta -- que ademas es un fallo silencioso,
+   * porque no da error: da cero filas.
+   *
+   * Sin el, se cae a las cookies como siempre.
+   */
+  supabase?: SupabaseClient;
 }
 
 /** Fecha del servidor como YYYY-MM-DD (fallback si el cliente no la manda). */
@@ -273,7 +286,7 @@ function historyToContents(history: NoaTurn[] | undefined): GeminiContent[] {
 }
 
 export async function runNoa(input: RunNoaInput): Promise<NoaResponse> {
-  const supabase = await createClient();
+  const supabase = input.supabase ?? (await createClient());
   const now = new Date();
   const ctx: NoaToolContext = {
     userId: input.userId,
@@ -381,6 +394,18 @@ export interface RunNoaConfirmInput {
   /** Día de hoy en la tz del usuario (YYYY-MM-DD), aportado por el cliente. */
   clientToday?: string;
   clientNowISO?: string;
+  /**
+   * Cliente ya autenticado por quien llamo a la route.
+   *
+   * Se pasa desde fuera porque el motor no puede saber COMO se autentico esta
+   * peticion: el navegador va por cookies y la app movil por cabecera. Si se
+   * quedara creandolo el solo, la app movil consultaria sin sesion y la RLS le
+   * devolveria vacio en cada herramienta -- que ademas es un fallo silencioso,
+   * porque no da error: da cero filas.
+   *
+   * Sin el, se cae a las cookies como siempre.
+   */
+  supabase?: SupabaseClient;
   /** Sesión en curso, para que el turno reanudado siga sabiendo qué pasa. */
   live?: NoaLiveContext;
 }
@@ -430,7 +455,7 @@ function resumeBatchNote(steps: ExecutedStep[]): string {
 }
 
 export async function runNoaConfirm(input: RunNoaConfirmInput): Promise<NoaResponse> {
-  const supabase = await createClient();
+  const supabase = input.supabase ?? (await createClient());
   const now = new Date();
   const ctx: NoaToolContext = {
     userId: input.userId,

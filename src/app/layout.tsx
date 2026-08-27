@@ -1,51 +1,57 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ThemeColorSync } from "@/components/theme-color-sync";
-import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { SetupNotice } from "@/components/setup-notice";
 import { getMissingSupabaseEnv } from "@/lib/supabase/env";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+/**
+ * Layout de lo unico que queda servido desde aqui: la landing y la API de NOA.
+ *
+ * Este proyecto ERA la app: una PWA en /app envuelta en Capacitor para Android.
+ * Ya no. La app es Rogue v2, nativa (React Native), y esto se queda como la
+ * pagina de presentacion mas el backend del asistente. Por eso se fueron el
+ * service worker, el manifiesto y el sincronizador de la barra de estado: no
+ * tienen a quien servir.
+ */
+
+// Plus Jakarta Sans y JetBrains Mono, las MISMAS que usa la app. La landing
+// ensena la app: si no comparten tipografia, la promesa no se sostiene.
+const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
+  variable: "--font-jbmono",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
   applicationName: "Rogue",
   title: {
-    default: "Rogue - Entrena, come y registra tu progreso",
+    default: "Rogue · Entrena, come y registra tu progreso",
     template: "%s · Rogue",
   },
   description:
-    "Controla tus rutinas y biblioteca de ejercicios, escanea alimentos por codigo de barras con sus macros y registra tus rutas de cardio. Todo en una PWA.",
-  appleWebApp: {
-    capable: true,
-    title: "Rogue",
-    statusBarStyle: "default",
-  },
+    "Rutinas y biblioteca de ejercicios, comidas por codigo de barras con sus macros, y rutas de cardio con mapa. Aplicacion Android.",
   formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  // Se permite el zoom: bloquearlo incumple WCAG 1.4.4 y WKWebView (iOS) lo
-  // respeta, asi que dejaba sin ampliar a quien lo necesita. El doble toque
-  // accidental que se queria evitar ya no ocurre: los controles cumplen el
-  // tamano minimo tactil y el layout no depende de un ancho fijo.
+  // Se permite el zoom: bloquearlo incumple WCAG 1.4.4 y deja sin ampliar a
+  // quien lo necesita.
   maximumScale: 5,
   userScalable: true,
-  viewportFit: "cover",
+  // Los dos de la paleta "Clean" de la app, para que la barra del navegador en
+  // movil no desentone con la pagina.
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f6f8" },
-    { media: "(prefers-color-scheme: dark)", color: "#0c0c0e" },
+    { media: "(prefers-color-scheme: light)", color: "#F2ECEA" },
+    { media: "(prefers-color-scheme: dark)", color: "#131016" },
   ],
 };
 
@@ -60,18 +66,16 @@ export default function RootLayout({
     <html
       lang="es"
       suppressHydrationWarning
-      className={`${inter.variable} ${jetbrainsMono.variable}`}
+      className={`${jakarta.variable} ${jetbrainsMono.variable}`}
     >
       <body className="antialiased" suppressHydrationWarning>
         {missingEnv.length > 0 ? (
           <SetupNotice missing={missingEnv} />
         ) : (
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <ThemeColorSync />
             {children}
           </ThemeProvider>
         )}
-        <ServiceWorkerRegister />
       </body>
     </html>
   );
