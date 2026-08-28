@@ -584,6 +584,11 @@ const logWorkout: ToolDef = {
         type: "number",
         description: "Duración del entreno en segundos, si el usuario la indica.",
       },
+      date: {
+        type: "string",
+        description:
+          "Cuándo se hizo, en formato YYYY-MM-DD. Úsalo cuando el usuario hable de un día que no es hoy ('ayer', 'el lunes', 'anteayer'). Si no lo dice, omítelo y se guardará con la fecha de hoy.",
+      },
     },
     required: ["dayLabel", "exercises"],
   },
@@ -640,11 +645,17 @@ const logWorkout: ToolDef = {
         ? undefined
         : clampInt(args.durationSec, 0, 0, 86400);
 
+    // Solo se pasa si tiene la forma esperada: una fecha a medias es peor que
+    // ninguna, porque el entreno acabaria en un dia al azar del historial.
+    const bruta = typeof args.date === "string" ? args.date.trim() : "";
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(bruta) ? bruta : undefined;
+
     return {
       type: "logWorkout",
       dayLabel: String(args.dayLabel ?? "Entreno"),
       exercises,
       durationSec,
+      ...(date ? { date } : {}),
     };
   },
 };

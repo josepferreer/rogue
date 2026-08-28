@@ -179,6 +179,8 @@ export type NoaClientAction =
         setDetails?: { reps: number; weightKg: number }[];
       }[];
       durationSec?: number;
+      /** Dia en que se hizo (YYYY-MM-DD). Sin esto se guarda como de hoy. */
+      date?: string;
     }
   | { type: "startCardio" }
   | {

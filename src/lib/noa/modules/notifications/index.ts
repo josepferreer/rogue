@@ -88,15 +88,34 @@ export const notificationsModule: ToolModule = {
   ],
 };
 
-/** Fecha legible para la tarjeta de confirmación; null si el ISO no es válido. */
+const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+/**
+ * Fecha legible para la tarjeta de confirmación; null si el ISO no es válido.
+ *
+ * Se leen los campos TAL Y COMO VIENEN ESCRITOS en el ISO, sin convertir nada.
+ *
+ * Antes esto hacía `new Date(iso).toLocaleString("es-ES", …)` sin indicar zona,
+ * y el servidor corre en UTC: un aviso para las 12:37 del usuario aparecía en la
+ * tarjeta como «10:37». La hora del aviso era correcta --el `atISO` sí lleva el
+ * offset del usuario-- pero el texto que se le enseñaba para decidir mentía dos
+ * horas, que es peor que fallar del todo: se confirma creyendo otra cosa.
+ *
+ * El ISO ya viene en la hora local de quien pregunta, así que renderizarlo
+ * literal es exactamente lo que hay que hacer.
+ */
 function formatWhen(value: unknown): string | null {
-  const d = new Date(String(value ?? ""));
-  if (!Number.isFinite(d.getTime())) return null;
-  return d.toLocaleString("es-ES", {
-    weekday: "long",
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(value ?? ""));
+  if (!m) return null;
+  const [, año, mes, dia, hora, minuto] = m;
+  const mesIdx = Number(mes) - 1;
+  if (mesIdx < 0 || mesIdx > 11) return null;
+
+  // El día de la semana sí se calcula, pero en UTC sobre la fecha de calendario:
+  // el día de la semana de un 28 de agosto es el mismo en cualquier huso.
+  const soloFecha = new Date(Date.UTC(Number(año), mesIdx, Number(dia)));
+  if (!Number.isFinite(soloFecha.getTime())) return null;
+
+  return `${DIAS[soloFecha.getUTCDay()]}, ${Number(dia)} ${MESES[mesIdx]}, ${hora}:${minuto}`;
 }
