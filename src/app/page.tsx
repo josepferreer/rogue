@@ -84,8 +84,16 @@ const FAQ = [
     a: "Inicia una actividad y la app registra tu recorrido con GPS: distancia, tiempo y ritmo, con el mapa de cada sesión guardado.",
   },
   {
+    // Se avisa AQUI y no solo dentro de la app: NOA es lo primero que se ve al
+    // abrirla y descubrir que hace falta una clave despues de instalar sienta
+    // mal. Se explica que es gratis y que se tarda un minuto, que es lo que
+    // desactiva la alarma.
+    q: "¿Qué es NOA y por qué me pide una clave?",
+    a: "NOA es el asistente: le preguntas con tus palabras y responde con tus datos reales, además de poder apuntar comidas o entrenos por ti. Funciona con una clave gratuita de Google que pones tú desde los ajustes de la app, donde hay una guía para conseguirla en un minuto. Es tuya y solo se usa para tus consultas.",
+  },
+  {
     q: "¿Es gratis?",
-    a: "Sí. Crear la cuenta y usar los entrenos, las comidas y el cardio no cuesta nada.",
+    a: "Sí. Crear la cuenta y usar los entrenos, las comidas y el cardio no cuesta nada. NOA usa tu propia clave de Google, que también es gratuita dentro de su cuota.",
   },
 ];
 
