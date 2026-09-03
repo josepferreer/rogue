@@ -12,9 +12,14 @@ import { PastelCard } from "@/components/ui/pastel-card";
 /**
  * El instalador de Android, servido como fichero estatico desde public/.
  *
- * Lo genera Rogue v2 (`build-apk.sh`) y se copia aqui a mano al publicar una
- * version. El peso se escribe al lado porque se ensena en la pagina: si cambia
- * el fichero y no se toca este numero, la pagina miente.
+ * Lo genera Rogue v3 (`build-apk.sh` en Linux, `build-apk.ps1` en Windows) y se
+ * copia aqui a mano al publicar una version. El peso se escribe al lado porque
+ * se ensena en la pagina: si cambia el fichero y no se toca este numero, la
+ * pagina miente.
+ *
+ * Son MEBIbytes, no megabytes decimales: el fichero pesa 71,6 MB contados de a
+ * 1.000.000 y 68,3 contados de a 1.048.576, que es como los cuenta Android al
+ * instalar. Si algun dia el numero baila, es por esto.
  */
 const APK = "/downloads/Rogue.apk";
 const APK_MB = 68;
