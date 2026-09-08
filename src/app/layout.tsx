@@ -29,15 +29,49 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500", "600"],
 });
 
+const DESCRIPCION =
+  "Rutinas con progresión de cargas, 374 ejercicios en castellano, comidas por " +
+  "código de barras con sus macros y rutas de cardio con mapa. Aplicación Android.";
+
 export const metadata: Metadata = {
+  // metadataBase existe para que las rutas relativas de las imagenes de abajo
+  // se resuelvan a URL absolutas: Open Graph no admite rutas relativas.
+  metadataBase: new URL("https://rogue-two.vercel.app"),
   applicationName: "Rogue",
   title: {
     default: "Rogue · Entrena, come y registra tu progreso",
     template: "%s · Rogue",
   },
-  description:
-    "Rutinas y biblioteca de ejercicios, comidas por codigo de barras con sus macros, y rutas de cardio con mapa. Aplicacion Android.",
+  // Con tildes. La descripcion las llevaba sin poner mientras el resto de la
+  // pagina si, y es el texto que sale en Google.
+  description: DESCRIPCION,
   formatDetection: { telephone: false },
+  /*
+    ANTES NO HABIA NADA DE ESTO, y el enlace se comparte mucho: sin Open Graph,
+    pegar rogue-two.vercel.app en WhatsApp o Telegram salia como una URL pelada,
+    sin titulo, sin imagen y sin una linea que dijera que es.
+
+    La imagen es el logotipo y la tarjeta se declara "summary" --la pequena y
+    cuadrada-- a proposito, porque el fichero es cuadrado (1920x1920). Pedir
+    "summary_large_image" con una imagen cuadrada la recorta por arriba y por
+    abajo. El dia que haya una ilustracion apaisada de 1200x630 se cambian las
+    dos cosas a la vez.
+  */
+  openGraph: {
+    type: "website",
+    locale: "es_ES",
+    siteName: "Rogue",
+    title: "Rogue · Entrena, come y registra tu progreso",
+    description: DESCRIPCION,
+    url: "/",
+    images: [{ url: "/brand/logo-full-black.png", width: 1920, height: 1920, alt: "Rogue" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "Rogue · Entrena, come y registra tu progreso",
+    description: DESCRIPCION,
+    images: ["/brand/logo-full-black.png"],
+  },
 };
 
 export const viewport: Viewport = {

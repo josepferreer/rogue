@@ -33,25 +33,25 @@ const FEATURES = [
     variant: "lilac" as const,
     icon: Dumbbell,
     title: "Entrenamientos",
-    text: "Crea rutinas, ordena tu semana y registra series, peso y repeticiones sobre una biblioteca de ejercicios con imágenes.",
+    text: "Monta tu semana, o deja que la app te la genere, y registra cada serie. En cada ejercicio te propone el peso a partir de lo que levantaste la última vez.",
   },
   {
     variant: "blue" as const,
     icon: Barcode,
-    title: "Escaner de alimentos",
+    title: "Escáner de alimentos",
     text: "Escanea el código de barras y obtén al instante calorías y macros. Guárdalo en tu despensa y planifica la semana.",
   },
   {
     variant: "mint" as const,
     icon: Flame,
-    title: "Nutricion y macros",
-    text: "Suma el valor nutricional de cada comida y sigue tus objetivos diarios de calorías y proteina.",
+    title: "Nutrición y macros",
+    text: "Suma el valor nutricional de cada comida y sigue tus objetivos diarios de calorías y proteína, calculados con tu peso, tu altura y lo que entrenas.",
   },
   {
     variant: "neutral" as const,
     icon: Footprints,
     title: "Cardio con GPS",
-    text: "Registra tus rutas con distancia, tiempo y ritmo, y revisa cada actividad sobre el mapa.",
+    text: "Registra tus rutas con distancia, tiempo y ritmo. Sigue grabando con la pantalla apagada y el móvil en el bolsillo.",
   },
 ];
 
@@ -83,6 +83,12 @@ const FAQ = [
   {
     q: "¿Por qué no está en Google Play?",
     a: "Se instala descargando el archivo directamente desde aquí. Android te avisará de que viene de fuera de la tienda; es normal al instalar así, y solo tienes que dar permiso una vez.",
+  },
+  {
+    // Va la segunda porque es LO que diferencia a la app de apuntar las series
+    // en el movil, y en el hero solo cabe enunciarlo.
+    q: "¿La app me dice cuánto peso poner?",
+    a: "Sí, y es la idea entera. Cada serie que registras se guarda, y a partir de ahí se propone la carga y las repeticiones de la próxima vez: sube cuando cumples el objetivo, mantiene cuando te quedas cerca y baja si llevas varios intentos sin llegar. El número siempre se puede cambiar a mano.",
   },
   {
     q: "¿De dónde salen los datos nutricionales?",
@@ -149,7 +155,7 @@ function MacrosPanel({ onSurface = false }: { onSurface?: boolean }) {
         </svg>
         <div className="flex-1 space-y-2.5">
           {[
-            { l: "Proteina", v: "120g", w: "78%" },
+            { l: "Proteína", v: "120g", w: "78%" },
             { l: "Carbos", v: "160g", w: "60%" },
             { l: "Grasas", v: "48g", w: "44%" },
           ].map((m) => (
@@ -238,7 +244,8 @@ function CardioPanel({ onSurface = false }: { onSurface?: boolean }) {
       </div>
       <div className="mt-4 flex justify-between">
         {[
-          { l: "DIST", v: "5,2" },
+          // Con unidad: "5,2" a secas no dice si son kilometros o millas.
+          { l: "DIST", v: "5,2 km" },
           { l: "TIEMPO", v: "27:14" },
           { l: "RITMO", v: "5:14" },
         ].map((s) => (
@@ -256,22 +263,22 @@ const DEEP_DIVES = [
   {
     eyebrow: "Entreno",
     variant: "lilac" as const,
-    title: "Tu rutina y tu biblioteca de ejercicios",
-    text: "Organiza tu semana por días, arrastra para reordenar y registra cada serie con su peso y repeticiones. Cada ejercicio incluye imágenes del movimiento y su grupo muscular.",
+    title: "Tu rutina, y el peso que toca hoy",
+    text: "Organiza tu semana por días, arrastra para reordenar y registra cada serie. La app lleva la cuenta de lo que levantas y propone la carga del día siguiente, sobre 374 ejercicios en castellano con sus instrucciones. Y si esta semana no puedes el martes, se mueve el día en vez de contarlo como fallo.",
     Panel: WorkoutPanel,
   },
   {
     eyebrow: "Comidas",
     variant: "blue" as const,
     title: "Escanea, suma macros y no te compliques",
-    text: "Apunta lo que comes escaneando el código de barras: calorías y macros al instante. Guarda tus alimentos y platos en la despensa y planifica la semana con objetivos diarios.",
+    text: "Apunta lo que comes escaneando el código de barras: calorías y macros al instante. Guarda tus alimentos y platos en la despensa y planifica la semana con objetivos calculados a partir de tus datos, no con una cifra igual para todos.",
     Panel: MacrosPanel,
   },
   {
     eyebrow: "Cardio",
     variant: "mint" as const,
     title: "Registra cada ruta con GPS",
-    text: "Sal a correr o a andar y deja que la app registre tu recorrido: distancia, tiempo y ritmo, con el mapa de cada actividad guardado en tu historial.",
+    text: "Sal a correr o a andar y deja que la app registre tu recorrido: distancia, tiempo y ritmo, con el mapa de cada actividad guardado en tu historial. Sigue grabando con la pantalla apagada, y si la app se cierra a mitad no pierdes lo que llevabas.",
     Panel: CardioPanel,
   },
 ];
@@ -317,9 +324,10 @@ export default function LandingPage() {
             Tu gimnasio y tu cocina, en el bolsillo.
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-            Rutinas y biblioteca de ejercicios, comidas por código de barras con
-            sus macros, y rutas de cardio sobre el mapa. Una aplicación Android,
-            nativa, que se instala en el móvil.
+            Monta tu rutina y la app te propone el peso de cada serie a partir
+            de lo que ya has levantado. Con 374 ejercicios en castellano,
+            escáner de alimentos y rutas de cardio sobre el mapa. Una aplicación
+            Android, nativa, que se instala en el móvil.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3">
             <a
