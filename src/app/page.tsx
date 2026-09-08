@@ -17,9 +17,13 @@ import { PastelCard } from "@/components/ui/pastel-card";
  * se ensena en la pagina: si cambia el fichero y no se toca este numero, la
  * pagina miente.
  *
- * Son MEBIbytes, no megabytes decimales: el fichero pesa 71,6 MB contados de a
+ * Son MEBIbytes, no megabytes decimales: el fichero pesa 71,7 MB contados de a
  * 1.000.000 y 68,3 contados de a 1.048.576, que es como los cuenta Android al
  * instalar. Si algun dia el numero baila, es por esto.
+ *
+ * Por eso el 68 aguanta compilacion tras compilacion sin tocarlo: entre la del
+ * 3/9 y la del 8/9 el fichero crecio 18 KB, que en mebibytes es 68,29 -> 68,31.
+ * Antes de "corregirlo" a 71, leer el parrafo de arriba.
  */
 const APK = "/downloads/Rogue.apk";
 const APK_MB = 68;
