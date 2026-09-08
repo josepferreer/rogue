@@ -1,0 +1,4 @@
+#Wed Jul 22 17:18:51 CEST 2026
+base.0=C\:\\Users\\Josep\\Desktop\\Antigravity\\rogue\\android\\app\\build\\intermediates\\dex\\release\\mergeDexRelease\\classes.dex
+path.0=classes.dex
+renamed.0=classes.dex

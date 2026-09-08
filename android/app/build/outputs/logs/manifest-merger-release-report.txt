@@ -1,0 +1,469 @@
+-- Merging decision tree log ---
+provider#androidx.core.content.FileProvider
+INJECTED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:27:9-35:20
+	android:grantUriPermissions
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:31:13-47
+	android:authorities
+		INJECTED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:29:13-64
+	android:exported
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:30:13-37
+	android:name
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:28:13-62
+manifest
+ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:2:1-57:12
+INJECTED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:2:1-57:12
+INJECTED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:2:1-57:12
+INJECTED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:2:1-57:12
+MERGED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-31:12
+MERGED from [:capacitor-app] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\app\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-7:12
+MERGED from [:capacitor-filesystem] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\filesystem\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-7:12
+MERGED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-26:12
+MERGED from [:capacitor-status-bar] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\status-bar\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-7:12
+MERGED from [:capacitor-android] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\android\capacitor\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-7:12
+MERGED from [:capacitor-cordova-android-plugins] C:\Users\Josep\Desktop\Antigravity\rogue\android\capacitor-cordova-android-plugins\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-11:12
+MERGED from [org.apache.cordova:framework:14.0.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\fc3fda52de4aac021df4b61c11b2d007\transformed\framework-14.0.1\AndroidManifest.xml:20:1-27:12
+MERGED from [androidx.core:core-splashscreen:1.2.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\4e2c70e39b52212bb8cc9e6a7798f2df\transformed\core-splashscreen-1.2.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.appcompat:appcompat-resources:1.7.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\89365c0bb30537201a5268c02e7149ea\transformed\appcompat-resources-1.7.1\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.appcompat:appcompat:1.7.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\0ee59218069aeb73776323333c9368d0\transformed\appcompat-1.7.1\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\d8aa0ceed7a6a6f4b8774956dd4804a2\transformed\coordinatorlayout-1.3.0\AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.android.gms:play-services-location:21.0.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\84c00993348248207ebcacfc6edea3af\transformed\play-services-location-21.0.1\AndroidManifest.xml:2:1-9:12
+MERGED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\922e2530350f3fa07261fc1e58eee366\transformed\play-services-base-18.1.0\AndroidManifest.xml:16:1-24:12
+MERGED from [com.google.android.gms:play-services-tasks:18.0.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\695d4b531b8fb637cbeb9d35cb4c5e43\transformed\play-services-tasks-18.0.2\AndroidManifest.xml:2:1-6:12
+MERGED from [com.google.android.gms:play-services-basement:18.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\2bb8cc50fe7d8ca01c9b4c07c6a26945\transformed\play-services-basement-18.1.0\AndroidManifest.xml:16:1-26:12
+MERGED from [androidx.fragment:fragment:1.8.9] C:\Users\Josep\.gradle\caches\9.5.0\transforms\7ec52b2ab02db50e5d957de9f2fbf376\transformed\fragment-1.8.9\AndroidManifest.xml:2:1-7:12
+MERGED from [io.ionic.libs:ionfilesystem-android:1.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\d34963711066d38fae337058ff312506\transformed\ionfilesystem-android-1.1.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.activity:activity-ktx:1.11.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\ef33c549f634ab4ac12ba0988a0e0469\transformed\activity-ktx-1.11.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.activity:activity:1.11.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\a802c53eb4a3b6f3826ab63dd9513a36\transformed\activity-1.11.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\8320b118cce78991c36c3075d3deb0d4\transformed\cursoradapter-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\92697f3d3a06370ea969389c2139d3e8\transformed\drawerlayout-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.emoji2:emoji2-views-helper:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\8c173ed13acab3b5cddfddcc12ad8ae0\transformed\emoji2-views-helper-1.3.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\f49c7d134cdcf9d985e11ae7163fdc6d\transformed\emoji2-1.3.0\AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\4289a0d65017b9b3d9760b08257204c3\transformed\viewpager-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.customview:customview:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\e153e52aa12f6547dd4c408e82211d6e\transformed\customview-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.webkit:webkit:1.14.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\a215b737f1d618d76a9fff0f9f723787\transformed\webkit-1.14.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\3365776c6bdf156c24d2fb065ce5a6dd\transformed\vectordrawable-animated-1.1.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\36fcd30e317b32c90f54c9d34b332c5f\transformed\vectordrawable-1.1.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.core:core-ktx:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\3205ffe49b5f0767c37db7aa6938b6c4\transformed\core-ktx-1.17.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\7a197554f3fce20f2ae9029711f87448\transformed\loader-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.core:core:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\32bc82171a132c10e6eee1e7641cd5c2\transformed\core-1.17.0\AndroidManifest.xml:17:1-30:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\ef5d0c3b0921bf575f1058d82d2ae4fe\transformed\lifecycle-viewmodel-ktx-2.6.2\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\17f90d6e4500752c632eed5286b7c3b3\transformed\lifecycle-runtime-ktx-2.6.2\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\cfbd82595e1e4dd57d71ba5dbf2b8c12\transformed\lifecycle-livedata-2.6.2\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\a6913299ec7feef0c6e49f6e3d9190da\transformed\lifecycle-viewmodel-2.6.2\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\eb8d1200a3f9c2561e53808812fd4c97\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\8a6cfb0d24f935b2c3afd24c747f5c2a\transformed\lifecycle-livedata-core-2.6.2\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\2e00b86c80c498ccdd39ab91cb5ee4b3\transformed\lifecycle-runtime-2.6.2\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\f9f3f5e390c11b154ed4b59e593f6584\transformed\lifecycle-viewmodel-savedstate-2.6.2\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\77537a5b870933493246b6d302011a81\transformed\savedstate-ktx-1.2.1\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.savedstate:savedstate:1.2.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\6838d8c5f6a77b82cf2b8b91cab5b5ea\transformed\savedstate-1.2.1\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\61819d81db1744a153a1da057a914b3c\transformed\localbroadcastmanager-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\45896fe866b31ad0dd9649164c92303e\transformed\core-runtime-2.2.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:17:1-55:12
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\b00e2a565ca2d56e890ba4d9482f1f9d\transformed\startup-runtime-1.1.1\AndroidManifest.xml:17:1-33:12
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\5a13c02fde9fc27a3810be4541cbf512\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:17:1-27:12
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\6a7bd4247cd7d759e560eb141aff9ca7\transformed\interpolator-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.tracing:tracing:1.2.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\7d4edf84a85e195c5f0dbd7fbe2c33b0\transformed\tracing-1.2.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.annotation:annotation-experimental:1.4.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\965419bae8aee9f355dbe2883afb6675\transformed\annotation-experimental-1.4.1\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.core:core-viewtree:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\3f1243ef03edabdf855288c6ecba8106\transformed\core-viewtree-1.0.0\AndroidManifest.xml:2:1-7:12
+	package
+		INJECTED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml
+	android:versionName
+		INJECTED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml
+	android:versionCode
+		INJECTED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml
+	xmlns:android
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:2:11-69
+application
+ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:4:5-36:19
+INJECTED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:4:5-36:19
+MERGED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:23:5-29:19
+MERGED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:23:5-29:19
+MERGED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:11:5-24:19
+MERGED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:11:5-24:19
+MERGED from [:capacitor-cordova-android-plugins] C:\Users\Josep\Desktop\Antigravity\rogue\android\capacitor-cordova-android-plugins\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:8:5-9:19
+MERGED from [:capacitor-cordova-android-plugins] C:\Users\Josep\Desktop\Antigravity\rogue\android\capacitor-cordova-android-plugins\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:8:5-9:19
+MERGED from [com.google.android.gms:play-services-location:21.0.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\84c00993348248207ebcacfc6edea3af\transformed\play-services-location-21.0.1\AndroidManifest.xml:7:5-20
+MERGED from [com.google.android.gms:play-services-location:21.0.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\84c00993348248207ebcacfc6edea3af\transformed\play-services-location-21.0.1\AndroidManifest.xml:7:5-20
+MERGED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\922e2530350f3fa07261fc1e58eee366\transformed\play-services-base-18.1.0\AndroidManifest.xml:19:5-23:19
+MERGED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\922e2530350f3fa07261fc1e58eee366\transformed\play-services-base-18.1.0\AndroidManifest.xml:19:5-23:19
+MERGED from [com.google.android.gms:play-services-tasks:18.0.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\695d4b531b8fb637cbeb9d35cb4c5e43\transformed\play-services-tasks-18.0.2\AndroidManifest.xml:5:5-20
+MERGED from [com.google.android.gms:play-services-tasks:18.0.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\695d4b531b8fb637cbeb9d35cb4c5e43\transformed\play-services-tasks-18.0.2\AndroidManifest.xml:5:5-20
+MERGED from [com.google.android.gms:play-services-basement:18.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\2bb8cc50fe7d8ca01c9b4c07c6a26945\transformed\play-services-basement-18.1.0\AndroidManifest.xml:20:5-24:19
+MERGED from [com.google.android.gms:play-services-basement:18.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\2bb8cc50fe7d8ca01c9b4c07c6a26945\transformed\play-services-basement-18.1.0\AndroidManifest.xml:20:5-24:19
+MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\f49c7d134cdcf9d985e11ae7163fdc6d\transformed\emoji2-1.3.0\AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\f49c7d134cdcf9d985e11ae7163fdc6d\transformed\emoji2-1.3.0\AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.core:core:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\32bc82171a132c10e6eee1e7641cd5c2\transformed\core-1.17.0\AndroidManifest.xml:28:5-89
+MERGED from [androidx.core:core:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\32bc82171a132c10e6eee1e7641cd5c2\transformed\core-1.17.0\AndroidManifest.xml:28:5-89
+MERGED from [androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\eb8d1200a3f9c2561e53808812fd4c97\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\eb8d1200a3f9c2561e53808812fd4c97\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\b00e2a565ca2d56e890ba4d9482f1f9d\transformed\startup-runtime-1.1.1\AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\b00e2a565ca2d56e890ba4d9482f1f9d\transformed\startup-runtime-1.1.1\AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\5a13c02fde9fc27a3810be4541cbf512\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\5a13c02fde9fc27a3810be4541cbf512\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:24:5-25:19
+	android:extractNativeLibs
+		INJECTED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml
+	android:appComponentFactory
+		ADDED from [androidx.core:core:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\32bc82171a132c10e6eee1e7641cd5c2\transformed\core-1.17.0\AndroidManifest.xml:28:18-86
+	android:supportsRtl
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:9:9-35
+	android:label
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:7:9-41
+	android:roundIcon
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:8:9-54
+	android:icon
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:6:9-43
+	android:allowBackup
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:5:9-35
+	android:theme
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:10:9-40
+activity#com.rogue.app.MainActivity
+ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:12:9-25:20
+	android:label
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:15:13-56
+	android:launchMode
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:17:13-44
+	android:exported
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:18:13-36
+	android:configChanges
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:13:13-148
+	android:theme
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:16:13-62
+	android:name
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:14:13-41
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
+ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:20:13-23:29
+action#android.intent.action.MAIN
+ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:21:17-69
+	android:name
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:21:25-66
+category#android.intent.category.LAUNCHER
+ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:22:17-77
+	android:name
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:22:27-74
+uses-permission#android.permission.INTERNET
+ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:40:5-67
+	android:name
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:40:22-64
+uses-permission#android.permission.ACCESS_COARSE_LOCATION
+ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:43:5-81
+MERGED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:7:5-81
+MERGED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:7:5-81
+	android:name
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:43:22-78
+uses-permission#android.permission.ACCESS_FINE_LOCATION
+ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:44:5-79
+MERGED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:8:5-79
+MERGED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:8:5-79
+	android:name
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:44:22-76
+uses-permission#android.permission.ACCESS_BACKGROUND_LOCATION
+ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:45:5-85
+	android:name
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:45:22-82
+uses-permission#android.permission.FOREGROUND_SERVICE
+ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:47:5-77
+MERGED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:9:5-77
+MERGED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:9:5-77
+	android:name
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:47:22-74
+uses-permission#android.permission.FOREGROUND_SERVICE_LOCATION
+ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:48:5-86
+MERGED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:14:5-86
+MERGED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:14:5-86
+	android:name
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:48:22-83
+uses-permission#android.permission.POST_NOTIFICATIONS
+ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:51:5-77
+MERGED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:19:5-77
+MERGED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:19:5-77
+MERGED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:9:5-77
+MERGED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:9:5-77
+	android:name
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:51:22-74
+uses-permission#android.permission.WAKE_LOCK
+ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:52:5-68
+MERGED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:8:5-68
+MERGED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:8:5-68
+	android:name
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:52:22-65
+uses-permission#android.permission.CAMERA
+ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:55:5-65
+	android:name
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:55:22-62
+uses-feature#android.hardware.camera
+ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:56:5-85
+	android:required
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:56:58-82
+	android:name
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:56:19-57
+meta-data#android.support.FILE_PROVIDER_PATHS
+ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:32:13-34:64
+	android:resource
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:34:17-51
+	android:name
+		ADDED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml:33:17-67
+uses-sdk
+INJECTED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml
+INJECTED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml
+MERGED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capacitor-app] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\app\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capacitor-app] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\app\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capacitor-filesystem] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\filesystem\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capacitor-filesystem] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\filesystem\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capacitor-status-bar] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\status-bar\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capacitor-status-bar] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\status-bar\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capacitor-android] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\android\capacitor\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capacitor-android] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\android\capacitor\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capacitor-cordova-android-plugins] C:\Users\Josep\Desktop\Antigravity\rogue\android\capacitor-cordova-android-plugins\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:6:5-44
+MERGED from [:capacitor-cordova-android-plugins] C:\Users\Josep\Desktop\Antigravity\rogue\android\capacitor-cordova-android-plugins\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:6:5-44
+MERGED from [org.apache.cordova:framework:14.0.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\fc3fda52de4aac021df4b61c11b2d007\transformed\framework-14.0.1\AndroidManifest.xml:25:5-44
+MERGED from [org.apache.cordova:framework:14.0.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\fc3fda52de4aac021df4b61c11b2d007\transformed\framework-14.0.1\AndroidManifest.xml:25:5-44
+MERGED from [androidx.core:core-splashscreen:1.2.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\4e2c70e39b52212bb8cc9e6a7798f2df\transformed\core-splashscreen-1.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core-splashscreen:1.2.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\4e2c70e39b52212bb8cc9e6a7798f2df\transformed\core-splashscreen-1.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.appcompat:appcompat-resources:1.7.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\89365c0bb30537201a5268c02e7149ea\transformed\appcompat-resources-1.7.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.appcompat:appcompat-resources:1.7.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\89365c0bb30537201a5268c02e7149ea\transformed\appcompat-resources-1.7.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.appcompat:appcompat:1.7.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\0ee59218069aeb73776323333c9368d0\transformed\appcompat-1.7.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.appcompat:appcompat:1.7.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\0ee59218069aeb73776323333c9368d0\transformed\appcompat-1.7.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\d8aa0ceed7a6a6f4b8774956dd4804a2\transformed\coordinatorlayout-1.3.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\d8aa0ceed7a6a6f4b8774956dd4804a2\transformed\coordinatorlayout-1.3.0\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-location:21.0.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\84c00993348248207ebcacfc6edea3af\transformed\play-services-location-21.0.1\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-location:21.0.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\84c00993348248207ebcacfc6edea3af\transformed\play-services-location-21.0.1\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\922e2530350f3fa07261fc1e58eee366\transformed\play-services-base-18.1.0\AndroidManifest.xml:18:5-43
+MERGED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\922e2530350f3fa07261fc1e58eee366\transformed\play-services-base-18.1.0\AndroidManifest.xml:18:5-43
+MERGED from [com.google.android.gms:play-services-tasks:18.0.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\695d4b531b8fb637cbeb9d35cb4c5e43\transformed\play-services-tasks-18.0.2\AndroidManifest.xml:4:5-43
+MERGED from [com.google.android.gms:play-services-tasks:18.0.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\695d4b531b8fb637cbeb9d35cb4c5e43\transformed\play-services-tasks-18.0.2\AndroidManifest.xml:4:5-43
+MERGED from [com.google.android.gms:play-services-basement:18.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\2bb8cc50fe7d8ca01c9b4c07c6a26945\transformed\play-services-basement-18.1.0\AndroidManifest.xml:18:5-43
+MERGED from [com.google.android.gms:play-services-basement:18.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\2bb8cc50fe7d8ca01c9b4c07c6a26945\transformed\play-services-basement-18.1.0\AndroidManifest.xml:18:5-43
+MERGED from [androidx.fragment:fragment:1.8.9] C:\Users\Josep\.gradle\caches\9.5.0\transforms\7ec52b2ab02db50e5d957de9f2fbf376\transformed\fragment-1.8.9\AndroidManifest.xml:5:5-44
+MERGED from [androidx.fragment:fragment:1.8.9] C:\Users\Josep\.gradle\caches\9.5.0\transforms\7ec52b2ab02db50e5d957de9f2fbf376\transformed\fragment-1.8.9\AndroidManifest.xml:5:5-44
+MERGED from [io.ionic.libs:ionfilesystem-android:1.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\d34963711066d38fae337058ff312506\transformed\ionfilesystem-android-1.1.0\AndroidManifest.xml:5:5-44
+MERGED from [io.ionic.libs:ionfilesystem-android:1.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\d34963711066d38fae337058ff312506\transformed\ionfilesystem-android-1.1.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-ktx:1.11.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\ef33c549f634ab4ac12ba0988a0e0469\transformed\activity-ktx-1.11.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-ktx:1.11.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\ef33c549f634ab4ac12ba0988a0e0469\transformed\activity-ktx-1.11.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity:1.11.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\a802c53eb4a3b6f3826ab63dd9513a36\transformed\activity-1.11.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.11.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\a802c53eb4a3b6f3826ab63dd9513a36\transformed\activity-1.11.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\8320b118cce78991c36c3075d3deb0d4\transformed\cursoradapter-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\8320b118cce78991c36c3075d3deb0d4\transformed\cursoradapter-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\92697f3d3a06370ea969389c2139d3e8\transformed\drawerlayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\92697f3d3a06370ea969389c2139d3e8\transformed\drawerlayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.emoji2:emoji2-views-helper:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\8c173ed13acab3b5cddfddcc12ad8ae0\transformed\emoji2-views-helper-1.3.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.emoji2:emoji2-views-helper:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\8c173ed13acab3b5cddfddcc12ad8ae0\transformed\emoji2-views-helper-1.3.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\f49c7d134cdcf9d985e11ae7163fdc6d\transformed\emoji2-1.3.0\AndroidManifest.xml:21:5-44
+MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\f49c7d134cdcf9d985e11ae7163fdc6d\transformed\emoji2-1.3.0\AndroidManifest.xml:21:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\4289a0d65017b9b3d9760b08257204c3\transformed\viewpager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\4289a0d65017b9b3d9760b08257204c3\transformed\viewpager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\e153e52aa12f6547dd4c408e82211d6e\transformed\customview-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\e153e52aa12f6547dd4c408e82211d6e\transformed\customview-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.webkit:webkit:1.14.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\a215b737f1d618d76a9fff0f9f723787\transformed\webkit-1.14.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.webkit:webkit:1.14.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\a215b737f1d618d76a9fff0f9f723787\transformed\webkit-1.14.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\3365776c6bdf156c24d2fb065ce5a6dd\transformed\vectordrawable-animated-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\3365776c6bdf156c24d2fb065ce5a6dd\transformed\vectordrawable-animated-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\36fcd30e317b32c90f54c9d34b332c5f\transformed\vectordrawable-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\36fcd30e317b32c90f54c9d34b332c5f\transformed\vectordrawable-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.core:core-ktx:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\3205ffe49b5f0767c37db7aa6938b6c4\transformed\core-ktx-1.17.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-ktx:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\3205ffe49b5f0767c37db7aa6938b6c4\transformed\core-ktx-1.17.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\7a197554f3fce20f2ae9029711f87448\transformed\loader-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\7a197554f3fce20f2ae9029711f87448\transformed\loader-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\32bc82171a132c10e6eee1e7641cd5c2\transformed\core-1.17.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\32bc82171a132c10e6eee1e7641cd5c2\transformed\core-1.17.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\ef5d0c3b0921bf575f1058d82d2ae4fe\transformed\lifecycle-viewmodel-ktx-2.6.2\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\ef5d0c3b0921bf575f1058d82d2ae4fe\transformed\lifecycle-viewmodel-ktx-2.6.2\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\17f90d6e4500752c632eed5286b7c3b3\transformed\lifecycle-runtime-ktx-2.6.2\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\17f90d6e4500752c632eed5286b7c3b3\transformed\lifecycle-runtime-ktx-2.6.2\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\cfbd82595e1e4dd57d71ba5dbf2b8c12\transformed\lifecycle-livedata-2.6.2\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\cfbd82595e1e4dd57d71ba5dbf2b8c12\transformed\lifecycle-livedata-2.6.2\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\a6913299ec7feef0c6e49f6e3d9190da\transformed\lifecycle-viewmodel-2.6.2\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\a6913299ec7feef0c6e49f6e3d9190da\transformed\lifecycle-viewmodel-2.6.2\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\eb8d1200a3f9c2561e53808812fd4c97\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\eb8d1200a3f9c2561e53808812fd4c97\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\8a6cfb0d24f935b2c3afd24c747f5c2a\transformed\lifecycle-livedata-core-2.6.2\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\8a6cfb0d24f935b2c3afd24c747f5c2a\transformed\lifecycle-livedata-core-2.6.2\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\2e00b86c80c498ccdd39ab91cb5ee4b3\transformed\lifecycle-runtime-2.6.2\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\2e00b86c80c498ccdd39ab91cb5ee4b3\transformed\lifecycle-runtime-2.6.2\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\f9f3f5e390c11b154ed4b59e593f6584\transformed\lifecycle-viewmodel-savedstate-2.6.2\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\f9f3f5e390c11b154ed4b59e593f6584\transformed\lifecycle-viewmodel-savedstate-2.6.2\AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\77537a5b870933493246b6d302011a81\transformed\savedstate-ktx-1.2.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\77537a5b870933493246b6d302011a81\transformed\savedstate-ktx-1.2.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\6838d8c5f6a77b82cf2b8b91cab5b5ea\transformed\savedstate-1.2.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\6838d8c5f6a77b82cf2b8b91cab5b5ea\transformed\savedstate-1.2.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\61819d81db1744a153a1da057a914b3c\transformed\localbroadcastmanager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\61819d81db1744a153a1da057a914b3c\transformed\localbroadcastmanager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\45896fe866b31ad0dd9649164c92303e\transformed\core-runtime-2.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\45896fe866b31ad0dd9649164c92303e\transformed\core-runtime-2.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:21:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:21:5-44
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\b00e2a565ca2d56e890ba4d9482f1f9d\transformed\startup-runtime-1.1.1\AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\b00e2a565ca2d56e890ba4d9482f1f9d\transformed\startup-runtime-1.1.1\AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\5a13c02fde9fc27a3810be4541cbf512\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\5a13c02fde9fc27a3810be4541cbf512\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\6a7bd4247cd7d759e560eb141aff9ca7\transformed\interpolator-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\6a7bd4247cd7d759e560eb141aff9ca7\transformed\interpolator-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.tracing:tracing:1.2.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\7d4edf84a85e195c5f0dbd7fbe2c33b0\transformed\tracing-1.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.tracing:tracing:1.2.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\7d4edf84a85e195c5f0dbd7fbe2c33b0\transformed\tracing-1.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\965419bae8aee9f355dbe2883afb6675\transformed\annotation-experimental-1.4.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\965419bae8aee9f355dbe2883afb6675\transformed\annotation-experimental-1.4.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-viewtree:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\3f1243ef03edabdf855288c6ecba8106\transformed\core-viewtree-1.0.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-viewtree:1.0.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\3f1243ef03edabdf855288c6ecba8106\transformed\core-viewtree-1.0.0\AndroidManifest.xml:5:5-44
+	android:targetSdkVersion
+		INJECTED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\AndroidManifest.xml
+uses-feature#android.hardware.location.gps
+ADDED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:21:5-66
+	android:name
+		ADDED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:21:19-63
+service#com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService
+ADDED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:24:9-28:56
+	android:enabled
+		ADDED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:26:13-35
+	android:exported
+		ADDED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:27:13-36
+	android:foregroundServiceType
+		ADDED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:28:13-53
+	android:name
+		ADDED from [:capacitor-community-background-geolocation] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor-community\background-geolocation\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:25:13-102
+uses-permission#android.permission.RECEIVE_BOOT_COMPLETED
+ADDED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:7:5-81
+	android:name
+		ADDED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:7:22-78
+receiver#com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher
+ADDED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:12:9-106
+	android:name
+		ADDED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:12:19-103
+receiver#com.capacitorjs.plugins.localnotifications.NotificationDismissReceiver
+ADDED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:13:9-107
+	android:name
+		ADDED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:13:19-104
+receiver#com.capacitorjs.plugins.localnotifications.LocalNotificationRestoreReceiver
+ADDED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:14:9-23:20
+	android:exported
+		ADDED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:17:13-37
+	android:directBootAware
+		ADDED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:16:13-43
+	android:name
+		ADDED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:15:13-103
+intent-filter#action:name:android.intent.action.BOOT_COMPLETED+action:name:android.intent.action.LOCKED_BOOT_COMPLETED+action:name:android.intent.action.QUICKBOOT_POWERON
+ADDED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:18:13-22:29
+action#android.intent.action.LOCKED_BOOT_COMPLETED
+ADDED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:19:17-86
+	android:name
+		ADDED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:19:25-83
+action#android.intent.action.BOOT_COMPLETED
+ADDED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:20:17-79
+	android:name
+		ADDED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:20:25-76
+action#android.intent.action.QUICKBOOT_POWERON
+ADDED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:21:17-82
+	android:name
+		ADDED from [:capacitor-local-notifications] C:\Users\Josep\Desktop\Antigravity\rogue\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:21:25-79
+activity#com.google.android.gms.common.api.GoogleApiActivity
+ADDED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\922e2530350f3fa07261fc1e58eee366\transformed\play-services-base-18.1.0\AndroidManifest.xml:20:9-22:45
+	android:exported
+		ADDED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\922e2530350f3fa07261fc1e58eee366\transformed\play-services-base-18.1.0\AndroidManifest.xml:22:19-43
+	android:theme
+		ADDED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\922e2530350f3fa07261fc1e58eee366\transformed\play-services-base-18.1.0\AndroidManifest.xml:21:19-78
+	android:name
+		ADDED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\922e2530350f3fa07261fc1e58eee366\transformed\play-services-base-18.1.0\AndroidManifest.xml:20:19-85
+meta-data#com.google.android.gms.version
+ADDED from [com.google.android.gms:play-services-basement:18.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\2bb8cc50fe7d8ca01c9b4c07c6a26945\transformed\play-services-basement-18.1.0\AndroidManifest.xml:21:9-23:69
+	android:value
+		ADDED from [com.google.android.gms:play-services-basement:18.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\2bb8cc50fe7d8ca01c9b4c07c6a26945\transformed\play-services-basement-18.1.0\AndroidManifest.xml:23:13-66
+	android:name
+		ADDED from [com.google.android.gms:play-services-basement:18.1.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\2bb8cc50fe7d8ca01c9b4c07c6a26945\transformed\play-services-basement-18.1.0\AndroidManifest.xml:22:13-58
+provider#androidx.startup.InitializationProvider
+ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\f49c7d134cdcf9d985e11ae7163fdc6d\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\eb8d1200a3f9c2561e53808812fd4c97\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\eb8d1200a3f9c2561e53808812fd4c97\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\b00e2a565ca2d56e890ba4d9482f1f9d\transformed\startup-runtime-1.1.1\AndroidManifest.xml:26:9-30:34
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Josep\.gradle\caches\9.5.0\transforms\b00e2a565ca2d56e890ba4d9482f1f9d\transformed\startup-runtime-1.1.1\AndroidManifest.xml:26:9-30:34
+	tools:node
+		ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\f49c7d134cdcf9d985e11ae7163fdc6d\transformed\emoji2-1.3.0\AndroidManifest.xml:28:13-31
+	android:authorities
+		ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\f49c7d134cdcf9d985e11ae7163fdc6d\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
+	android:exported
+		ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\f49c7d134cdcf9d985e11ae7163fdc6d\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\f49c7d134cdcf9d985e11ae7163fdc6d\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
+meta-data#androidx.emoji2.text.EmojiCompatInitializer
+ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\f49c7d134cdcf9d985e11ae7163fdc6d\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\f49c7d134cdcf9d985e11ae7163fdc6d\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\f49c7d134cdcf9d985e11ae7163fdc6d\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
+permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\32bc82171a132c10e6eee1e7641cd5c2\transformed\core-1.17.0\AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\32bc82171a132c10e6eee1e7641cd5c2\transformed\core-1.17.0\AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\32bc82171a132c10e6eee1e7641cd5c2\transformed\core-1.17.0\AndroidManifest.xml:23:9-81
+permission#com.rogue.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\32bc82171a132c10e6eee1e7641cd5c2\transformed\core-1.17.0\AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\32bc82171a132c10e6eee1e7641cd5c2\transformed\core-1.17.0\AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\32bc82171a132c10e6eee1e7641cd5c2\transformed\core-1.17.0\AndroidManifest.xml:23:9-81
+uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\32bc82171a132c10e6eee1e7641cd5c2\transformed\core-1.17.0\AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\32bc82171a132c10e6eee1e7641cd5c2\transformed\core-1.17.0\AndroidManifest.xml:26:22-94
+uses-permission#com.rogue.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\32bc82171a132c10e6eee1e7641cd5c2\transformed\core-1.17.0\AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.17.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\32bc82171a132c10e6eee1e7641cd5c2\transformed\core-1.17.0\AndroidManifest.xml:26:22-94
+meta-data#androidx.lifecycle.ProcessLifecycleInitializer
+ADDED from [androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\eb8d1200a3f9c2561e53808812fd4c97\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\eb8d1200a3f9c2561e53808812fd4c97\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\Josep\.gradle\caches\9.5.0\transforms\eb8d1200a3f9c2561e53808812fd4c97\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:30:17-78
+meta-data#androidx.profileinstaller.ProfileInstallerInitializer
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:30:17-85
+receiver#androidx.profileinstaller.ProfileInstallReceiver
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:34:9-52:20
+	android:enabled
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:37:13-35
+	android:exported
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:38:13-36
+	android:permission
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:39:13-57
+	android:directBootAware
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:36:13-44
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:35:13-76
+intent-filter#action:name:androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:40:13-42:29
+action#androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:17-91
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:25-88
+intent-filter#action:name:androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:43:13-45:29
+action#androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:17-85
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:25-82
+intent-filter#action:name:androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:46:13-48:29
+action#androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:17-88
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:25-85
+intent-filter#action:name:androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:49:13-51:29
+action#androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:17-95
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\Josep\.gradle\caches\9.5.0\transforms\dcfd1818dd9abd1567617ae39a6d1301\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:25-92

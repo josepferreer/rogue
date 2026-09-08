@@ -1,0 +1,15 @@
+{
+	"appId": "com.rogue.app",
+	"appName": "Rogue",
+	"webDir": "capacitor-www",
+	"server": {
+		"url": "https://rogue-two.vercel.app/app",
+		"cleartext": false
+	},
+	"plugins": {
+		"LocalNotifications": {
+			"smallIcon": "ic_stat_rogue",
+			"iconColor": "#FFFFFF"
+		}
+	}
+}

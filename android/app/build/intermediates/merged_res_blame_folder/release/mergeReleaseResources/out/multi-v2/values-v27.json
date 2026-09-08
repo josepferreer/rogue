@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.rogue.app-mergeReleaseResources-32:/values-v27/values-v27.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\Josep\\.gradle\\caches\\9.5.0\\transforms\\4e2c70e39b52212bb8cc9e6a7798f2df\\transformed\\core-splashscreen-1.2.0\\res\\values-v27\\values-v27.xml",
+                    "from": {
+                        "startLines": "2,3,4,7",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,136,229,405",
+                        "endLines": "2,3,6,9",
+                        "endColumns": "80,92,12,12",
+                        "endOffsets": "131,224,400,588"
+                    }
+                }
+            ]
+        }
+    ]
+}

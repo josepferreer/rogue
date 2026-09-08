@@ -1,0 +1,20 @@
+<lint-module
+    format="1"
+    dir="C:\Users\Josep\Desktop\Antigravity\rogue\android\app"
+    name=":app"
+    type="APP"
+    maven="android:app:unspecified"
+    agpVersion="9.3.0"
+    buildFolder="build"
+    bootClassPath="C:\Users\Josep\AppData\Local\Android\Sdk\platforms\android-36\android.jar;C:\Users\Josep\AppData\Local\Android\Sdk\build-tools\36.0.0\core-lambda-stubs.jar"
+    javaSourceLevel="21"
+    compileTarget="android-36"
+    neverShrinking="true"
+    highlightGradualR8Api="false">
+  <lintOptions
+      abortOnError="true"
+      absolutePaths="true"
+      checkReleaseBuilds="true"
+      explainIssues="true"/>
+  <variant name="release"/>
+</lint-module>
