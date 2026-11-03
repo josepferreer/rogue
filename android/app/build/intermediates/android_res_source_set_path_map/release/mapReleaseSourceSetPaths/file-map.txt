@@ -1,9 +1,0 @@
-com.rogue.app-pngs-0 C:\Users\Josep\Desktop\Antigravity\rogue\android\app\build\generated\res\pngs\release
-com.rogue.app-resValues-1 C:\Users\Josep\Desktop\Antigravity\rogue\android\app\build\generated\res\resValues\release
-com.rogue.app-updated_navigation_xml-2 C:\Users\Josep\Desktop\Antigravity\rogue\android\app\build\generated\updated_navigation_xml\release
-com.rogue.app-packageReleaseResources-3 C:\Users\Josep\Desktop\Antigravity\rogue\android\app\build\intermediates\incremental\release\packageReleaseResources\merged.dir
-com.rogue.app-packageReleaseResources-4 C:\Users\Josep\Desktop\Antigravity\rogue\android\app\build\intermediates\incremental\release\packageReleaseResources\stripped.dir
-com.rogue.app-release-5 C:\Users\Josep\Desktop\Antigravity\rogue\android\app\build\intermediates\merged_res\release\mergeReleaseResources
-com.rogue.app-main-6 C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\main\res
-com.rogue.app-release-7 C:\Users\Josep\Desktop\Antigravity\rogue\android\app\src\release\res
-gradleHome-0 C:\Users\Josep\.gradle

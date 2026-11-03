@@ -38,6 +38,18 @@ next-env.d.ts
 # datos generados por scripts (se regeneran con fetch-exercisedb.mjs)
 /scripts/data/
 
+# android: salida de Gradle y rutas locales. Lo cubria android/.gitignore,
+# que se borro en e127578; desde entonces un `git add .` lo sube todo.
+/android/.gradle/
+/android/build/
+/android/app/build/
+/android/local.properties
+
+# firma de release: la clave y sus contrasenas NUNCA van al repo
+*.jks
+*.keystore
+keystore.properties
+
 # IDE
 .idea/
 
